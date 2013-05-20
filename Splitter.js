@@ -1,3 +1,11 @@
+
+/*
+ * IMPORTANT NOTE: this was meant to be a lightweight version of the Resizer utility
+ * but I never really got a chance to work on it much. The main difference is that I
+ * I got rid of the requestAnimationFrame because it was resizing very choppy.
+ * Again I wanted to remove all the jQuery but i ran out of time. Will do it soon.
+ */
+
 define(function (require, exports, module) {
     "use strict";
 
@@ -15,7 +23,7 @@ define(function (require, exports, module) {
 
     Splitter.makeResizable = function(element, direction, position, minSize, collapsible, cm) {
         
-        var $resizer            = $('<div class="' + direction + '-resizer"></div>'),
+        var $resizer            = $('<div class="' + direction + '-splitter"></div>'),
             $element            = $(element),
             $resizableElement   = $($element.find(".resizable-content:first")[0]),
             $body               = $(window.document.body),
@@ -110,17 +118,7 @@ define(function (require, exports, module) {
                 resizeStarted   = false;
             
             $body.append($resizeShield);
-                        
-            // if ($resizableElement.length) {
-            //     $element.children().not(".horz-resizer, .vert-resizer, .resizable-content").each(function (index, child) {
-            //         if (direction === DIRECTION_HORIZONTAL) {
-            //             baseSize += $(child).outerWidth();
-            //         } else {
-            //             baseSize += $(child).outerHeight();
-            //         }
-            //     });
-            // }
-                        
+         
             function doRedraw() {
                 // only run this if the mouse is down so we don't constantly loop even 
                 // after we're done resizing.
@@ -154,8 +152,6 @@ define(function (require, exports, module) {
                         $element.trigger("panelResizeStart", newSize);
                     }   
                 }
-                
-            // animationRequest = window.webkitRequestAnimationFrame(doRedraw);
             }
             
             function onMouseMove(e) {

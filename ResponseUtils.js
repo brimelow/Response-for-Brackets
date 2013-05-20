@@ -1,21 +1,23 @@
+
+/**
+ * ResponseUtils.js Module
+ * Contains a set of DOM and CSS helper functions that the extension uses.
+ */
+
 define(function (require, exports, module) {
     "use strict";
 
-
     // DOM utility methods
-    //------------------------------------------------------------------//
+    //----------------------------------------------------------------//
 
      /**
-     * Takes an array of objects and converts into DOM elements attached to a document fragment.
-     * Insanely faster than jQuery.append() and innerHTML.
+     * Takes an array of objects and converts them into DOM elements 
+     * attached to a document fragment. Insanely faster than jQuery.append().
      *
      * Example: {tag:"div",attr:{id:"layoutText"}, text:"LAYOUT", parent:1}
-     * Pass -1 as parent to attach directly to document fragment.
      *
-     * @param [domArray{tag:{string}, {attr:{name}:value}}, {text:{string}?}, parent:{Number}] 
-     * @return {DocumentFragment}
+     * Pass -1 as parent to attach directly to document fragment.
      */
-
     function createDOMFragment(domArray) {
         var frag = document.createDocumentFragment();
         var elements = [];
@@ -52,7 +54,7 @@ define(function (require, exports, module) {
 
     /**
      * Simple function that adds an external JS file to the document head.
-     * @params: 1: URL of external script, 2: head element to append to.
+     * @params: [1] URL of external script, [2] head element to append it to.
      */
     function loadExternalScript(url, head) {
         var script = document.createElement("script");
@@ -64,12 +66,15 @@ define(function (require, exports, module) {
     // CSS utility methods
     //------------------------------------------------------------------//
 
-
     /**
-     *  Simple object that stores the CSS results that get returned. 
+     *  Simple return object that stores the CSS results generated with the functions below. 
      */
     function CSSResponse() {
+
+        // Array of the selectors.
         this.selectors = [];
+
+        // Object list of the rules for each selector.
         this.rules = {};
     }
 
@@ -91,6 +96,8 @@ define(function (require, exports, module) {
             var match = rules[i].match(/\s*([^:\s]*)\s*:\s*(.*?)\s*(?:! (important))?;?$/);
             
             if(match) {
+
+                // Checks if the match has 3 elements.
                 if(match[2]) {
 
                     // Push result in to the lines array.
@@ -99,14 +106,14 @@ define(function (require, exports, module) {
             }      
         }
 
-        // Return the lines.
+        // Return the lines array.
         return lines;
     }
 
     /**
      *  Function that finds all of the CSS rules that match a certain 
-     *  CSS selector and return the results.
-     *  @param: 1: document object to search, 2: CSS selector to search with.
+     *  CSS selector and return the results as a CSSResponse object.
+     *  @param: [1] document to search, [2] CSS selector string.
      */
     function getAuthorCSSBySelector(doc, sel) {
         
@@ -115,11 +122,11 @@ define(function (require, exports, module) {
 
         if(el) {
 
-            // Use the native getMatchedCSSRules function to get the
-            // information we need to continue.
+            // Use the native getMatchedCSSRules function to get
+            // all of the matching CSS rules for this element.
             var rules = doc.defaultView.getMatchedCSSRules(el, '', false);
 
-            // Create a new response object.
+            // Create a new return object.
             var res = new CSSResponse();
 
             // Add the selector parameter to the return object.
@@ -176,14 +183,14 @@ define(function (require, exports, module) {
     /**
      *  Function that finds all of the CSS rules that are currently set and 
      *  affecting a particular DOM element and returns the results.
-     *  @param: 1: document object to search, 2: affected DOM element.
+     *  @param: [1] document object to search, [2] affected DOM element.
      */
     function getAuthorCSSRules(doc, el) {
         
         // Use the native method for finding matching CSS rules.
         var rules = doc.defaultView.getMatchedCSSRules(el, '', false);
 
-        // Create a new response object.
+        // Create a new return object.
         var res = new CSSResponse();
 
         // Loop thorugh the returned CSS rule objects.
@@ -234,7 +241,7 @@ define(function (require, exports, module) {
         return res;
     }
 
-    // Exposes the functions publicly.
+    // Export the functions.
     exports.getAuthorCSSRules = getAuthorCSSRules;
     exports.getAuthorCSSBySelector = getAuthorCSSBySelector;
     exports.createDOMFragment = createDOMFragment;

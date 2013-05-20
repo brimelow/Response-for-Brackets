@@ -4,7 +4,8 @@
 define(function (require, exports, module) {
     "use strict";
     
-    /* Import needed modules */
+    /*================  Load needed brackets modules  ================*/   
+
     var CommandManager = brackets.getModule("command/CommandManager");
     var Menus = brackets.getModule("command/Menus");
     var DocumentManager = brackets.getModule("document/DocumentManager");
@@ -13,101 +14,111 @@ define(function (require, exports, module) {
     var ProjectManager = brackets.getModule("project/ProjectManager");
     var EditorManager = brackets.getModule("editor/EditorManager");
     var ExtensionUtils = brackets.getModule("utils/ExtensionUtils");
-    var ResponseInlineEdit = require("ResponseInlineEdit").ResponseInlineEdit;
     var Dialogs = brackets.getModule("widgets/Dialogs");
     var AppInit = brackets.getModule("utils/AppInit");
+
+    
+    /*================  Load my custom modules  ================*/  
+
+    // This is my own stripped down version of the MultiRangeInlineTextEditor.
+    // Also wanted to get rid of all the jQuery but I ran out of time.
+    var ResponseInlineEdit = require("ResponseInlineEdit").ResponseInlineEdit;
+
+    // This is slimmed down of the resizer utility. See module for more info. 
     var Splitter = require("Splitter").Splitter;
-    var Resizer = brackets.getModule("utils/Resizer").Resizer;
+
+    // Set of DOM and CSS utility methods.
     var ResponseUtils = require("ResponseUtils");
 
 
-    /* Top-level module properties */
+    /*================  Define module properties  ================*/  
     
-    // reference to the codemirror instance of the inline editor
+    // Reference to the codemirror instance of the inline editor.
     var inlineCm;
 
-    // path to this extension
+    // Path to this extension.
     var modulePath;
 
-    // need to manually move this damn triangle around. 
-    // I'll explain later what these 2 props are.
-    var sTriangle;
+    // Holds the starting top position of the sidebar triangle.
     var triangleOffset;
 
-    // path to the current open project
+    // The little arrow in the working set that shows which file is open.
+    var triangle;
+
+    // Path to the current open project.
     var projectRoot;
 
-    // document for the generated media-queries.css file
+    // Document for the generated media-queries.css file.
     var mediaQueryDoc;
 
-    // I write to this temp document to show in the inline editor
+    // I write to this temp document to show in the inline editor.
     var tempCSSDoc;
 
-    // element whose CSS rules are being show in the inline editor
+    // Element whose CSS rules are being show in the inline editor.
     var inlineElement;
 
-    // the range element ruler which you drag to change width
+    // The range element ruler which you drag to change width.
     var slider;
 
-    // iFrame containing the live HTML preview
+    // Iframe containing the live HTML preview.
     var frame;
 
-    // the track where the color media query bars are shown
+    // The track where the color media query bars are shown.
     var track;
 
-    // .main-view div in Brackets core
+    // The .main-view div in Brackets core.
     var mainView;
 
-    // main container for the response tools and iFrame
+    // Main container for the response tools and iFrame.
     var response;
 
-    // button that switches the layout to horizontal
+    // Button that switches the layout to horizontal.
     var horzButt;
 
-    // button that switches the layout to vertical
+    // Button that switches the layout to vertical.
     var vertButt;
 
-    // codemirror instance for the current full editor
+    // Codemirror instance for the current full editor.
     var cm;
 
-    // editor in current full editor
+    // Editor in current full editor.
     var mainEditor;
 
-    // select element allowing user to choose the right selector
+    // Select element allowing user to choose the right selector.
     var selectSelector;
+
+    // Wrapper div for selector select box.
 
     var selectWrapper;
     
-    // + button for adding a new media query
+    // + button for adding a new media query.
     var addButt;
 
-    var frameRules;
-    
-    // 'constant' for vertical mode
+    // The 'constant' for vertical mode.
     var VERTICAL = 0;
 
-    // 'constant' for horizontal mode
+    // The 'constant' for horizontal mode.
     var HORIZONTAL = 1;
 
-    // the current layout mode
+    // The current layout mode.
     var mode = VERTICAL;
 
-    // document object of iframe
+    // Document object of iframe.
     var frameDOM;
 
-    // holds all of the created media query objects
+    // Holds all of the created media query objects.
     var queries = {};
 
-    // array for sorting the queries (needed?)
+    // Array for sorting the queries.
     var sort = [];
 
-    // crazy high starting index for query color bars
+    // Crazy high starting index for query color bars.
     var z = 5000;
 
-    // the currently selected media query
+    // The currently selected media query.
     var currentQuery;
 
-    // array of color objects for media query bar gradients
+    // Array of color objects for media query bar gradients.
     var colors = [{
         t: "#91b3fb",
         b: "#5f88d0"
@@ -125,25 +136,25 @@ define(function (require, exports, module) {
         b: "#59cfc3"
     }];
     
-    // the inspect mode toggle button
+    // The inspect mode toggle button.
     var inspectButton;
 
-    // is the inline editor open?
+    // Is the inline editor open?
     var isInlineOpen = false;
     
-    // selector for the element in the inline editor 
+    // Selector for the element in the inline editor.
     var inlineSelector;
 
-    // editor backing the inline editor
+    // Editor backing the inline editor.
     var inlineEditor;
 
-    // div containing tools like layout, inspect, add query
+    // Div containing tools like layout, inspect, add query.
     var tools;
     
-    // div that provides the dark overlay in inspect mode
+    // Div that provides the dark overlay in inspect mode.
     var highlight;
 
-    // the main Brackets sidebar div
+    // The main Brackets sidebar div.
     var sidebar;
 
 
@@ -154,13 +165,13 @@ define(function (require, exports, module) {
     var frDOM = {};
 
    
-    // is the code currently animating
+    // Is the code currently animating.
     var isAnimating = false;
     
-    // results returned from ResponseUtils.getAuthorCSSRules()
+    // Results returned from ResponseUtils.getAuthorCSSRules().
     var cssResults;
 
-    // the current document in the full editor
+    // The current document in the full editor.
     var currentDoc;
 
     // A style block we will inject into the iframe.
@@ -173,8 +184,10 @@ define(function (require, exports, module) {
     var splitter;
     
 
+    /*================  Begin function definitions  ================*/  
+
     /** 
-     *  Main function that is called when responsive mode is launched.
+     *  Main entry point of extension that is called when responsive mode is launched.
      */
     function Response() {
 
@@ -186,7 +199,7 @@ define(function (require, exports, module) {
 
         // Is there a brackets function for loading non-module scripts?
         // I couldn't find one so I wrote a simple one.    
-        ResponseUtils.loadExternalScript(modulePath + "/TweenMax.min.js", document.head);
+        ResponseUtils.loadExternalScript(modulePath + "/js/TweenMax.min.js", document.head);
         ResponseUtils.loadExternalScript(modulePath + "/Query.js", document.head);    
 
         // Load in the main CSS for the responsive UI.    
@@ -238,6 +251,12 @@ define(function (require, exports, module) {
 
         var doc = document;
         doc.body.backgroundColor = "#303030";
+
+        // Get a reference to the triangle in the project panel so we can adjust its top.
+        triangle = document.querySelector(".sidebar-selection-triangle");
+
+        // Get the current triangle top value
+        triangleOffset = triangle.offsetTop;
 
         // I wrote my own DOM insertion utility to avoid jQuery here. Insanely faster.
         // See the details of this function in the ResponseUtils.js module.
@@ -304,7 +323,7 @@ define(function (require, exports, module) {
 
         // Create a vertical splitter to divide the editor and the response UI
         Splitter.makeResizable(response, 'vert', 'bottom', 10, true, cm);
-        splitter = document.querySelector('#response .vert-resizer');
+        splitter = document.querySelector('.vert-splitter');
 
         // This is the select box that allows users to choose the a CSS selector
         // when they are in quick edit mode. It is also wrapped in a div element.
@@ -319,9 +338,10 @@ define(function (require, exports, module) {
         response.style.height = (h * 0.6) + 'px';
         mainView.style.height = (h - response.offsetHeight - 16) + 'px';
 
-        // I hate this little triangle. Should've just hidden it during the demo.
-        sTriangle = document.querySelector(".sidebar-selection-triangle");
-        document.body.appendChild(sTriangle);
+        // Set the triangle position if sidebar is open
+        if(sidebar.offsetWidth > 0) {
+            triangle.style.top = (response.offsetHeight + triangleOffset + 15) + "px";
+        }
 
         // Manually fire the window resize event to position everything correctly.
         handleWindowResize(null);
@@ -419,12 +439,15 @@ define(function (require, exports, module) {
                 response.removeChild(splitter);
 
             // Hide the sidebar in horizontal mode
-            Resizer.hide(document.getElementById("sidebar"));
+            sidebar.style.display = "none";
+            document.querySelector(".content").style.left = "0px";           
+            var horzSizer = sidebar.parentElement.insertBefore(document.querySelector(".horz-resizer"), sidebar);
+            horzSizer.style.left = "0px";
 
             // Create a new splitter for this mode
             Splitter.makeResizable(response, 'horz', 'right', 320, true, cm);
 
-            splitter = document.querySelector('#response .horz-resizer');
+            splitter = document.querySelector('.horz-splitter');
             splitter.style.right = '-16px';
             
             var w = window.innerWidth;
@@ -459,7 +482,7 @@ define(function (require, exports, module) {
             // Create a new splitter for this mode
             Splitter.makeResizable(response, 'vert', 'bottom', 10, true, cm);
 
-            splitter = document.querySelector('#response .vert-resizer');
+            splitter = document.querySelector('#response .vert-splitter');
             mode = VERTICAL;
 
             var w = window.innerWidth;
@@ -676,9 +699,10 @@ define(function (require, exports, module) {
             return;
         } 
 
-        // Adjust this damn triangle if the sidebar is open.
-        if(sidebar.offsetWidth > 0)
-            sTriangle.style.top = (triangleOffset + mainView.offsetTop) + "px";
+        // Adjust this triangle position if the sidebar is open.
+        if(sidebar.offsetWidth > 0) {
+            triangle.style.top = (size + triangleOffset) + "px";
+        }
 
         // Were in vertical mode so adjust things accordingly.
         mainView.style.height = (window.innerHeight - size - 16) + 'px';
@@ -690,9 +714,9 @@ define(function (require, exports, module) {
      */
     function handlePanelStart(e, size) {
 
-        // Find out the position of the triangle to position it properly later.
-        if(triangleOffset == undefined)
-            triangleOffset = sTriangle.offsetTop - mainView.offsetTop;
+        // This is used to adjust the position of project triangle.
+        triangleOffset = triangle.offsetTop - response.offsetHeight;
+
     }
 
     /** 
@@ -846,7 +870,8 @@ define(function (require, exports, module) {
 
         // We'll use the codemirror scroller element to animate our code into view.
         var scroller = cm.display.scroller;
-        var editorHeight = (scroller.offfsetHeight > 0) ? scroller.offsetHeight : parseInt(scroller.style.height);
+        window.scroller = scroller;
+        var editorHeight = (scroller.offsetHeight > 0) ? scroller.offsetHeight : parseInt(scroller.style.height);
         
         // Find out the correct line number from the cache.
         var line = cmDOM[tag][ind];
@@ -868,7 +893,8 @@ define(function (require, exports, module) {
         // Calculate the correct scrollTop value that will make the line be in the center.
         var documentCurPos = cm.charCoords({line:line, ch:0}, "local").bottom;
         var screenCurPos = cm.charCoords({line:line, ch:0}, "page").bottom;
-        var pos = documentCurPos - editorHeight / 2;
+        var pos = documentCurPos - editorHeight * 0.5;
+        console.log(editorHeight);
         var info = cm.getScrollInfo();       
         pos = Math.min(Math.max(pos, 0), (info.height - info.clientHeight));
         

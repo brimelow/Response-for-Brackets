@@ -1,20 +1,17 @@
 
 /*
 /* IMPORTANT NOTE: this was meant to be a lightweight version of the MultiRangeIlineTextEditor
-/* but I never really got a chance to work n it mucn. So basically there isn't much to see here
+/* but I never really got a chance to work on it mucn. So basically there isn't much to see here.
 */
 
 define(function (require, exports, module) {
     "use strict";
     
     // Load dependent modules
-    var TextRange           = brackets.getModule("document/TextRange").TextRange,
-        InlineTextEditor    = brackets.getModule("editor/InlineTextEditor").InlineTextEditor,
+    var InlineTextEditor    = brackets.getModule("editor/InlineTextEditor").InlineTextEditor,
         EditorManager       = brackets.getModule("editor/EditorManager"),
         Commands            = brackets.getModule("command/Commands"),
-        Strings             = brackets.getModule("strings"),
-        CommandManager      = brackets.getModule("command/CommandManager"),
-        PerfUtils           = brackets.getModule("utils/PerfUtils");
+        CommandManager      = brackets.getModule("command/CommandManager");
     
     /**
      * @constructor
