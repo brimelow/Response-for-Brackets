@@ -20,11 +20,11 @@ define(function (require, exports, module) {
     
     /*================  Load my custom modules  ================*/  
 
-    // This is my own stripped down version of the MultiRangeInlineTextEditor.
-    // Also wanted to get rid of all the jQuery but I ran out of time.
+    // This is a much lighter-weight version of the MultiRangeInlineTextEditor.
+    // Ideally I could would be able to use the InlineTextEditor we can't yet.
     var ResponseInlineEdit = require("ResponseInlineEdit").ResponseInlineEdit;
 
-    // This is slimmed down of the resizer utility. See module for more info. 
+    // This much lighter-weight version of the Resizer utility
     var Splitter = require("Splitter").Splitter;
 
     // Set of DOM and CSS utility methods.
@@ -291,14 +291,15 @@ define(function (require, exports, module) {
 
         // This set of DOM elements creates a dialog for when you try to do 
         // quick edit without first creating a media query. Never used in the demo.
-        domArray = [{tag:"div",attr:{id:"response", class:"response-dialog template modal hide"}, parent:-1},
+        domArray = [{tag:"div",attr:{class:"response-dialog template modal hide"}, parent:-1},
             {tag:"div",attr:{class:"modal-header"}, parent:0},
-            {tag:"a",attr:{class:"close", href:"#", text:"x"}, parent:1},
+            {tag:"a",attr:{class:"close", href:"#"}, text:"x", parent:1},
             {tag:"h1",attr:{class:"dialog-title"}, parent:1},
             {tag:"div",attr:{class:"modal-body"}, parent:0},
-            {tag:"p",attr:{class:"dialog-message"}, parent:2},
-            {tag:"div",attr:{id:"modal-footer"}, parent:0},
-            {tag:"a",attr:{class:"dialog-button btn primary right","data-button-id":"ok", text:"Ok"}, parent:3}];
+            {tag:"div",attr:{class:"dialog-message"}, parent:4},
+            {tag:"p",attr:{},parent:5},
+            {tag:"div",attr:{class:"modal-footer"}, parent:0},
+            {tag:"a",attr:{class:"dialog-button btn primary right","data-button-id":"ok"}, text:"Ok", parent:7}];
         
         frag = ResponseUtils.createDOMFragment(domArray);
         doc.body.appendChild(frag);
@@ -321,10 +322,6 @@ define(function (require, exports, module) {
         frame = doc.getElementById('frame');
         frame.style.width = slider.value + 'px';
 
-        // Create a vertical splitter to divide the editor and the response UI
-        Splitter.makeResizable(response, 'vert', 'bottom', 10, true, cm);
-        splitter = document.querySelector('.vert-splitter');
-
         // This is the select box that allows users to choose the a CSS selector
         // when they are in quick edit mode. It is also wrapped in a div element.
         selectSelector = document.createElement('select');
@@ -338,11 +335,14 @@ define(function (require, exports, module) {
         response.style.height = (h * 0.6) + 'px';
         mainView.style.height = (h - response.offsetHeight - 16) + 'px';
 
-        // Set the triangle position if sidebar is open
-        if(sidebar.offsetWidth > 0) {
-            triangle.style.top = (response.offsetHeight + triangleOffset + 15) + "px";
-        }
+        // Create a vertical splitter to divide the editor and the response UI
+        Splitter.makeResizable(response, 'vert', 100, cm);
+        splitter = document.querySelector('.vert-splitter');
 
+        // Position the selection triangle
+        triangle.style.top = (response.offsetHeight + triangleOffset + 15) + "px";
+        triangleOffset = triangle.offsetTop - response.offsetHeight;
+        
         // Manually fire the window resize event to position everything correctly.
         handleWindowResize(null);
 
@@ -445,7 +445,7 @@ define(function (require, exports, module) {
             horzSizer.style.left = "0px";
 
             // Create a new splitter for this mode
-            Splitter.makeResizable(response, 'horz', 'right', 320, true, cm);
+            Splitter.makeResizable(response, 'horz', 344, cm);
 
             splitter = document.querySelector('.horz-splitter');
             splitter.style.right = '-16px';
@@ -480,9 +480,9 @@ define(function (require, exports, module) {
                 response.removeChild(splitter);
 
             // Create a new splitter for this mode
-            Splitter.makeResizable(response, 'vert', 'bottom', 10, true, cm);
+            Splitter.makeResizable(response, 'vert', 100, cm);
 
-            splitter = document.querySelector('#response .vert-splitter');
+            splitter = document.querySelector('.vert-splitter');
             mode = VERTICAL;
 
             var w = window.innerWidth;
@@ -525,6 +525,9 @@ define(function (require, exports, module) {
 
         // Add it to the frame body
         frameDOM.body.appendChild(highlight);
+
+        // Listen for click events on the frame's body
+        frameDOM.body.addEventListener('click', handleFrameClick, false);
     }
 
     /** 
@@ -686,7 +689,7 @@ define(function (require, exports, module) {
      *  Called when the user resizes the panels using the splitter.
      */
     function handlePanelResize(e, size) {
-        
+  
         // Only refresh codemirror every other call (perf).    
         if(size & 1)
             cm.refresh();
@@ -739,7 +742,6 @@ define(function (require, exports, module) {
             highlight.style.display = 'none';
             cm.display.wrapper.removeEventListener('click', handleCodeClick);
             frameDOM.body.removeEventListener('mouseover', handleInspectHover);
-            frameDOM.body.removeEventListener('click', handleInspectClick);
             return;
         }
 
@@ -752,7 +754,6 @@ define(function (require, exports, module) {
             selected = null;
             frameDOM.body.addEventListener('mouseover', handleInspectHover, false);
             cm.display.wrapper.addEventListener('click', handleCodeClick, false);
-            frameDOM.body.addEventListener('click', handleInspectClick, false);
         }
 
     }
@@ -848,12 +849,13 @@ define(function (require, exports, module) {
     /** 
      *  Called when the user clicks on an element in the iframe while in inspect mode.
      */
-    function handleInspectClick(e) {
+    function handleFrameClick(e) {
 
         e.stopImmediatePropagation();
+        e.preventDefault();
 
         // If inline editor is open, say goodbye.
-        if(isInlineOpen)
+        if(isInlineOpen || !inspectButton.classList.contains("inspectButtonOn"))
             return;
 
         var target = e.target;
@@ -894,20 +896,17 @@ define(function (require, exports, module) {
         var documentCurPos = cm.charCoords({line:line, ch:0}, "local").bottom;
         var screenCurPos = cm.charCoords({line:line, ch:0}, "page").bottom;
         var pos = documentCurPos - editorHeight * 0.5;
-        console.log(editorHeight);
+
         var info = cm.getScrollInfo();       
         pos = Math.min(Math.max(pos, 0), (info.height - info.clientHeight));
         
         // Use TweenMax to animate our code to the correct position. When the animation is
         // done we position the cursor on the that line inside the correct tag.
-        console.log(pos, scroller, line);
         TweenMax.to(scroller, 0.5, {scrollTop: pos, roundProps:'scrollTop', ease: 'Expo.easeOut', onComplete:
             function() {
                 cm.setCursor(line, cm.getLine(line).indexOf('<') + 1);
             }
         });
-
-        e.preventDefault();
 
     }
 
@@ -997,10 +996,13 @@ define(function (require, exports, module) {
 
         // If there isn't a media query, show the dialog and the just bail.
         if(currentQuery == undefined) {
-            Dialogs.showModalDialog("response-dialog", "No Media Queries Yet Defined", 
+            Dialogs.showModalDialog("response-dialog", "No Media Queries Defined", 
                 "You first need to create a media query using the toolbar at the top" +
                 "before you can begin editing your CSS properties.", true);
-            cm.removeLineClass(selected.line, "background");
+            
+            if(selected)
+                cm.removeLineClass(selected.line, "background");
+            
             return;
         }
         
