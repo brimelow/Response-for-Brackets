@@ -32,8 +32,8 @@ Since I'm writing everything to a temporary CSS file Brackets wouldn't stop bugg
 Again the issue was with the temp CSS file. I didn't want it showing in the project panel or the working set. The code below basically says "so long as it isn't my file, do what you want".
 
 ```javascript
-220     function addToWorkingSet(file) {
-221	  if(file.fullPath.indexOf("temp") === -1) {
+220    function addToWorkingSet(file) {
+221       if(file.fullPath.indexOf("temp") === -1) {
 ```
 
 ###Main source files
