@@ -1144,14 +1144,6 @@ define(function (require, exports, module) {
                 isInlineOpen = true;
 
                 var eh = document.querySelector(".inlineEditorHolder");
-                var im = document.querySelector(".inlinemark");
-
-                // If there is already an inline colored query mark in the DOM
-                // then just remove it.
-                if(im) {
-                    im.style.cssText = "";
-                    eh.removeChild(im);
-                }
 
                 // Create a new mark that will show at the top of the inline editor
                 // with the correct query color to remind the user of what they're changing.
