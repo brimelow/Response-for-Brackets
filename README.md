@@ -1,4 +1,67 @@
+
 Response-for-Brackets
 =====================
 
-Welcome to the source code for my responsive design tool for Brackets/Edge Code. Remember that while this code does work as advertised, it is still a prototype. If you don't follow the steps below when using it, things might get a little funky or flat-out fail on you.
+----------
+
+Welcome to the source code for my responsive design tool for Brackets/Edge Code. Remember that while this code does actually work, it is still an early prototype. If you don't follow the guidelines below when trying it out, well, **all hell could break loose**.
+
+---------
+
+Source code structure
+---------
+
+This prototype was built as an extension with the goal of not making any changes to the Brackets core code. Well I almost was able to do that. There are a couple of changes I had to make to the core code. The modified files are in the ***src/bracketsCoreChanges*** folder and I'll describe them below.
+    
+####Changes to Brackets core code
+
+---------
+<i class="icon-file"></i> **EditorManager.js**   
+Basically you can't create an inline CSS editor that competes with the official one in Brackets. I had to simply swap it so only mine was chosen. Here is the modified code:
+
+
+	162   if(providers[i].name.indexOf("inlineEditorProvider") !== -1)
+	163      inlinePromise = provider(editor, pos); 
+
+
+<i class="icon-file"></i> **FileSyncManager.js**   
+Since I'm writing everything to a temporary CSS file Brackets wouldn't stop bugging me about external changes, dirty files, etc. This mod just made it ignore my file. Here is the modified code:
+
+	252    if (true) {
+	253      result.resolve();
+	254      return promise;
+	255    }
+
+<i class="icon-file"></i> **DocumentManager.js**   
+Again the issue was with the temp CSS file. I didn't want it showing in the project panel or the working set. The code below basically says "so long as it isn't my file, do what you need to do,"
+
+	220	   function addToWorkingSet(file) {
+	221      if(file.fullPath.indexOf("temp") === -1) {
+
+
+
+####Main source files
+
+---------
+<i class="icon-file"></i> **main.js**   
+This is the where it all happens. The main extension file is around 1500 lines of pure excitement.
+
+<i class="icon-file"></i> **Query.js**   
+This is a "class" that represents a single media query and all of its data. This was written a while ago so it isn't a requireJS module, but rather a self executing anonymous function.
+
+<i class="icon-file"></i> **Splitter.js**   
+Brackets has a module called Resizer which gives you the ability to resize panels. Since I'm doing some pretty intensive stuff, I re-wrote it to make it super lightweight. I also removed all the jQuery from it.
+
+<i class="icon-file"></i> **ResponseInlineEdit.js**   
+For this tool, all I need is an inline editor that you can just feed a string, without the need for a backing file and document. I successfully put one together but then I couldn't get code hinting to work. What I ended up doing is create a super lightweight wrapper around the InlineTextEditor, using the MultiRangeInlineEditor as a guide.
+
+<i class="icon-file"></i> **ResponseUtils.js**   
+This module contains some helper functions for the CSS parsing and some DOM functions.
+
+<i class="icon-file"></i> **respond.css**   
+All of the CSS for responsive mode lives here. It is a bit of a mess right now.
+
+<i class="icon-file"></i> **TweenMax.min.js**   
+This is the animation library I am using to animate both the iframe elements and the lines of code in the editor.
+
+----------
