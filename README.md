@@ -1,6 +1,6 @@
 Response-for-Brackets
 =====================
-Welcome to the source code for my responsive design tool for Brackets/Edge Code. Remember that while this code does actually work, it is still an early prototype. If you don't follow the guidelines below when trying it out, well, **all hell could break loose**.
+Welcome to the source code for my responsive design tool for Brackets. Remember that while this code does actually work, it is still an early prototype. If you don't follow the guidelines below when trying it out, well, **all hell could break loose**.
 
 <br>
 <img src="http://www.leebrimelow.com/images/shot1.png">
