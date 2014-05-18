@@ -3,7 +3,7 @@ Response-for-Brackets
 Welcome to the source code for my responsive design tool for Brackets/Edge Code. Remember that while this code does actually work, it is still an early prototype. If you don't follow the guidelines below when trying it out, well, **all hell could break loose**.
 
 <br>
-<img src="http://www.leebrimelow.com/images/shot.png">
+<img src="http://www.leebrimelow.com/images/shot1.png">
 
 ##Source code structure
 This prototype was built as an extension with the goal of not making any changes to the Brackets core code. Well I almost was able to do that. There are a couple of changes I had to make to the core code. The modified files are in the ***src/bracketsCoreChanges*** folder and I'll describe them below.
