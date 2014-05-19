@@ -1,6 +1,6 @@
 Response-for-Brackets
 =====================
-**IMPORTANT:** this code only currently works in Brackets sprint 25.
+***IMPORTANT:** this code only currently works in Brackets sprint 25.*
 
 
 Welcome to the source code for my responsive design tool for Brackets. Remember that while this code does actually work, it is still just a prototype. If you don't follow the guidelines below when trying it then **all hell could break loose**.
@@ -9,7 +9,7 @@ Welcome to the source code for my responsive design tool for Brackets. Remember 
 <img src="http://www.leebrimelow.com/images/shot1.png">
 
 ##Source code structure
-This prototype was built as an extension with the goal of not making any changes to the Brackets core code. Well I almost was able to do that. There are a couple of changes I had to make to the core code. The modified files are in the ***src/bracketsCoreChanges*** folder and I'll describe them below.
+This prototype was built as an extension with the goal of not making any changes to the Brackets core code. Well I almost was able to do that. There are a couple of changes I had to make to the core code. The modified files are in the ***src/bracketsCoreChanges*** folder and I'll describe them below. Just overwrite the current files in Brackets with my modified versions.
     
 ###List of changes to Brackets core code
 
@@ -78,7 +78,7 @@ What I've built actually works really well but it is a prototype so there really
 11. With a media query selected, you can select a DOM element and hit Cmd-E to go into a response quick edit.
 
 ##There's an easier way##
-Just follow the steps I show the video below:
+Just follow the steps I show the video below. The images are different but the site's HTML is the same as the demo site included in the source.
 
 **http://www.youtube.com/watch?v=kXTP8XqrSwE**
 
