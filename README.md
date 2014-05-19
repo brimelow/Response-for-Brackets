@@ -1,7 +1,8 @@
 Response-for-Brackets
 =====================
+
 _**IMPORTANT:** this code only currently works in Brackets sprint 25. I haven't had the time to update it for the latest version of Brackets but I don't think it would require much effort. I would love some help if anyone is interested in contributing._
-<br/>
+
 <img src="http://www.leebrimelow.com/images/shot1.png">
 
 Welcome to the source code for my responsive design tool for Brackets. Remember that while this code does actually work, it is still just a prototype. If you don't follow the guidelines below when trying it out then **all hell could break loose** :).
