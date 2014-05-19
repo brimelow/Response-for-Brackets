@@ -1,6 +1,6 @@
 Response-for-Brackets
 =====================
-_**IMPORTANT:** this code only currently works in Brackets sprint 25._
+_**IMPORTANT:** this code only currently works in Brackets sprint 25. I haven't had the time to update it for the latest version of Brackets but I don't think it would require much effort. I would love some help if anyone is interested in contributing. _
 
 <img src="http://www.leebrimelow.com/images/shot1.png">
 
@@ -14,7 +14,8 @@ Before looking into the code you should first test out the feature running insid
 3. Open Brackets and go to ***File > Open Folder*** and choose the ***demo website*** folder at the root of this respository.
 4. You should now see the split view and the response UI.
 5. Now go and watch the video at **http://www.youtube.com/watch?v=kXTP8XqrSwE** and follow the exact steps I did test the feature.
-6. There is not a lot of error checking in the code so following my demo should showcase the extension without any issues.
+6. There is not a lot of error checking in the code so following my demo will let you see the features without any issues.
+7. After that try to break it and let me know the issues you see.
 
 ##Source code structure
 This prototype was built as an extension with the goal of not making any changes to the Brackets core code. Well I almost was able to do that. There are a couple of changes I had to make to the core code. The modified files are in the ***src/bracketsCoreChanges*** folder and I'll describe them below. Just overwrite the current files in Brackets with my modified versions.
@@ -85,12 +86,9 @@ What I've built actually works really well but it is a prototype so there really
 10. Click on a tag in the editor should move the DOM element into place.
 11. With a media query selected, you can select a DOM element and hit Cmd-E to go into a response quick edit.
 
-##There's an easier way##
-Just follow the steps I show the video below. The images are different but the site's HTML is the same as the demo site included in the source.
+Like I mentioned earlier, I highly recommend watching the video at **http://www.youtube.com/watch?v=kXTP8XqrSwE** and follow my demo to help you get used to the tool.
 
-**http://www.youtube.com/watch?v=kXTP8XqrSwE**
-
-Let me know how it goes :)
+Thanks in advance for any feedback you have!
 
 
 
