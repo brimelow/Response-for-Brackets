@@ -14,7 +14,7 @@ Before looking into the code you should first test out the feature running insid
 2. Download either the Mac or Windows demo zip file, which contains a patched version of Brackets with the extension already installed.
 3. Open Brackets and go to ***File > Open Folder*** and choose the ***demo website*** folder at the root of this respository.
 4. You should now see the split view and the response UI.
-5. Now go and watch the video at **http://www.youtube.com/watch?v=kXTP8XqrSwE** and follow the exact steps I did test the feature.
+5. Now go and watch the video at **http://www.youtube.com/watch?v=kXTP8XqrSwE** and follow the exact steps I did in the demo to test the feature.
 6. There is not a lot of error checking in the code so following my demo will let you see the features without any issues.
 7. After that try to break it and let me know the issues you see.
 
