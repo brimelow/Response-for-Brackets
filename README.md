@@ -11,7 +11,7 @@ Welcome to the source code for my responsive design tool for Brackets. Remember 
 Before looking into the code you should first test out the feature running inside of Brackets. Follow the steps below to get started:
 
 1. Clone this respository to your hard drive.
-2. Download either the Mac or Windows demo zip file, which contains a patched version of Brackets with the extension already installed.
+2. Download either the [Mac](http://leebrimelow.com/files/ResponseBracketsMac.zip) or [Windows](http://leebrimelow.com/files/ResponseBracketsWin.zip) demo zip file, which contains a patched version of Brackets with the extension already installed.
 3. Open Brackets and go to ***File > Open Folder*** and choose the ***demo website*** folder at the root of this respository.
 4. You should now see the split view and the response UI.
 5. Now go and watch the video at **http://www.youtube.com/watch?v=kXTP8XqrSwE** and follow the exact steps I did in the demo to test the feature.
