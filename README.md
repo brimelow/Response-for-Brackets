@@ -1,6 +1,6 @@
 Response-for-Brackets
 =====================
-***IMPORTANT:** this code only currently works in Brackets sprint 25.*
+**IMPORTANT:** this code only currently works in Brackets sprint 25.
 
 
 Welcome to the source code for my responsive design tool for Brackets. Remember that while this code does actually work, it is still just a prototype. If you don't follow the guidelines below when trying it then **all hell could break loose**.
