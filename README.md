@@ -1,10 +1,10 @@
 Response-for-Brackets
 =====================
 _**IMPORTANT:** this code only currently works in Brackets sprint 25._
-<br>
+
 <img src="http://www.leebrimelow.com/images/shot1.png">
 
-Welcome to the source code for my responsive design tool for Brackets. Remember that while this code does actually work, it is still just a prototype. If you don't follow the guidelines below when trying it then **all hell could break loose**.
+Welcome to the source code for my responsive design tool for Brackets. Remember that while this code does actually work, it is still just a prototype. If you don't follow the guidelines below when trying it out then **all hell could break loose** :).
 
 ##Source code structure
 This prototype was built as an extension with the goal of not making any changes to the Brackets core code. Well I almost was able to do that. There are a couple of changes I had to make to the core code. The modified files are in the ***src/bracketsCoreChanges*** folder and I'll describe them below. Just overwrite the current files in Brackets with my modified versions.
