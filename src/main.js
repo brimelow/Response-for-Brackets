@@ -1408,12 +1408,12 @@ define(function (require, exports, module) {
      *  Called when brackets has opened and is ready.
      */
     AppInit.appReady(function () {
-
+        var iconURL = require.toUrl('./images/icon.png');
         // Here we add the toolbar icon that launches you into responsive mode.
         var icon = document.createElement('a');
         icon.href = "#";
         icon.className = "responseIcon";
-        icon.style.cssText = "margin: 10px 0 5px;content: '';background: url('extensions/default/Response/images/icon.png') 0 0 no-repeat;display: inline-block;width: 14px;height: 17px;display: inline-block;";
+        icon.style.cssText = "margin: 10px 0 5px;content: '';background: url('"+iconURL+"') 0 0 no-repeat;display: inline-block;width: 14px;height: 17px;display: inline-block;";
         document.querySelector('#main-toolbar .buttons').appendChild(icon);
         icon.addEventListener('click', Response, false);
     });
