@@ -24,9 +24,9 @@ img{width:auto;height:auto;max-width:100%;vertical-align:middle;border:0;}
 .clearfix:after{display:table;line-height:0;content:"";}
 .clearfix:after{clear:both;}
 .container{width:1120px;margin:auto;}
-.header{width:100%;display:block;margin-bottom:30px;}
-.logo{width:163px;float:left;}
-.navigation{float:right;width:auto;margin-top:47px;}
+.header{width:100%;display:block;margin-bottom:34px;}
+.logo{width:230px;float:left;}
+.navigation{float:right;width:auto;margin-top:36px;}
 .headline{clear:both;}
 .imageRotater{float:left;width:60%;}
 .imageRotater img{width:100%;height:auto;}
