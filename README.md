@@ -1,5 +1,6 @@
 Response-for-Brackets
 =====================
+This code is released under the The MIT License (MIT) - http://opensource.org/licenses/MIT
 
 _**IMPORTANT:** this code only currently works in Brackets sprint 25. I haven't had the time to update it for the latest version of Brackets but I don't think it would require much effort. I would love some help if anyone is interested in contributing._
 
