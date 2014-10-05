@@ -64,8 +64,8 @@ define(function (require, exports, module) {
 
         // The magic line that creates and displays the inline editor
         this.createInlineEditorFromText(doc, start, end, this.editorDiv);
-        this.editors[0].focus();
-        this.editors[0].refresh();
+        this.editor.focus();
+        this.editor.refresh();
 
         // Size the inline editor to its contents
         this.sizeInlineWidgetToContents();

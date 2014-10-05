@@ -28,8 +28,10 @@ define(function (require, exports, module) {
     /*================  Load needed brackets modules  ================*/   
 
     var CommandManager = brackets.getModule("command/CommandManager");
+    var Commands        = brackets.getModule("command/Commands");
     var Menus = brackets.getModule("command/Menus");
     var DocumentManager = brackets.getModule("document/DocumentManager");
+    var MainViewManager = brackets.getModule("view/MainViewManager");
     var NativeFileSystem = brackets.getModule("file/NativeFileSystem").NativeFileSystem;
     var FileUtils = brackets.getModule("file/FileUtils");
     var ProjectManager = brackets.getModule("project/ProjectManager");
@@ -37,6 +39,7 @@ define(function (require, exports, module) {
     var ExtensionUtils = brackets.getModule("utils/ExtensionUtils");
     var Dialogs = brackets.getModule("widgets/Dialogs");
     var AppInit = brackets.getModule("utils/AppInit");
+    var FileSystem = brackets.getModule("filesystem/FileSystem");
 
     
     /*================  Load my custom modules  ================*/  
@@ -233,17 +236,20 @@ define(function (require, exports, module) {
         // opening or creating a file  called media-queries.css. I then add 
         // the file to the working set but immediately switch back and select 
         // the HTML file. All of this was just to help the demo go smoothly.
-        brackets.fs.writeFile(projectRoot + "/media-queries.css", "", "utf8", function() {
-            DocumentManager.getDocumentForPath(projectRoot + '/media-queries.css').done(
+        
+        FileSystem.getFileForPath(projectRoot + 'media-queries.css').write( '', {}, function() {
+            DocumentManager.getDocumentForPath(projectRoot + 'media-queries.css').done(
                 function(doc) {
 
                     // Save reference to the new files document.
                     mediaQueryDoc = doc;
-                    DocumentManager.addToWorkingSet(doc.file);
+                    console.log( 'file: ', doc.file );
+                    console.log( 'file.fullPath: ', doc.file.fullPath );
+                    MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
 
                     // Write a blank document.
                     FileUtils.writeText(mediaQueryDoc.file, '');
-                    DocumentManager.setCurrentDocument(currentDoc);
+                    CommandManager.execute(Commands.CMD_OPEN, {fullPath: currentDoc.file.fullPath});
 
                     // now we are ready to create the response UI
                     createResponseUI();
@@ -253,12 +259,12 @@ define(function (require, exports, module) {
 
         // Since the inline editors require an actual file to read from, here I create
         // a temporary CSS file to write to. The contents of this file populates the inline editor.
-        brackets.fs.writeFile(modulePath + "/temp.css", "", "utf8", function(){
-            DocumentManager.getDocumentForPath(modulePath + '/temp.css').done(
+        FileSystem.getFileForPath(modulePath + "/temp_response_file.css").write( "", {}, function(){
+            DocumentManager.getDocumentForPath(modulePath + '/temp_response_file.css').done(
                 function(doc) {
                     tempCSSDoc = doc;
                     FileUtils.writeText(tempCSSDoc.file, '');
-                    DocumentManager.setCurrentDocument(currentDoc);
+                    CommandManager.execute(Commands.CMD_OPEN, {fullPath: currentDoc.file.fullPath});
                 }
             );
         });
@@ -274,10 +280,10 @@ define(function (require, exports, module) {
         doc.body.backgroundColor = "#303030";
 
         // Get a reference to the triangle in the project panel so we can adjust its top.
-        triangle = document.querySelector(".sidebar-selection-triangle");
+        //triangle = document.querySelector(".sidebar-selection-triangle");
 
         // Get the current triangle top value
-        triangleOffset = triangle.offsetTop;
+        //triangleOffset = triangle.offsetTop;
 
         // I wrote my own DOM insertion utility to avoid jQuery here. Insanely faster.
         // See the details of this function in the ResponseUtils.js module.
@@ -361,8 +367,8 @@ define(function (require, exports, module) {
         splitter = document.querySelector('.vert-splitter');
 
         // Position the selection triangle
-        triangle.style.top = (response.offsetHeight + triangleOffset + 15) + "px";
-        triangleOffset = triangle.offsetTop - response.offsetHeight;
+        //triangle.style.top = (response.offsetHeight + triangleOffset + 15) + "px";
+        //triangleOffset = triangle.offsetTop - response.offsetHeight;
         
         // Manually fire the window resize event to position everything correctly.
         handleWindowResize(null);
@@ -460,10 +466,12 @@ define(function (require, exports, module) {
                 response.removeChild(splitter);
 
             // Hide the sidebar in horizontal mode
+            /*
             sidebar.style.display = "none";
             document.querySelector(".content").style.left = "0px";           
             var horzSizer = sidebar.parentElement.insertBefore(document.querySelector(".horz-resizer"), sidebar);
             horzSizer.style.left = "0px";
+            */
 
             // Create a new splitter for this mode
             Splitter.makeResizable(response, 'horz', 344, cm);
@@ -1185,10 +1193,11 @@ define(function (require, exports, module) {
                 mark.appendChild(wd);
 
                 // Get a reference to the codemirror instance of the inline editor.
-                inlineCm = inlineEditor.editors[0]._codeMirror;
+                inlineCm = inlineEditor.editor._codeMirror;
 
                 // Since the select box is invisible we still need to set the first line.
-                inlineCm.doc.setLine(0, inlineSelector + " {");
+                //inlineCm.doc.setLine(0, inlineSelector + " {");
+                inlineCm.doc.replaceRange(inlineSelector + " {", 0);
 
                 // Loops through the existingEdits array and highlights the appropriate lines
                 // in the inline editor.
@@ -1226,6 +1235,8 @@ define(function (require, exports, module) {
             
             // Called when the inline editor is closed.
             inlineEditor.onClosed = function() {
+
+                console.log( arguments.callee.caller );
 
                 // Call parent function first.
                 ResponseInlineEdit.prototype.parentClass.onAdded.apply(this, arguments);

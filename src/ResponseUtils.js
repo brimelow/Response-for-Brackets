@@ -176,7 +176,7 @@ define(function (require, exports, module) {
 
                                 // See if we can shorten things by checking if there is a 
                                 // shorthand version of this rule (i.e. margin:20px vs margin-top:20px etc.)
-                                if(declaration.getPropertyShorthand(lines[j][1]) != null) {
+                                /*if(declaration.getPropertyShorthand(lines[j][1]) != null) {
 
                                     // Get the shorthand property name.
                                     var pname = declaration.getPropertyShorthand(lines[j][1]);
@@ -185,10 +185,10 @@ define(function (require, exports, module) {
                                     res.rules[pname] = declaration.getPropertyValue(pname);
                                 }
 
-                                else {
+                                else {*/
                                     // Store the property name and value returned to us.
                                     res.rules[lines[j][1]] = lines[j][2];
-                                }
+                                //}
 
                             }
                         }
@@ -238,7 +238,7 @@ define(function (require, exports, module) {
                         
                         // See if we can shorten things by checking if there is a 
                         // shorthand version of this rule (i.e. margin:20px vs margin-top:20px etc.)
-                        if(declaration.getPropertyShorthand(lines[j][1]) != null) {
+                        /*if(declaration.getPropertyShorthand(lines[j][1]) != null) {
 
                             // Get the shorthand property name.
                             var pname = declaration.getPropertyShorthand(lines[j][1]);
@@ -249,9 +249,9 @@ define(function (require, exports, module) {
 
                         else {
 
-                            // No shortand available so just use the returned value.
+                            // No shortand available so just use the returned value.*/
                             res.rules[lines[j][1]] = lines[j][2];
-                        }
+                        //}
 
                     }
                 }
