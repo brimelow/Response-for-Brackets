@@ -215,6 +215,9 @@ define(function (require, exports, module) {
      */
     function Response() {
 
+        // Prevent creating UI more than once
+        if(document.querySelector('#response')) return;
+
         modulePath = FileUtils.getNativeModuleDirectoryPath(module);
         projectRoot = ProjectManager.getProjectRoot().fullPath;
         mainEditor = EditorManager.getCurrentFullEditor();
@@ -236,15 +239,12 @@ define(function (require, exports, module) {
         // opening or creating a file  called media-queries.css. I then add 
         // the file to the working set but immediately switch back and select 
         // the HTML file. All of this was just to help the demo go smoothly.
-        
         FileSystem.getFileForPath(projectRoot + 'media-queries.css').write( '', {}, function() {
             DocumentManager.getDocumentForPath(projectRoot + 'media-queries.css').done(
                 function(doc) {
 
                     // Save reference to the new files document.
                     mediaQueryDoc = doc;
-                    console.log( 'file: ', doc.file );
-                    console.log( 'file.fullPath: ', doc.file.fullPath );
                     MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
 
                     // Write a blank document.
@@ -259,6 +259,7 @@ define(function (require, exports, module) {
 
         // Since the inline editors require an actual file to read from, here I create
         // a temporary CSS file to write to. The contents of this file populates the inline editor.
+        /*
         FileSystem.getFileForPath(modulePath + "/temp_response_file.css").write( "", {}, function(){
             DocumentManager.getDocumentForPath(modulePath + '/temp_response_file.css').done(
                 function(doc) {
@@ -268,6 +269,7 @@ define(function (require, exports, module) {
                 }
             );
         });
+        */
 
     }
 
@@ -747,7 +749,7 @@ define(function (require, exports, module) {
     function handlePanelStart(e, size) {
 
         // This is used to adjust the position of project triangle.
-        triangleOffset = triangle.offsetTop - response.offsetHeight;
+        //triangleOffset = triangle.offsetTop - response.offsetHeight;
 
     }
 
@@ -1154,17 +1156,18 @@ define(function (require, exports, module) {
         var result = new $.Deferred();
 
         // Write the string to the temporary CSS file.
-        FileUtils.writeText(tempCSSDoc.file, str).done(function (e) {
+        //FileUtils.writeText(tempCSSDoc.file, str).done(function (e) {
             
             // Refresh the files document with the new text.
-            tempCSSDoc.refreshText(str, new Date());
+            //tempCSSDoc.refreshText(str, new Date());
 
             // Create a new inline editor. This is my stripped-down version of the
             // MultiRangeInlineEditor module.
             inlineEditor = new ResponseInlineEdit();
 
             // Load the editor with the CSS we generated.
-            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, tempCSSDoc);
+            console.log( 'init load' );
+            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, str);
 
             // Called when the editor is added to the DOM.          
             inlineEditor.onAdded = function() {
@@ -1173,6 +1176,7 @@ define(function (require, exports, module) {
                 isInlineOpen = true;
 
                 var eh = document.querySelector(".inlineEditorHolder");
+                console.log( eh );
 
                 // Create a new mark that will show at the top of the inline editor
                 // with the correct query color to remind the user of what they're changing.
@@ -1183,21 +1187,21 @@ define(function (require, exports, module) {
                 // Add mark to the inline editor holder div.
                 eh.appendChild(mark);
 
-                // Add the selector select box. It is positioned absolutely.
-                mark.appendChild(selectSelector);
-
                 // Create the pixel width text that is displayed on the mark.
                 var wd = document.createElement("div");
                 wd.className = "wd";
                 wd.appendChild(document.createTextNode(cq.width + "px"));
                 mark.appendChild(wd);
 
+                // Add the selector select box. It is positioned absolutely.
+                mark.appendChild(selectSelector);
+
                 // Get a reference to the codemirror instance of the inline editor.
                 inlineCm = inlineEditor.editor._codeMirror;
 
                 // Since the select box is invisible we still need to set the first line.
                 //inlineCm.doc.setLine(0, inlineSelector + " {");
-                inlineCm.doc.replaceRange(inlineSelector + " {", 0);
+                //inlineCm.doc.replaceRange(inlineSelector + " {", 0);
 
                 // Loops through the existingEdits array and highlights the appropriate lines
                 // in the inline editor.
@@ -1224,7 +1228,7 @@ define(function (require, exports, module) {
                     w = coords.right - sidebar.offsetWidth - 40;
 
                 // Set the width of the selector select box.
-                selectSelector.style.width = w + "px";
+                //selectSelector.style.width = w + "px";
 
                 // Listen for changes in the inline editor.
                 inlineCm.on("change", inlineChange);
@@ -1235,8 +1239,6 @@ define(function (require, exports, module) {
             
             // Called when the inline editor is closed.
             inlineEditor.onClosed = function() {
-
-                console.log( arguments.callee.caller );
 
                 // Call parent function first.
                 ResponseInlineEdit.prototype.parentClass.onAdded.apply(this, arguments);
@@ -1254,7 +1256,7 @@ define(function (require, exports, module) {
             // I had to mod the EditorManager module so it always chooses me.
             result.resolve(inlineEditor);
 
-        });
+        //});
 
         return result.promise();
   
