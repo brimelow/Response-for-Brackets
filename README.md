@@ -11,3 +11,7 @@
 
 ## Installing the extension
 8. Copy all the files from this repo `src` folder to your `C:\Users\<username>\AppData\Roaming\Brackets\extensions\user` folder
+
+# Original project
+
+For more information please visit [Response-forBrackets](https://github.com/brimelow/Response-for-Brackets) by [@brimelow](https://github.com/brimelow)
