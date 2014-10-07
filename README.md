@@ -7,6 +7,13 @@
 4. Fetch submodules: `cd brackets` and `git submodule update --init`
 5. Add an "upstream" remote: `git remote add upstream https://github.com/adobe/brackets.git`
 6. Run `setup_for_hacking` script
+
+ | sys | asdasd |
+ |-----|--------|
+ | Mac | `tools/setup_for_hacking.sh "/Applications/Brackets.app"` |
+ | Windows | `tools\setup_for_hacking.bat "C:\Program Files (x86)\Brackets"`<br>(MUST be run in a Command Prompt started with "Run as Administrator") |
+ | Linux | `sudo tools/setup_for_hacking.sh "/opt/brackets"` |
+
 7. Copy the files from the `src/bracketsCoreChanges` into your cloned `brackets/src` folder 
 
 ## Installing the extension
