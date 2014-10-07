@@ -8,7 +8,7 @@
 5. Add an "upstream" remote: `git remote add upstream https://github.com/adobe/brackets.git`
 6. Run `setup_for_hacking` script
 
- | sys | asdasd |
+ | system | command |
  |-----|--------|
  | Mac | `tools/setup_for_hacking.sh "/Applications/Brackets.app"` |
  | Windows | `tools\setup_for_hacking.bat "C:\Program Files (x86)\Brackets"`<br>(MUST be run in a Command Prompt started with "Run as Administrator") |
