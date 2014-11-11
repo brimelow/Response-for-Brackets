@@ -1027,10 +1027,6 @@ define(function (require, exports, module) {
 
         // If there isn't a media query, show the dialog and the just bail.
         if(currentQuery == undefined) {
-            Dialogs.showModalDialog("response-dialog", "No Media Queries Defined", 
-                "You first need to create a media query using the toolbar at the top" +
-                "before you can begin editing your CSS properties.", true);
-            
             if(selected)
                 cm.removeLineClass(selected.line, "background");
             
@@ -1338,7 +1334,8 @@ define(function (require, exports, module) {
         var count = 0;
         var existingEdits = [];
 
-        // Loop through the CSS results we got when we opened the inline editor.
+        // Refresh rules for current query and loop through.
+        cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, inlineElement);
         for(var prop in cssResults.rules) {
             
             var pvalue = undefined;
@@ -1471,6 +1468,6 @@ define(function (require, exports, module) {
     menu.addMenuItem(INSPECT_ID, "Ctrl-1");
 
     // Register as an inline provider.
-    EditorManager.registerInlineEditProvider(inlineEditorProvider);
+    EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);
 
 });
