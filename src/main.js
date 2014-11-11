@@ -235,42 +235,35 @@ define(function (require, exports, module) {
         // Store the current HTML document that we'll be working with.
         currentDoc = DocumentManager.getCurrentDocument();
 
-        // There must be a better way of doing what I did here. Basically I'm
-        // opening or creating a file  called media-queries.css. I then add 
-        // the file to the working set but immediately switch back and select 
-        // the HTML file. All of this was just to help the demo go smoothly.
-        FileSystem.getFileForPath(projectRoot + 'media-queries.css').write( '', {}, function() {
-            DocumentManager.getDocumentForPath(projectRoot + 'media-queries.css').done(
-                function(doc) {
+        // Check if the media-queries css file exists. If it doesn't, then create a 
+        // new file. If it does, then reload and refresh UI
+        FileSystem.resolve(projectRoot + 'media-queries.css', function(result, file, fileSystemStats) {
+            if ('NotFound' === result) {
+                // There must be a better way of doing what I did here. Basically I'm
+                // opening or creating a file  called media-queries.css. I then add
+                // the file to the working set but immediately switch back and select
+                // the HTML file. All of this was just to help the demo go smoothly.
+                FileSystem.getFileForPath(projectRoot + 'media-queries.css').write( '', {}, function() {
+                    DocumentManager.getDocumentForPath(projectRoot + 'media-queries.css').done(
+                        function(doc) {
 
-                    // Save reference to the new files document.
-                    mediaQueryDoc = doc;
-                    MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
+                            // Save reference to the new files document.
+                            mediaQueryDoc = doc;
+                            MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
 
-                    // Write a blank document.
-                    FileUtils.writeText(mediaQueryDoc.file, '');
-                    CommandManager.execute(Commands.CMD_OPEN, {fullPath: currentDoc.file.fullPath});
+                            // Write a blank document.
+                            FileUtils.writeText(mediaQueryDoc.file, '');
+                            CommandManager.execute(Commands.CMD_OPEN, {fullPath: currentDoc.file.fullPath});
 
-                    // now we are ready to create the response UI
-                    createResponseUI();
-                }
-            );
+                            // now we are ready to create the response UI
+                            createResponseUI();
+                        }
+                    );
+                });
+            } else {
+
+            }
         });
-
-        // Since the inline editors require an actual file to read from, here I create
-        // a temporary CSS file to write to. The contents of this file populates the inline editor.
-        /*
-        FileSystem.getFileForPath(modulePath + "/temp_response_file.css").write( "", {}, function(){
-            DocumentManager.getDocumentForPath(modulePath + '/temp_response_file.css').done(
-                function(doc) {
-                    tempCSSDoc = doc;
-                    FileUtils.writeText(tempCSSDoc.file, '');
-                    CommandManager.execute(Commands.CMD_OPEN, {fullPath: currentDoc.file.fullPath});
-                }
-            );
-        });
-        */
-
     }
 
     /** 
