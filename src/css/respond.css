@@ -628,7 +628,7 @@ input[type='range']::-webkit-slider-thumb {
 	margin-top: -5px;
 	width: auto;
 	margin-right: 8px;
-	text-align: left;
+	text-align: right;
 }
 
 .inlinemark > select {
