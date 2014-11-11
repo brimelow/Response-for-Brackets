@@ -1178,7 +1178,6 @@ define(function (require, exports, module) {
                 // with the correct query color to remind the user of what they're changing.
                 var mark = document.createElement("div");
                 mark.className = "inlinemark";
-                mark.id = 'mark' + cq.width + 'inline';
                 
                 // Add mark to the inline editor holder div.
                 eh.appendChild(mark);
@@ -1304,32 +1303,14 @@ define(function (require, exports, module) {
         // Begin writing the output string that will populate the inline editor.
         var str = inlineSelector + " {\n";
 
-        var eh = document.querySelector(".inlineEditorHolder");
-        var im = document.querySelector(".inlinemark");
-
-        // If there is a already an inline mark in the DOM, get rid of it.
-        if(im) {
-            im.style.cssText = "";
-            eh.removeChild(im);
-        }
-
-        // Create a new inline colored mark to put in the inline editor.
-        var mark = document.createElement("div");
-        mark.className = "inlinemark";
-        mark.id = "mark" + cq.width + "inline";       
-        eh.appendChild(mark);
-
-        // Add the selector select box to the mark div.
-        mark.appendChild(selectSelector);
-
-        // Create the pixel width text display and add it to the mark div.
-        var wd = document.createElement("div");
-        wd.className = "wd";
-        wd.appendChild(document.createTextNode(cq.width + "px"));
-        mark.appendChild(wd);
-        
-        // Set the appropriate color for the newly selected query.
+        // update the background colour of the inline mark
+        var mark = document.querySelector(".inlinemark");
         mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+        
+        var wd = document.querySelector(".inlinemark > .wd");
+        wd.innerHTML = cq.width + "px";
+
+        // Set the appropriate color for the newly selected query.
 
         var count = 0;
         var existingEdits = [];
