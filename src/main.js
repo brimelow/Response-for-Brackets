@@ -28,8 +28,10 @@ define(function (require, exports, module) {
     /*================  Load needed brackets modules  ================*/   
 
     var CommandManager = brackets.getModule("command/CommandManager");
+    var Commands        = brackets.getModule("command/Commands");
     var Menus = brackets.getModule("command/Menus");
     var DocumentManager = brackets.getModule("document/DocumentManager");
+    var MainViewManager = brackets.getModule("view/MainViewManager");
     var NativeFileSystem = brackets.getModule("file/NativeFileSystem").NativeFileSystem;
     var FileUtils = brackets.getModule("file/FileUtils");
     var ProjectManager = brackets.getModule("project/ProjectManager");
@@ -37,6 +39,7 @@ define(function (require, exports, module) {
     var ExtensionUtils = brackets.getModule("utils/ExtensionUtils");
     var Dialogs = brackets.getModule("widgets/Dialogs");
     var AppInit = brackets.getModule("utils/AppInit");
+    var FileSystem = brackets.getModule("filesystem/FileSystem");
 
     
     /*================  Load my custom modules  ================*/  
@@ -212,6 +215,9 @@ define(function (require, exports, module) {
      */
     function Response() {
 
+        // Prevent creating UI more than once
+        if(document.querySelector('#response')) return;
+
         modulePath = FileUtils.getNativeModuleDirectoryPath(module);
         projectRoot = ProjectManager.getProjectRoot().fullPath;
         mainEditor = EditorManager.getCurrentFullEditor();
@@ -233,17 +239,17 @@ define(function (require, exports, module) {
         // opening or creating a file  called media-queries.css. I then add 
         // the file to the working set but immediately switch back and select 
         // the HTML file. All of this was just to help the demo go smoothly.
-        brackets.fs.writeFile(projectRoot + "/media-queries.css", "", "utf8", function() {
-            DocumentManager.getDocumentForPath(projectRoot + '/media-queries.css').done(
+        FileSystem.getFileForPath(projectRoot + 'media-queries.css').write( '', {}, function() {
+            DocumentManager.getDocumentForPath(projectRoot + 'media-queries.css').done(
                 function(doc) {
 
                     // Save reference to the new files document.
                     mediaQueryDoc = doc;
-                    DocumentManager.addToWorkingSet(doc.file);
+                    MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
 
                     // Write a blank document.
                     FileUtils.writeText(mediaQueryDoc.file, '');
-                    DocumentManager.setCurrentDocument(currentDoc);
+                    CommandManager.execute(Commands.CMD_OPEN, {fullPath: currentDoc.file.fullPath});
 
                     // now we are ready to create the response UI
                     createResponseUI();
@@ -253,15 +259,17 @@ define(function (require, exports, module) {
 
         // Since the inline editors require an actual file to read from, here I create
         // a temporary CSS file to write to. The contents of this file populates the inline editor.
-        brackets.fs.writeFile(modulePath + "/temp.css", "", "utf8", function(){
-            DocumentManager.getDocumentForPath(modulePath + '/temp.css').done(
+        /*
+        FileSystem.getFileForPath(modulePath + "/temp_response_file.css").write( "", {}, function(){
+            DocumentManager.getDocumentForPath(modulePath + '/temp_response_file.css').done(
                 function(doc) {
                     tempCSSDoc = doc;
                     FileUtils.writeText(tempCSSDoc.file, '');
-                    DocumentManager.setCurrentDocument(currentDoc);
+                    CommandManager.execute(Commands.CMD_OPEN, {fullPath: currentDoc.file.fullPath});
                 }
             );
         });
+        */
 
     }
 
@@ -274,10 +282,10 @@ define(function (require, exports, module) {
         doc.body.backgroundColor = "#303030";
 
         // Get a reference to the triangle in the project panel so we can adjust its top.
-        triangle = document.querySelector(".sidebar-selection-triangle");
+        //triangle = document.querySelector(".sidebar-selection-triangle");
 
         // Get the current triangle top value
-        triangleOffset = triangle.offsetTop;
+        //triangleOffset = triangle.offsetTop;
 
         // I wrote my own DOM insertion utility to avoid jQuery here. Insanely faster.
         // See the details of this function in the ResponseUtils.js module.
@@ -361,8 +369,8 @@ define(function (require, exports, module) {
         splitter = document.querySelector('.vert-splitter');
 
         // Position the selection triangle
-        triangle.style.top = (response.offsetHeight + triangleOffset + 15) + "px";
-        triangleOffset = triangle.offsetTop - response.offsetHeight;
+        //triangle.style.top = (response.offsetHeight + triangleOffset + 15) + "px";
+        //triangleOffset = triangle.offsetTop - response.offsetHeight;
         
         // Manually fire the window resize event to position everything correctly.
         handleWindowResize(null);
@@ -460,10 +468,12 @@ define(function (require, exports, module) {
                 response.removeChild(splitter);
 
             // Hide the sidebar in horizontal mode
+            /*
             sidebar.style.display = "none";
             document.querySelector(".content").style.left = "0px";           
             var horzSizer = sidebar.parentElement.insertBefore(document.querySelector(".horz-resizer"), sidebar);
             horzSizer.style.left = "0px";
+            */
 
             // Create a new splitter for this mode
             Splitter.makeResizable(response, 'horz', 344, cm);
@@ -739,7 +749,7 @@ define(function (require, exports, module) {
     function handlePanelStart(e, size) {
 
         // This is used to adjust the position of project triangle.
-        triangleOffset = triangle.offsetTop - response.offsetHeight;
+        //triangleOffset = triangle.offsetTop - response.offsetHeight;
 
     }
 
@@ -1017,10 +1027,6 @@ define(function (require, exports, module) {
 
         // If there isn't a media query, show the dialog and the just bail.
         if(currentQuery == undefined) {
-            Dialogs.showModalDialog("response-dialog", "No Media Queries Defined", 
-                "You first need to create a media query using the toolbar at the top" +
-                "before you can begin editing your CSS properties.", true);
-            
             if(selected)
                 cm.removeLineClass(selected.line, "background");
             
@@ -1146,17 +1152,18 @@ define(function (require, exports, module) {
         var result = new $.Deferred();
 
         // Write the string to the temporary CSS file.
-        FileUtils.writeText(tempCSSDoc.file, str).done(function (e) {
+        //FileUtils.writeText(tempCSSDoc.file, str).done(function (e) {
             
             // Refresh the files document with the new text.
-            tempCSSDoc.refreshText(str, new Date());
+            //tempCSSDoc.refreshText(str, new Date());
 
             // Create a new inline editor. This is my stripped-down version of the
             // MultiRangeInlineEditor module.
             inlineEditor = new ResponseInlineEdit();
 
             // Load the editor with the CSS we generated.
-            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, tempCSSDoc);
+            console.log( 'init load' );
+            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, str);
 
             // Called when the editor is added to the DOM.          
             inlineEditor.onAdded = function() {
@@ -1165,18 +1172,15 @@ define(function (require, exports, module) {
                 isInlineOpen = true;
 
                 var eh = document.querySelector(".inlineEditorHolder");
+                console.log( eh );
 
                 // Create a new mark that will show at the top of the inline editor
                 // with the correct query color to remind the user of what they're changing.
                 var mark = document.createElement("div");
                 mark.className = "inlinemark";
-                mark.id = 'mark' + cq.width + 'inline';
                 
                 // Add mark to the inline editor holder div.
                 eh.appendChild(mark);
-
-                // Add the selector select box. It is positioned absolutely.
-                mark.appendChild(selectSelector);
 
                 // Create the pixel width text that is displayed on the mark.
                 var wd = document.createElement("div");
@@ -1184,11 +1188,15 @@ define(function (require, exports, module) {
                 wd.appendChild(document.createTextNode(cq.width + "px"));
                 mark.appendChild(wd);
 
+                // Add the selector select box. It is positioned absolutely.
+                mark.appendChild(selectSelector);
+
                 // Get a reference to the codemirror instance of the inline editor.
-                inlineCm = inlineEditor.editors[0]._codeMirror;
+                inlineCm = inlineEditor.editor._codeMirror;
 
                 // Since the select box is invisible we still need to set the first line.
-                inlineCm.doc.setLine(0, inlineSelector + " {");
+                //inlineCm.doc.setLine(0, inlineSelector + " {");
+                //inlineCm.doc.replaceRange(inlineSelector + " {", 0);
 
                 // Loops through the existingEdits array and highlights the appropriate lines
                 // in the inline editor.
@@ -1215,7 +1223,7 @@ define(function (require, exports, module) {
                     w = coords.right - sidebar.offsetWidth - 40;
 
                 // Set the width of the selector select box.
-                selectSelector.style.width = w + "px";
+                //selectSelector.style.width = w + "px";
 
                 // Listen for changes in the inline editor.
                 inlineCm.on("change", inlineChange);
@@ -1243,7 +1251,7 @@ define(function (require, exports, module) {
             // I had to mod the EditorManager module so it always chooses me.
             result.resolve(inlineEditor);
 
-        });
+        //});
 
         return result.promise();
   
@@ -1295,37 +1303,20 @@ define(function (require, exports, module) {
         // Begin writing the output string that will populate the inline editor.
         var str = inlineSelector + " {\n";
 
-        var eh = document.querySelector(".inlineEditorHolder");
-        var im = document.querySelector(".inlinemark");
-
-        // If there is a already an inline mark in the DOM, get rid of it.
-        if(im) {
-            im.style.cssText = "";
-            eh.removeChild(im);
-        }
-
-        // Create a new inline colored mark to put in the inline editor.
-        var mark = document.createElement("div");
-        mark.className = "inlinemark";
-        mark.id = "mark" + cq.width + "inline";       
-        eh.appendChild(mark);
-
-        // Add the selector select box to the mark div.
-        mark.appendChild(selectSelector);
-
-        // Create the pixel width text display and add it to the mark div.
-        var wd = document.createElement("div");
-        wd.className = "wd";
-        wd.appendChild(document.createTextNode(cq.width + "px"));
-        mark.appendChild(wd);
-        
-        // Set the appropriate color for the newly selected query.
+        // update the background colour of the inline mark
+        var mark = document.querySelector(".inlinemark");
         mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+        
+        var wd = document.querySelector(".inlinemark > .wd");
+        wd.innerHTML = cq.width + "px";
+
+        // Set the appropriate color for the newly selected query.
 
         var count = 0;
         var existingEdits = [];
 
-        // Loop through the CSS results we got when we opened the inline editor.
+        // Refresh rules for current query and loop through.
+        cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, inlineElement);
         for(var prop in cssResults.rules) {
             
             var pvalue = undefined;
@@ -1458,6 +1449,6 @@ define(function (require, exports, module) {
     menu.addMenuItem(INSPECT_ID, "Ctrl-1");
 
     // Register as an inline provider.
-    EditorManager.registerInlineEditProvider(inlineEditorProvider);
+    EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);
 
 });
