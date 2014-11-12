@@ -1059,26 +1059,6 @@ define(function (require, exports, module) {
         var existingEdits = [];
 
         refreshSelectorSelectbox(selectSelector, res);
-/*
-        var i = 0;
-        
-        // Loop through the returned CSS selectors and populate the select box.
-        while(i < res.selectors.length) {
-            var s = selectSelector.appendChild(document.createElement('option'));
-            s.text = s.value = res.selectors[i];
-
-            // We will select the first selector in the array as the are sorted based on specificity.
-            if(i == 0) {
-                s.selected = true;
-                selectSelector.selectedIndex = 0;
-            }
-
-            i++;
-        }
-
-        // Store the selected selector.
-        inlineSelector = res.selectors[0];
-*/
 
         // If element has an ID, add it to the selectors and use it as the selector.
         if(el.id) {
@@ -1260,6 +1240,11 @@ define(function (require, exports, module) {
   
     }
 
+    /**
+     * Called to refresh the contents of the selector drop down in the inline editor
+     * @params: the first is a reference to the selector dom element and the second is 
+     *          the css rules for the selected html dom element
+     */
     function refreshSelectorSelectbox(selectSelector, res) {
         
         var i = 0;
