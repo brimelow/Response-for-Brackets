@@ -1060,11 +1060,11 @@ define(function (require, exports, module) {
 
         var cursor = cm.getCursor();
         
-        // Find out the tag name they were on when they hit Cmd-E.
+        // Find out the tag name they were on when they hit Cmd-E. If could not
+        // be determined then return so message is displayed to user
         var tag = cm.getTokenAt(cursor).state.htmlState.tagName;
         if (tag ===  null) {
-            result.reject("could not find tag");
-            return result.promise();
+            return null;
         }
         
         // Get a reference to the DOM element in the iframe.
