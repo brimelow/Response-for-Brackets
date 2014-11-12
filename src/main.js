@@ -1108,6 +1108,8 @@ define(function (require, exports, module) {
             // Called when the editor is added to the DOM.          
             inlineEditor.onAdded = function() {
                 
+                console.log("onAdded invoked");
+
                 // Let everyone know the editor is open.
                 isInlineOpen = true;
 
@@ -1171,14 +1173,18 @@ define(function (require, exports, module) {
 
                 // Style the inline mark to match the color of the current query.
                 mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+                
+                console.log("onAdded finished");
             }
             
             // Called when the inline editor is closed.
             inlineEditor.onClosed = function() {
 
+                console.log("onClosed invoked");
+                
                 // Call parent function first.
                 ResponseInlineEdit.prototype.parentClass.onAdded.apply(this, arguments);
-
+/*
                 // Set a bunch of stuff so we know the inline editor is no longer showing.
                 selected = null;
                 isInlineOpen = false;
@@ -1186,7 +1192,8 @@ define(function (require, exports, module) {
                 highlight.style.display = 'none';
                 selectSelector.options.length = 0;
                 $(selectSelector).remove();
-
+*/
+                console.log("onClosed finished");
             } 
 
             // I had to mod the EditorManager module so it always chooses me.
