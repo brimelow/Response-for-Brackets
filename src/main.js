@@ -1041,7 +1041,13 @@ define(function (require, exports, module) {
         if (hostEditor.getLanguageForSelection().getId() !== "html") {
             return null;
         }
-        
+                
+        // Only provide CSS editor if the selection is within a single line
+        var sel = hostEditor.getSelection();
+        if (sel.start.line !== sel.end.line) {
+            return null;
+        }
+
         // If there isn't a media query, show the dialog and the just bail.
         if(currentQuery == undefined) {
             if(selected)
