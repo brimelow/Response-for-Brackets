@@ -1036,7 +1036,11 @@ define(function (require, exports, module) {
      *  is the main or host editor and the second is the cursor position.
      */
     function inlineEditorProvider(hostEditor, pos) {
-
+        
+        // We are now going to write the string the temporary CSS file so we can display
+        // it in the inline editor. A jQuery deffered object is used for async.
+        var result = new $.Deferred();
+        
         // If there isn't a media query, show the dialog and the just bail.
         if(currentQuery == undefined) {
             if(selected)
@@ -1053,10 +1057,14 @@ define(function (require, exports, module) {
         
         // Find out the tag name they were on when they hit Cmd-E.
         var tag = cm.getTokenAt(cursor).state.htmlState.tagName;
-
+        if (tag ===  null) {
+            result.reject("could not find tag");
+            return result.promise();
+        }
+        
         // Get a reference to the DOM element in the iframe.
         var el = frDOM[tag][cmDOM[tag].indexOf(cursor.line)];
-        
+
         // Set this element to the inlineElement property that is used elsewhere.
         inlineElement = el;
 
@@ -1075,17 +1083,13 @@ define(function (require, exports, module) {
         }
 
         var count = 4;
-        
+
         var cq = currentQuery;
 
         // build the editor contents
         // The line count starts at 4 because of the selector, whitespace, etc.  
         // Note: For some reason count is 0 when refreshed but 4 when editor is created
         var editorContents = refreshCodeEditor(currentQuery, cssResults);
-        
-        // We are now going to write the string the temporary CSS file so we can display
-        // it in the inline editor. A jQuery deffered object is used for async.
-        var result = new $.Deferred();
 
         // Write the string to the temporary CSS file.
         //FileUtils.writeText(tempCSSDoc.file, str).done(function (e) {
@@ -1187,11 +1191,10 @@ define(function (require, exports, module) {
 
             // I had to mod the EditorManager module so it always chooses me.
             result.resolve(inlineEditor);
-
+        
         //});
 
         return result.promise();
-  
     }
 
     /**
