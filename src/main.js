@@ -958,14 +958,25 @@ define(function (require, exports, module) {
         
         var v = e.target.value;
 
+        if (inlineSelector === v) return;
+        
         // Change the selector to the new value chosen.
         inlineSelector = v;
 
-        // Our select box is actually invisble so we still need to write
-        // the selector and curly brace to the first line of the inline editor.
-        inlineCm.doc.setLine(0, v + " {");
-        inlineCm.refresh();
+        // Build the editor contents. 
+        // Note: For some reason count is 0 when refreshed but 4 when editor is created
+        var editorContents = refreshCodeEditor(currentQuery, cssResults);
 
+        // Set the text in the inline editor to our new string.
+        inlineCm.setValue(editorContents.contents);
+
+        // Loop through the existingEdits array and highlight lines appropriately.
+        var existingEdits = editorContents.existingEdits;
+        for(var i=0, len=existingEdits.length; i<len; i++) {
+            inlineCm.removeLineClass(existingEdits[i].line, "background");
+            inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
+        }
+/*
         var w;
 
         // Finds the absolute position of the opening curly brace on line 1.
@@ -980,6 +991,7 @@ define(function (require, exports, module) {
 
         // Resize the select element to the correct width.
         selectSelector.style.width = w + "px";
+*/        
     }
 
     /** 
@@ -1125,7 +1137,6 @@ define(function (require, exports, module) {
                 // Loops through the existingEdits array and highlights the appropriate lines
                 // in the inline editor.
                 var existingEdits = editorContents.existingEdits;
-                
                 for(var i=0, len=existingEdits.length; i<len; i++) {
                     inlineCm.removeLineClass(existingEdits[i].line, "background");
                     inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
@@ -1191,6 +1202,11 @@ define(function (require, exports, module) {
     function refreshSelectorSelectbox(selectSelector, res) {
         
         var i = 0;
+
+        // Choose the first selector if a selector is not already selected or
+        // if the current one is no longer available.
+        if (!inlineSelector || res.selectors.indexOf(inlineSelector) == -1)
+            inlineSelector = res.selectors[0];
         
         // clear all options from the select box first
         $(selectSelector).empty();
@@ -1201,16 +1217,13 @@ define(function (require, exports, module) {
             s.text = s.value = res.selectors[i];
 
             // We will select the first selector in the array as the are sorted based on specificity.
-            if(i == 0) {
+            if (res.selectors[i] === inlineSelector) {
                 s.selected = true;
-                selectSelector.selectedIndex = 0;
+                selectSelector.selectedIndex = i;
             }
 
             i++;
         }
-
-        // Choose the first selector if a selector is not already selected.
-        if (!inlineSelector) inlineSelector = res.selectors[0];
     }
     
     function refreshCodeEditor(cq, res) {
