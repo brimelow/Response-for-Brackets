@@ -219,18 +219,13 @@ define(function (require, exports, module) {
 
             for(var i=rules.length-1; i>-1; i--) {
 
-                // If the return object doesn't have this selector set yet, add it 
-                // to the selectors array.
-                if(res.selectors.indexOf(rules[i].selectorText) == -1)
-                    res.selectors.push(rules[i].selectorText);
-
                 // Use the helper function above to parse out all the rules
                 // from the cssText string.
                 var lines = parseCSSRules(rules[i].style.cssText);
-
                 var declaration = rules[i].style;
 
                 // Loop through the retuned lines of CSS.
+                var rulelist = {};
                 for(var j=0, len=lines.length; j<len; j++) {
                     
                     // There is a property name proceed;  
@@ -250,11 +245,24 @@ define(function (require, exports, module) {
                         else {
 
                             // No shortand available so just use the returned value.*/
-                            res.rules[lines[j][1]] = lines[j][2];
+                            rulelist[lines[j][1]] = lines[j][2];
                         //}
 
                     }
                 }
+
+                var selector = rules[i].selectorText;
+                
+                // If the return object doesn't have this selector set yet, add it 
+                // to the selectors array.
+                if (res.selectors.indexOf(selector) == -1) {
+                    res.selectors.push(selector);
+                    res.rules[selector] = rulelist;
+                } else {
+                    res.rules[selector] = $.extend(res.rules[selector], rulelist);
+                }
+
+                
             }
         }
 

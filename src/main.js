@@ -1058,6 +1058,8 @@ define(function (require, exports, module) {
         // Array to hold information about whether a rule has already been set by this or another query.
         var existingEdits = [];
 
+        refreshSelectorSelectbox(selectSelector, res);
+/*
         var i = 0;
         
         // Loop through the returned CSS selectors and populate the select box.
@@ -1076,6 +1078,7 @@ define(function (require, exports, module) {
 
         // Store the selected selector.
         inlineSelector = res.selectors[0];
+*/
 
         // If element has an ID, add it to the selectors and use it as the selector.
         if(el.id) {
@@ -1094,7 +1097,7 @@ define(function (require, exports, module) {
         var count = 4;
 
         // Go through all of the returned CSS rules and write to the output string.
-        for(var prop in res.rules) {
+        for(var prop in res.rules[inlineSelector]) {
             
             var pvalue = undefined;
             count++;
@@ -1138,7 +1141,7 @@ define(function (require, exports, module) {
 
             // If this property hasn't been set by anyone, we use the original value returned.
             if(pvalue == undefined)
-                pvalue = res.rules[prop];
+                pvalue = res.rules[inlineSelector][prop];
 
             // Finally we add the CSS rule to the output string.
             str += "\t" + prop + ": " + pvalue.trim() + ";\n";
@@ -1257,6 +1260,31 @@ define(function (require, exports, module) {
   
     }
 
+    function refreshSelectorSelectbox(selectSelector, res) {
+        
+        var i = 0;
+        
+        // clear all options from the select box first
+        $(selectSelector).empty();
+        
+        // Loop through the returned CSS selectors and populate the select box.
+        while(i < res.selectors.length) {
+            var s = selectSelector.appendChild(document.createElement('option'));
+            s.text = s.value = res.selectors[i];
+
+            // We will select the first selector in the array as the are sorted based on specificity.
+            if(i == 0) {
+                s.selected = true;
+                selectSelector.selectedIndex = 0;
+            }
+
+            i++;
+        }
+
+        // Choose the first selector if a selector is not already selected.
+        if (!inlineSelector) inlineSelector = res.selectors[0];
+    }
+    
     /** 
      *  Called when there is a text change in the inline editor.
      *  @params: the first is the codemirror instance, the second is the change object.
@@ -1300,9 +1328,6 @@ define(function (require, exports, module) {
         var cq = currentQuery;
         var i = 0;
 
-        // Begin writing the output string that will populate the inline editor.
-        var str = inlineSelector + " {\n";
-
         // update the background colour of the inline mark
         var mark = document.querySelector(".inlinemark");
         mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
@@ -1317,7 +1342,14 @@ define(function (require, exports, module) {
 
         // Refresh rules for current query and loop through.
         cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, inlineElement);
-        for(var prop in cssResults.rules) {
+
+        // refresh the selector drop down
+        refreshSelectorSelectbox(selectSelector, cssResults);
+
+        // Begin writing the output string that will populate the inline editor.
+        var str = inlineSelector + " {\n";
+        
+        for(var prop in cssResults.rules[inlineSelector]) {
             
             var pvalue = undefined;
             count++;
@@ -1358,7 +1390,7 @@ define(function (require, exports, module) {
 
             // If nobody has set this property yet, just use the original returned result.
             if(pvalue == undefined)
-                pvalue = cssResults.rules[prop];
+                pvalue = cssResults.rules[inlineSelector][prop];
 
             // Add the CSS for this property to the output string.
             str += "\t" + prop + ": " + pvalue.trim() + ";\n";
