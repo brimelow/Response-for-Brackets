@@ -1037,9 +1037,10 @@ define(function (require, exports, module) {
      */
     function inlineEditorProvider(hostEditor, pos) {
         
-        // We are now going to write the string the temporary CSS file so we can display
-        // it in the inline editor. A jQuery deffered object is used for async.
-        var result = new $.Deferred();
+        // Only provide a CSS editor when cursor is in HTML content
+        if (hostEditor.getLanguageForSelection().getId() !== "html") {
+            return null;
+        }
         
         // If there isn't a media query, show the dialog and the just bail.
         if(currentQuery == undefined) {
@@ -1049,6 +1050,10 @@ define(function (require, exports, module) {
             return;
         }
         
+        // We are now going to write the string the temporary CSS file so we can display
+        // it in the inline editor. A jQuery deffered object is used for async.
+        var result = new $.Deferred();
+                
         // If there is a selected line of code in the editor, remove the highlight.
         if(selected)
             cm.removeLineClass(selected.line, "background");
