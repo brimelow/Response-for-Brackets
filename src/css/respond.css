@@ -241,27 +241,27 @@ font-size: 13px;
 }
 
 .pq0 {
-	background: hsl(221, 93%, 90%);
+	background: hsl(221, 93%, 90%) !important; 
 	left: 17px;
 }
  
 .pq1 {
-	background: hsl(263, 95%, 90%);
+	background: hsl(263, 95%, 90%) !important;
 	left: 17px;
 }
 
 .pq2 {
-	background: hsl(78, 79%, 75%);
+	background: hsl(78, 79%, 75%) !important;
 	left: 17px;
 }
 
 .pq3 {
-	background: hsl(40, 97%, 85%);
+	background: hsl(40, 97%, 85%) !important;
 	left: 17px;
 }
 
 .pq4 {
-	background: hsl(176, 77%, 84%);
+	background: hsl(176, 77%, 84%) !important;
 	left: 17px;
 }
 

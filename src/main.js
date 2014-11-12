@@ -1050,15 +1050,9 @@ define(function (require, exports, module) {
 
         // Call my utility method that finds all of the CSS rules that are
         // currently set for this element. See the comments in ResponseUtils.js.
-        var res = ResponseUtils.getAuthorCSSRules(frameDOM, el);
-        
-        // Store the results so we can use them elsewhere.
-        cssResults = res;
+        cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, el);
 
-        // Array to hold information about whether a rule has already been set by this or another query.
-        var existingEdits = [];
-
-        refreshSelectorSelectbox(selectSelector, res);
+        refreshSelectorSelectbox(selectSelector, cssResults);
 
         // If element has an ID, add it to the selectors and use it as the selector.
         if(el.id) {
@@ -1068,68 +1062,15 @@ define(function (require, exports, module) {
             selectSelector.appendChild(s);
         }
 
-        // Here we begin writing the string that we will use to populate the inline editor.
-        var str = inlineSelector + " {\n";
-
-        var cq = currentQuery;    
-
-        // The line count starts at 4 because of the selector, whitespace, etc.  
         var count = 4;
+        
+        var cq = currentQuery;
 
-        // Go through all of the returned CSS rules and write to the output string.
-        for(var prop in res.rules[inlineSelector]) {
-            
-            var pvalue = undefined;
-            count++;
-            
-            // Here we loop through all of the defined media queries to see if this rule
-            // has already been set by one of them. This is used to show inheritance.
-            for(var sel in queries) {
-
-                var q = queries[sel];
-
-                // If the media query (q) has a width greater than the currently selected
-                // query and has already set a value for this property, then the current
-                // query will inherit that value.
-                if(q != cq && parseInt(q.width) > parseInt(cq.width) && 
-                    q.selectors[inlineSelector]) {
-
-                    // Check if it has the property set and if so, add it to the existingEdits
-                    // array so we can highlight it appropriately. Also stores the value.
-                    if(q.selectors[inlineSelector].rules[prop]) {
-                       pvalue = q.selectors[inlineSelector].rules[prop];
-                       existingEdits.push({query:q, line:count-4});
-                       pvalue = pvalue.replace(/;/, '');
-                       break;
-                    }
-                } 
-
-                // Check if the currently selected query has this property already set.
-                // If so then we add it to the existingEdits array for highlighting purposes.
-                // It also stores the value 'pvalue' so we can use that in the output.
-                else if(cq == q && q.selectors[inlineSelector]) {
-
-                    if(q.selectors[inlineSelector].rules[prop]) {
-                       pvalue = q.selectors[inlineSelector].rules[prop];
-                       existingEdits.push({query:q, line:count-4});
-                       pvalue = pvalue.replace(/;/, '');
-                       break;
-
-                    }
-                }               
-            }
-
-            // If this property hasn't been set by anyone, we use the original value returned.
-            if(pvalue == undefined)
-                pvalue = res.rules[inlineSelector][prop];
-
-            // Finally we add the CSS rule to the output string.
-            str += "\t" + prop + ": " + pvalue.trim() + ";\n";
-        }
-
-        // Closing curly brace = were done!
-        str += "}";
-
+        // build the editor contents
+        // The line count starts at 4 because of the selector, whitespace, etc.  
+        // Note: For some reason count is 0 when refreshed but 4 when editor is created
+        var editorContents = refreshCodeEditor(currentQuery, cssResults);
+        
         // We are now going to write the string the temporary CSS file so we can display
         // it in the inline editor. A jQuery deffered object is used for async.
         var result = new $.Deferred();
@@ -1146,7 +1087,7 @@ define(function (require, exports, module) {
 
             // Load the editor with the CSS we generated.
             console.log( 'init load' );
-            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, str);
+            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, editorContents.contents);
 
             // Called when the editor is added to the DOM.          
             inlineEditor.onAdded = function() {
@@ -1183,6 +1124,8 @@ define(function (require, exports, module) {
 
                 // Loops through the existingEdits array and highlights the appropriate lines
                 // in the inline editor.
+                var existingEdits = editorContents.existingEdits;
+                
                 for(var i=0, len=existingEdits.length; i<len; i++) {
                     inlineCm.removeLineClass(existingEdits[i].line, "background");
                     inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
@@ -1270,6 +1213,74 @@ define(function (require, exports, module) {
         if (!inlineSelector) inlineSelector = res.selectors[0];
     }
     
+    function refreshCodeEditor(cq, res) {
+        
+        // Array to hold information about whether a rule has already been set by this or another query.
+        var existingEdits = [];
+        
+        // indicates the current line number. setting for 1 as the first line (0) is the selector
+        var lineNumber = 0;
+        
+        // Here we begin writing the string that we will use to populate the inline editor.
+        var str = inlineSelector + " {\n";
+
+        // Go through all of the returned CSS rules and write to the output string.
+        for(var prop in res.rules[inlineSelector]) {
+            
+            var pvalue = undefined;
+            lineNumber++;
+            
+            // Here we loop through all of the defined media queries to see if this rule
+            // has already been set by one of them. This is used to show inheritance.
+            for(var sel in queries) {
+
+                var q = queries[sel];
+
+                // If the media query (q) has a width greater than the currently selected
+                // query and has already set a value for this property, then the current
+                // query will inherit that value.
+                if(q != cq && parseInt(q.width) > parseInt(cq.width) && 
+                    q.selectors[inlineSelector]) {
+
+                    // Check if it has the property set and if so, add it to the existingEdits
+                    // array so we can highlight it appropriately. Also stores the value.
+                    if(q.selectors[inlineSelector].rules[prop]) {
+                       pvalue = q.selectors[inlineSelector].rules[prop];
+                       existingEdits.push({query:q, line:lineNumber});
+                       pvalue = pvalue.replace(/;/, '');
+                       break;
+                    }
+                } 
+
+                // Check if the currently selected query has this property already set.
+                // If so then we add it to the existingEdits array for highlighting purposes.
+                // It also stores the value 'pvalue' so we can use that in the output.
+                else if(cq == q && q.selectors[inlineSelector]) {
+
+                    if(q.selectors[inlineSelector].rules[prop]) {
+                       pvalue = q.selectors[inlineSelector].rules[prop];
+                       existingEdits.push({query:q, line:lineNumber});
+                       pvalue = pvalue.replace(/;/, '');
+                       break;
+
+                    }
+                }               
+            }
+
+            // If this property hasn't been set by anyone, we use the original value returned.
+            if(pvalue == undefined)
+                pvalue = res.rules[inlineSelector][prop];
+
+            // Finally we add the CSS rule to the output string.
+            str += "\t" + prop + ": " + pvalue.trim() + ";\n";
+        }
+
+        // Closing curly brace = we're done!
+        str += "}";
+        
+        return { contents: str, existingEdits: existingEdits, numLines: lineNumber };
+    }
+    
     /** 
      *  Called when there is a text change in the inline editor.
      *  @params: the first is the codemirror instance, the second is the change object.
@@ -1331,63 +1342,16 @@ define(function (require, exports, module) {
         // refresh the selector drop down
         refreshSelectorSelectbox(selectSelector, cssResults);
 
-        // Begin writing the output string that will populate the inline editor.
-        var str = inlineSelector + " {\n";
-        
-        for(var prop in cssResults.rules[inlineSelector]) {
-            
-            var pvalue = undefined;
-            count++;
-            
-            // Loop through all of the defined media queries.
-            for(var sel in queries) {
-
-                var q = queries[sel];
-
-                // If the query is the current query and it has this selector already.
-                if(cq == q && q.selectors[inlineSelector]) {
-
-                    // If this property has been set already store the value.
-                    if(q.selectors[inlineSelector].rules[prop]) {
-                       pvalue = q.selectors[inlineSelector].rules[prop];
-                       existingEdits.push({query:q, line:count});
-                       pvalue = pvalue.replace(/;/, '');
-                       break;
-
-                    }
-                }  
-
-                // If the query's width is greater than the currently selected query
-                // and the the query has this selector already.
-                else if(q != cq && parseInt(q.width) > parseInt(cq.width) && 
-                    q.selectors[inlineSelector]) {
-
-                    // If there is already a property value, store it.
-                    if(q.selectors[inlineSelector].rules[prop]) {
-                       pvalue = q.selectors[inlineSelector].rules[prop];
-                       existingEdits.push({query:q, line:count});
-                       pvalue = pvalue.replace(/;/, '');
-                       break;
-                    }
-                } 
-                             
-            }
-
-            // If nobody has set this property yet, just use the original returned result.
-            if(pvalue == undefined)
-                pvalue = cssResults.rules[inlineSelector][prop];
-
-            // Add the CSS for this property to the output string.
-            str += "\t" + prop + ": " + pvalue.trim() + ";\n";
-        }
-
-        // Finish the string.
-        str += "}";
+        // Build the editor contents. 
+        // Note: For some reason count is 0 when refreshed but 4 when editor is created
+        var editorContents = refreshCodeEditor(cq, cssResults);
 
         // Set the text in the inline editor to our new string.
-        inlineCm.setValue(str);
+        inlineCm.setValue(editorContents.contents);
 
         // Loop through the existingEdits array and highlight lines appropriately.
+        var existingEdits = editorContents.existingEdits;
+
         for(var i=0, len=existingEdits.length; i<len; i++) {
             inlineCm.removeLineClass(existingEdits[i].line, "background");
             inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
