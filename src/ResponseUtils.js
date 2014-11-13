@@ -214,9 +214,8 @@ define(function (require, exports, module) {
         // Create a new return object.
         var res = new CSSResponse();
 
-        // Loop thorugh the returned CSS rule objects.
-        if(rules.length > 0) {
-
+        if(rules != null && rules.length > 0) {
+            // Loop thorugh the returned CSS rule objects.
             for(var i=rules.length-1; i>-1; i--) {
 
                 // Use the helper function above to parse out all the rules
@@ -263,6 +262,17 @@ define(function (require, exports, module) {
                 }
 
                 
+            }
+        } else {
+            // create empty CSS rules for each class or id on the element
+            if (el.id.length > 0) {
+                res.selectors.push('#' + el.id);
+                res.rules['#' + el.id] = {};
+            }
+
+            for (var i = 0; i < el.classList.length; i++) {
+                res.selectors.push('.' + el.classList[i]);
+                res.rules['.' + el.classList[i]] = {};
             }
         }
 
