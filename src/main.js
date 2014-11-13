@@ -1273,7 +1273,7 @@ define(function (require, exports, module) {
         var str = inlineSelector + " {\n";
 
         // Go through all of the returned CSS rules and write to the output string.
-        if (res.rules[inlineSelector].length > 0) {
+        if (res.rules[inlineSelector] !== null) {
             for(var prop in res.rules[inlineSelector]) {
 
                 var pvalue = undefined;

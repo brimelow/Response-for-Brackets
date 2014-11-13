@@ -267,18 +267,18 @@ define(function (require, exports, module) {
             // create empty CSS rules for each class or id on the element
             if (el.id.length > 0) {
                 res.selectors.push('#' + el.id);
-                res.rules['#' + el.id] = {};
+                res.rules['#' + el.id] = null;
             }
 
             for (var i = 0; i < el.classList.length; i++) {
                 res.selectors.push('.' + el.classList[i]);
-                res.rules['.' + el.classList[i]] = {};
+                res.rules['.' + el.classList[i]] = null;
             }
             
             // and id or class has not been defined...adding the tag name instead
             if (res.selectors.length == 0) {
                 res.selectors.push(el.tagName.toLowerCase());
-                res.rules[el.tagName.toLowerCase()] = {};                
+                res.rules[el.tagName.toLowerCase()] = null;                
             }
         }
 
