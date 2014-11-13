@@ -1048,12 +1048,19 @@ define(function (require, exports, module) {
             return null;
         }
 
-        // If there isn't a media query, show the dialog and the just bail.
+        // We are not in responsive mode yet (toolbar icon not selected). Fallback
+        // to the default CSS inline editor
+        if (!response) {
+            return null;
+        }
+        
+        // If there isn't a media query, show the message that a query has not been selected
         if(currentQuery == undefined) {
             if(selected)
                 cm.removeLineClass(selected.line, "background");
             
-            return;
+            hostEditor.displayErrorMessageAtCursor("There have not been any media queries defined.");
+            return $.Deferred().promise();
         }
         
         // We are now going to write the string the temporary CSS file so we can display
