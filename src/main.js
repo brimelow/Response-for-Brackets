@@ -1135,7 +1135,7 @@ define(function (require, exports, module) {
                 // Let everyone know the editor is open.
                 isInlineOpen = true;
 
-                var eh = document.querySelector(".inlineEditorHolder");
+                var eh = inlineEditor.$htmlContent[0].querySelector(".inlineEditorHolder");
                 console.log( eh );
 
                 // Create a new mark that will show at the top of the inline editor
