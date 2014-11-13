@@ -14,24 +14,6 @@
 	top: 86px;z-index:50;position: absolute;bottom: 0;right:0;left:0px;
 }
 
-select {
-	position: absolute;
-    top: 28px;
-    font-size: 17px;
-    left: 69px;
-    border: none;
-    background: transparent;
-    color: transparent;
-    -webkit-appearance: none;
-    font-family: "SourceCodePro";
-    width: auto;
-	outline-width: 0 !important;
-	display: inline-block;
-	background: url(../images/arrow.png);
-	background-repeat: no-repeat;
-	background-position: right 10px;
-}
-
 .inline-widget .inline-editor-header .filename {
 	display:none !important;
 }
@@ -632,9 +614,23 @@ input[type='range']::-webkit-slider-thumb {
 }
 
 .inlinemark > select {
+	position: absolute;
+    top: 18px;
+    left: 10px;
+    height: 20px;
 	font-size: 12px;
-	height: auto;
-	position: static;
+    color: transparent;
+    -webkit-appearance: none;
+    width: auto;
+	outline-width: 0 !important;
+	display: inline-block;
+    border: none;
+	background: url(../images/arrow.png);
+	background-repeat: no-repeat;
+	background-position: right 10px;
+}
+.inlinemark > select:focus {
+    box-shadow: none;
 }
 
 #track {
