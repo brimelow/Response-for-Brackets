@@ -108,13 +108,6 @@ define(function (require, exports, module) {
     // Editor in current full editor.
     var mainEditor;
 
-    // Select element allowing user to choose the right selector.
-    var selectSelector;
-
-    // Wrapper div for selector select box.
-
-    var selectWrapper;
-    
     // + button for adding a new media query.
     var addButt;
 
@@ -351,13 +344,6 @@ define(function (require, exports, module) {
         frame = doc.getElementById('frame');
         frame.style.width = slider.value + 'px';
 
-        // This is the select box that allows users to choose the a CSS selector
-        // when they are in quick edit mode. It is also wrapped in a div element.
-        selectSelector = document.createElement('select');
-        selectWrapper = document.createElement('div');
-        selectWrapper.id = "selectWrapper";
-        selectWrapper.appendChild(selectSelector);
-
         var h = window.innerHeight;
 
         // Set the initial heights of the panels to 60% response / 40% code editor.
@@ -428,7 +414,6 @@ define(function (require, exports, module) {
      */
     function setupEventHandlers() {
 
-        selectSelector.addEventListener('change', handleSelectorChange, false);
         horzButt.addEventListener('click', handleChangeLayout, false);
         vertButt.addEventListener('click', handleChangeLayout, false);
         slider.addEventListener('change', handleSliderChange, false);
@@ -1090,6 +1075,10 @@ define(function (require, exports, module) {
         // currently set for this element. See the comments in ResponseUtils.js.
         cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, el);
 
+        // Create a select box to contain the list of possible selectors for 
+        // the current element
+        var selectSelector = document.createElement("select");
+        selectSelector.addEventListener('change', handleSelectorChange, false);
         refreshSelectorSelectbox(selectSelector, cssResults);
 
         // If element has an ID, add it to the selectors and use it as the selector.
@@ -1393,6 +1382,7 @@ define(function (require, exports, module) {
         cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, inlineElement);
 
         // refresh the selector drop down
+        var selectSelector = inlineEditor.$htmlContent[0].querySelector("select");
         refreshSelectorSelectbox(selectSelector, cssResults);
 
         // Build the editor contents. 
