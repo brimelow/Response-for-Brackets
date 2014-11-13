@@ -274,6 +274,12 @@ define(function (require, exports, module) {
                 res.selectors.push('.' + el.classList[i]);
                 res.rules['.' + el.classList[i]] = {};
             }
+            
+            // and id or class has not been defined...adding the tag name instead
+            if (res.selectors.length == 0) {
+                res.selectors.push(el.tagName.toLowerCase());
+                res.rules[el.tagName.toLowerCase()] = {};                
+            }
         }
 
         // Return the CSSResults instance.
