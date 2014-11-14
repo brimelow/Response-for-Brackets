@@ -74,6 +74,10 @@ define(function (require, exports, module) {
 
     // Document for the generated media-queries.css file.
     var mediaQueryDoc;
+    
+    // The file where media queries will be stored. This should be moved into 
+    // a preferences so it can be customized
+    var mediaQueryFile = 'css/media-queries.css';
 
     // I write to this temp document to show in the inline editor.
     var tempCSSDoc;
@@ -207,7 +211,6 @@ define(function (require, exports, module) {
     // The splitter that allows resizing of the split view.
     var splitter;
     
-
     /*================  Begin function definitions  ================*/  
 
     /** 
@@ -237,14 +240,14 @@ define(function (require, exports, module) {
 
         // Check if the media-queries css file exists. If it doesn't, then create a 
         // new file. If it does, then reload and refresh UI
-        FileSystem.resolve(projectRoot + 'media-queries.css', function(result, file, fileSystemStats) {
+        FileSystem.resolve(projectRoot + mediaQueryFile, function(result, file, fileSystemStats) {
             if ('NotFound' === result) {
                 // There must be a better way of doing what I did here. Basically I'm
                 // opening or creating a file  called media-queries.css. I then add
                 // the file to the working set but immediately switch back and select
                 // the HTML file. All of this was just to help the demo go smoothly.
-                FileSystem.getFileForPath(projectRoot + 'media-queries.css').write( '', {}, function() {
-                    DocumentManager.getDocumentForPath(projectRoot + 'media-queries.css').done(
+                FileSystem.getFileForPath(projectRoot + mediaQueryFile).write( '', {}, function() {
+                    DocumentManager.getDocumentForPath(projectRoot + mediaQueryFile).done(
                         function(doc) {
 
                             // Save reference to the new files document.
