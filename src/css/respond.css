@@ -207,10 +207,6 @@ font-size: 13px;
 	height: 100%;
 }
 
-#main-toolbar {
-	display: none;
-}
-
 .main-view .content {
 
 	position: absolute;
