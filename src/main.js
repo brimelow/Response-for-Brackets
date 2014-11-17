@@ -32,6 +32,7 @@ define(function (require, exports, module) {
     var Menus = brackets.getModule("command/Menus");
     var DocumentManager = brackets.getModule("document/DocumentManager");
     var MainViewManager = brackets.getModule("view/MainViewManager");
+    var WorkspaceManager = brackets.getModule("view/WorkspaceManager");
     var NativeFileSystem = brackets.getModule("file/NativeFileSystem").NativeFileSystem;
     var FileUtils = brackets.getModule("file/FileUtils");
     var ProjectManager = brackets.getModule("project/ProjectManager");
@@ -216,57 +217,80 @@ define(function (require, exports, module) {
     /** 
      *  Main entry point of extension that is called when responsive mode is launched.
      */
-    function Response() {
+    function Response(e) {
 
+        var iconLink = e.target;
+        document.body.classList.toggle('responsive-mode');
+        
         // Prevent creating UI more than once
-        if(document.querySelector('#response')) return;
+        if(document.querySelector('#response')) {
 
-        modulePath = FileUtils.getNativeModuleDirectoryPath(module);
-        projectRoot = ProjectManager.getProjectRoot().fullPath;
-        mainEditor = EditorManager.getCurrentFullEditor();
-        cm = mainEditor._codeMirror;
-        mainView = document.querySelector('.main-view');
+            // update toolbar icon to indicate we are leaving responsive mode
+            iconLink.style.backgroundPosition = '0 0';
 
-        // Is there a brackets function for loading non-module scripts?
-        // I couldn't find one so I wrote a simple one.    
-        ResponseUtils.loadExternalScript(modulePath + "/js/TweenMax.min.js", document.head);
-        ResponseUtils.loadExternalScript(modulePath + "/Query.js", document.head);    
+            // remove the #response view
+            var element = document.getElementById("response");
+            element.parentNode.removeChild(element);
 
-        // Load in the main CSS for the responsive UI.    
-        ExtensionUtils.addLinkedStyleSheet(modulePath + "/css/respond.css");
+            // Manually fire the window resize event to position everything correctly.
+            handleWindowResize(null);
 
-        // Store the current HTML document that we'll be working with.
-        currentDoc = DocumentManager.getCurrentDocument();
+            cm.refresh();
+            
+            return;
 
-        // Check if the media-queries css file exists. If it doesn't, then create a 
-        // new file. If it does, then reload and refresh UI
-        FileSystem.resolve(projectRoot + mediaQueryFile, function(result, file, fileSystemStats) {
-            if ('NotFound' === result) {
-                // There must be a better way of doing what I did here. Basically I'm
-                // opening or creating a file  called media-queries.css. I then add
-                // the file to the working set but immediately switch back and select
-                // the HTML file. All of this was just to help the demo go smoothly.
-                FileSystem.getFileForPath(projectRoot + mediaQueryFile).write( '', {}, function() {
-                    DocumentManager.getDocumentForPath(projectRoot + mediaQueryFile).done(
-                        function(doc) {
+        } else {
 
-                            // Save reference to the new files document.
-                            mediaQueryDoc = doc;
-                            MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
+            // update toolbar icon to indicate we are in responsive mode
+            iconLink.style.backgroundPosition = '0 -26px';
 
-                            // Write a blank document.
-                            FileUtils.writeText(mediaQueryDoc.file, '');
-                            CommandManager.execute(Commands.CMD_OPEN, {fullPath: currentDoc.file.fullPath});
+            modulePath = FileUtils.getNativeModuleDirectoryPath(module);
+            projectRoot = ProjectManager.getProjectRoot().fullPath;
+            mainEditor = EditorManager.getCurrentFullEditor();
+            cm = mainEditor._codeMirror;
+            mainView = document.querySelector('.main-view');
 
-                            // now we are ready to create the response UI
-                            createResponseUI();
-                        }
-                    );
-                });
-            } else {
+            // Is there a brackets function for loading non-module scripts?
+            // I couldn't find one so I wrote a simple one.
+            ResponseUtils.loadExternalScript(modulePath + "/js/TweenMax.min.js", document.head);
+            ResponseUtils.loadExternalScript(modulePath + "/Query.js", document.head);
 
-            }
-        });
+            // Load in the main CSS for the responsive UI.
+            ExtensionUtils.addLinkedStyleSheet(modulePath + "/css/respond.css");
+
+            // Store the current HTML document that we'll be working with.
+            currentDoc = DocumentManager.getCurrentDocument();
+
+            // Check if the media-queries css file exists. If it doesn't, then create a
+            // new file. If it does, then reload and refresh UI
+            FileSystem.resolve(projectRoot + mediaQueryFile, function(result, file, fileSystemStats) {
+//                if ('NotFound' === result) {
+                    // There must be a better way of doing what I did here. Basically I'm
+                    // opening or creating a file  called media-queries.css. I then add
+                    // the file to the working set but immediately switch back and select
+                    // the HTML file. All of this was just to help the demo go smoothly.
+                    FileSystem.getFileForPath(projectRoot + mediaQueryFile).write( '', {}, function() {
+                        DocumentManager.getDocumentForPath(projectRoot + mediaQueryFile).done(
+                            function(doc) {
+
+                                // Save reference to the new files document.
+                                mediaQueryDoc = doc;
+                                MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
+
+                                // Write a blank document.
+                                FileUtils.writeText(mediaQueryDoc.file, '');
+                                CommandManager.execute(Commands.CMD_OPEN, {fullPath: currentDoc.file.fullPath});
+
+                                // now we are ready to create the response UI
+                                createResponseUI();
+                            }
+                        );
+                    });
+//                } else {
+
+//                }
+            });
+        }
     }
 
     /** 
@@ -709,7 +733,6 @@ define(function (require, exports, module) {
         mainView.style.height = (h - responseHeight - 16) + 'px';
         slider.max = slider.value = w;
         frame.style.width = w + 'px';
-       
     }
 
     /** 
@@ -717,10 +740,13 @@ define(function (require, exports, module) {
      */
     function handlePanelResize(e, size) {
   
-        // Only refresh codemirror every other call (perf).    
-        if(size & 1)
-            cm.refresh();
+        console.log("resize: " + size);
 
+        // Only refresh codemirror every other call (perf).    
+        if(size & 1) {
+            cm.refresh();
+        }
+        
         // Adjust things properly if in horizontal mode.
         if (mode & 1) {
             mainView.style.left = (parseInt(size) + 15) + 'px';
@@ -729,14 +755,8 @@ define(function (require, exports, module) {
             return;
         } 
 
-        // Adjust this triangle position if the sidebar is open.
-        if(sidebar.offsetWidth > 0) {
-            triangle.style.top = (size + triangleOffset) + "px";
-        }
-
         // Were in vertical mode so adjust things accordingly.
         mainView.style.height = (window.innerHeight - size - 16) + 'px';
-
     }
 
     /** 
@@ -1438,12 +1458,14 @@ define(function (require, exports, module) {
      *  Called when brackets has opened and is ready.
      */
     AppInit.appReady(function () {
-        var iconURL = require.toUrl('./images/icon.png');
         // Here we add the toolbar icon that launches you into responsive mode.
         var icon = document.createElement('a');
         icon.href = "#";
         icon.className = "responseIcon";
-        icon.style.cssText = "margin: 10px 0 5px;content: '';background: url('"+iconURL+"') 0 0 no-repeat;display: inline-block;width: 14px;height: 17px;display: inline-block;";
+
+        var iconURL = require.toUrl('./images/toolbar-icon.png');
+        icon.style.cssText = "content: ''; background: url('"+iconURL+"') 0 0 no-repeat;";
+
         document.querySelector('#main-toolbar .buttons').appendChild(icon);
         icon.addEventListener('click', Response, false);
     });
