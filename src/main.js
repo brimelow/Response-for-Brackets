@@ -223,11 +223,6 @@ define(function (require, exports, module) {
 
         var iconLink = e.target;
         document.body.classList.toggle('responsive-mode');
-        
-        // Only provide a CSS editor when cursor is in HTML content
-        if (EditorManager.getCurrentFullEditor().getLanguageForSelection().getId() !== "html") {
-            return;
-        }
 
         // Prevent creating UI more than once
         if(document.querySelector('#response')) {
@@ -248,14 +243,19 @@ define(function (require, exports, module) {
 
         } else {
 
-            // update toolbar icon to indicate we are in responsive mode
-            iconLink.style.backgroundPosition = '0 -26px';
-
             modulePath = FileUtils.getNativeModuleDirectoryPath(module);
             projectRoot = ProjectManager.getProjectRoot().fullPath;
             mainEditor = EditorManager.getCurrentFullEditor();
             cm = mainEditor._codeMirror;
             mainView = document.querySelector('.main-view');
+        
+            // Only provide a CSS editor when cursor is in HTML content
+            if (editorManager.getLanguageForSelection().getId() !== "html") {
+                return;
+            }
+
+            // update toolbar icon to indicate we are in responsive mode
+            iconLink.style.backgroundPosition = '0 -26px';
 
             // Is there a brackets function for loading non-module scripts?
             // I couldn't find one so I wrote a simple one.
