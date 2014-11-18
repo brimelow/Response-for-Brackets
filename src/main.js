@@ -228,7 +228,7 @@ define(function (require, exports, module) {
         if (EditorManager.getCurrentFullEditor().getLanguageForSelection().getId() !== "html") {
             return;
         }
-        
+
         // Prevent creating UI more than once
         if(document.querySelector('#response')) {
 
