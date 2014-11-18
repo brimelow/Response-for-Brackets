@@ -219,8 +219,15 @@ define(function (require, exports, module) {
      */
     function Response(e) {
 
+        e.stopImmediatePropagation();
+
         var iconLink = e.target;
         document.body.classList.toggle('responsive-mode');
+        
+        // Only provide a CSS editor when cursor is in HTML content
+        if (EditorManager.getCurrentFullEditor().getLanguageForSelection().getId() !== "html") {
+            return;
+        }
         
         // Prevent creating UI more than once
         if(document.querySelector('#response')) {
