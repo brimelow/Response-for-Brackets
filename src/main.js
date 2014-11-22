@@ -1199,12 +1199,7 @@ define(function (require, exports, module) {
             inlineEditor = new ResponseInlineEdit();
 
             // Load the editor with the CSS we generated.
-<<<<<<< HEAD
-            console.log( 'init load' );
             inlineEditor.load(hostEditor, inlineSelector, 0, count+2, editorContents.contents);
-=======
-            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, str);
->>>>>>> switching-behaviour
 
             // Called when the editor is added to the DOM.          
             inlineEditor.onAdded = function() {
@@ -1214,12 +1209,7 @@ define(function (require, exports, module) {
                 // Let everyone know the editor is open.
                 isInlineOpen = true;
 
-<<<<<<< HEAD
                 var eh = inlineEditor.$htmlContent[0].querySelector(".inlineEditorHolder");
-                console.log( eh );
-=======
-                var eh = document.querySelector(".inlineEditorHolder");
->>>>>>> switching-behaviour
 
                 // Create a new mark that will show at the top of the inline editor
                 // with the correct query color to remind the user of what they're changing.
