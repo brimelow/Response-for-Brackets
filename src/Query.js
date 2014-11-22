@@ -27,8 +27,9 @@ THE SOFTWARE. */
  * This would be easy to turn into a module but no time for it now.
  */
 
-(function(window) {
-
+define(function (require, exports, module) {
+    "use strict";
+    
 	// A Query object represents a single media query and all of its data.
 	function Query(width) {
 
@@ -40,29 +41,25 @@ THE SOFTWARE. */
 		this.view = null;
 		this.left = 0;
 	}
-
-	// An object that represents a selector and all its rules.
-	function Selector() {
-		this.rules = {};
-	}
-
+    
 	// Function that you call when you want add a new CSS rule
 	// for a particular selector to the media query.
-	Query.prototype.addRule = function(selector, rule) {
+	Query.prototype = {
+        addRule: function(selector, rule) {
 		
-		// If the selector doesn't exist in this query, add it.
-		if(this.selectors[selector] == null)
-			this.selectors[selector] = new Selector();
-		
-		// Separate the CSS property and the value.
-		var style = rule.trim().split(':');
-		
-		// Add the rule to the selector.	
-		if(style[1] != undefined)
-			this.selectors[selector].rules[style[0]] = style[1];
-	}
+            // If the selector doesn't exist in this query, add it.
+            if(this.selectors[selector] == null)
+                this.selectors[selector] = { rules: {} }; //new Selector();
 
-	//Exposes the Query object the global scope (not optimal). 
-	window.Query = Query;
+            // Separate the CSS property and the value.
+            var style = rule.trim().split(':');
 
-})(window);
+            // Add the rule to the selector.	
+            if(style[1] != undefined)
+                this.selectors[selector].rules[style[0].trim()] = style[1].trim();
+        }
+    }
+
+    Query.prototype.constructor = Query;
+    exports.Query = Query;
+});
