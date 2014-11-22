@@ -51,7 +51,7 @@
 	-webkit-font-smoothing: subpixel-antialiased;
 }
 
-
+/*
 .response-dialog .modal-header {
 	border-bottom: 1px solid hsla(0, 0%, 0%, 0.15);
 	background: hsl(0, 0%, 95%);
@@ -66,6 +66,7 @@
 .response-dialog h1 {
 	font-size: 22px;
 }
+*/
 
 #highlight {
 	position: absolute;
@@ -514,25 +515,25 @@ input[type='range']::-webkit-slider-thumb {
 	top: 10px;
 	left: 175px;
 }
-
-.CodeMirror-linewidget {
+/*
+.responsive-mode .CodeMirror-linewidget {
 	overflow: hidden !important;
 	margin: 5px 0 !important;
 	padding-top: 9px !important;
 }
 
-.CodeMirror-scroll {
+.responsive-mode .CodeMirror-scroll {
 	margin-right: 0 !important;
 }
 
-.CodeMirror-vscrollbar > div {
+.responsive-mode .CodeMirror-vscrollbar > div {
 	display: none !important;
 }
 
-.main-view .CodeMirror-wrap {
+.responsive-mode .main-view .CodeMirror-wrap {
 	height: 100% !important;
 }
-
+*/
 .caret {
 	display: none !important;
 }

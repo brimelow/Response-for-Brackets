@@ -41,7 +41,7 @@ define(function (require, exports, module) {
     var Dialogs = brackets.getModule("widgets/Dialogs");
     var AppInit = brackets.getModule("utils/AppInit");
     var FileSystem = brackets.getModule("filesystem/FileSystem");
-
+    var CSSUtils = brackets.getModule("language/CSSUtils");
     
     /*================  Load my custom modules  ================*/  
 
@@ -54,6 +54,9 @@ define(function (require, exports, module) {
 
     // Set of DOM and CSS utility methods.
     var ResponseUtils = require("ResponseUtils");
+    
+    // represents a media query and its custom selectors/rules
+    var Query = require("Query").Query;
 
 
     /*================  Define module properties  ================*/  
@@ -134,9 +137,6 @@ define(function (require, exports, module) {
     // Array for sorting the queries.
     var sort = [];
 
-    // Crazy high starting index for query color bars.
-    var z = 5000;
-
     // The currently selected media query.
     var currentQuery;
 
@@ -212,15 +212,23 @@ define(function (require, exports, module) {
      */
     function Response(e) {
 
-        var iconLink = e.target;
-        document.body.classList.toggle('responsive-mode');
+        e.stopImmediatePropagation();
         
+        // Only provide a CSS editor when cursor is in HTML content
+        if (DocumentManager.getCurrentDocument().language.getId() !== "html") {
+            return;
+        }
+
+        var iconLink = e.target;
+        //document.body.classList.toggle('responsive-mode');
+
         // Prevent creating UI more than once
         if(document.querySelector('#response')) {
 
             // update toolbar icon to indicate we are leaving responsive mode
             iconLink.style.backgroundPosition = '0 0';
-
+            document.body.classList.remove('responsive-mode');
+            
             // remove the #response view
             var element = document.getElementById("response");
             element.parentNode.removeChild(element);
@@ -234,14 +242,15 @@ define(function (require, exports, module) {
 
         } else {
 
-            // update toolbar icon to indicate we are in responsive mode
-            iconLink.style.backgroundPosition = '0 -26px';
-
             modulePath = FileUtils.getNativeModuleDirectoryPath(module);
             projectRoot = ProjectManager.getProjectRoot().fullPath;
             mainEditor = EditorManager.getCurrentFullEditor();
             cm = mainEditor._codeMirror;
             mainView = document.querySelector('.main-view');
+
+            // update toolbar icon to indicate we are in responsive mode
+            iconLink.style.backgroundPosition = '0 -26px';
+            document.body.classList.add('responsive-mode');
 
             // Is there a brackets function for loading non-module scripts?
             // I couldn't find one so I wrote a simple one.
@@ -257,32 +266,83 @@ define(function (require, exports, module) {
             // Check if the media-queries css file exists. If it doesn't, then create a
             // new file. If it does, then reload and refresh UI
             FileSystem.resolve(projectRoot + mediaQueryFile, function(result, file, fileSystemStats) {
-//                if ('NotFound' === result) {
-                    // There must be a better way of doing what I did here. Basically I'm
-                    // opening or creating a file  called media-queries.css. I then add
-                    // the file to the working set but immediately switch back and select
-                    // the HTML file. All of this was just to help the demo go smoothly.
-                    FileSystem.getFileForPath(projectRoot + mediaQueryFile).write( '', {}, function() {
-                        DocumentManager.getDocumentForPath(projectRoot + mediaQueryFile).done(
-                            function(doc) {
+                
+                // create an empty file as one doesn't exist yet                
+                if ('NotFound' === result) {
+                    FileSystem.getFileForPath(projectRoot + mediaQueryFile).write('');
+                }
+                
+                DocumentManager.getDocumentForPath(projectRoot + mediaQueryFile)
+                    .done(function(doc) {
 
-                                // Save reference to the new files document.
-                                mediaQueryDoc = doc;
-                                MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
+                        // Save reference to the new files document.
+                        mediaQueryDoc = doc;
+                        MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
 
-                                // Write a blank document.
-                                FileUtils.writeText(mediaQueryDoc.file, '');
-                                CommandManager.execute(Commands.CMD_OPEN, {fullPath: currentDoc.file.fullPath});
+                        // now we are ready to create the response UI
+                        createResponseUI();
 
-                                // now we are ready to create the response UI
-                                createResponseUI();
-                            }
-                        );
-                    });
-//                } else {
-
-//                }
+                        // refresh media queries from file if they exist
+                        _reloadMediaQueriesFromFile(doc);
+                    }
+                );
             });
+        }
+        
+        function _reloadMediaQueriesFromFile(mediaQueryDoc) {
+
+            // break the css file into media queries. assumption is that the output for 
+            // each media query starts with "@media only screen and (max-width:###px) {"
+            var mediaQueryRegex = /@media only screen and \(max-width:[0-9]+px\) {\s*([\.#\w:\(\)\-]+\s*{\s*[\w\s:%;-]*}\s*)*}/g;
+            var mediaQueries = mediaQueryDoc.getText().match(mediaQueryRegex);
+
+            //reset master query list 
+            queries = {};
+            sort = [];
+
+            if (mediaQueries != null && mediaQueries.length > 0) {
+                for (var i = 0; i < mediaQueries.length; i++) {
+                    
+                    // get the width for the current media query
+                    var matches = /max-width:([0-9]+)px/g.exec(mediaQueries[i]);
+                    var w = matches[1];
+                    
+                    // add a query  mark to the top of the preview window
+                    var queryMark = addQueryMark(w);
+
+                    // extract all the selectors from the current media query
+                    var selectors = CSSUtils.extractAllSelectors(mediaQueries[i], mediaQueryDoc.getLanguage().getMode());
+                    
+                    // add the rules associated to each selector to the queryMark
+                    _addRulesToMediaQueries(queryMark, mediaQueries[i], selectors)
+                }
+            }
+        }
+        
+        /*
+         * Iterates through the list of supplied selectors and updates the 
+         * queryMark with the selector and the list of rules associated to 
+         * the selector
+         */
+        function _addRulesToMediaQueries(queryMark, mediaQuery, selectors) {
+            
+            if (selectors != null && selectors.length > 0) {
+                for (var i = 0; i < selectors.length; i++) {
+                    var escapedSelector = selectors[i].selector.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+                    var ruleListRegex = new RegExp(escapedSelector + "\\s+{([\\s\\w\\d:;%\-]*)}", "g");
+                    
+                    var matches = ruleListRegex.exec(mediaQuery);
+                    if (matches != null) {
+                        var ruleList = matches[1].split(';');
+                        // doing length - 1 here as the last item in the split array will be an empty string
+                        // assumption is that the last char in rule list is a ;.
+                        // NOTE: Is it possible for the last rule not to have a ; ???? need better logic if this valid
+                        for (var j = 0; j < ruleList.length - 1; j++) {
+                            queryMark.addRule(selectors[i].selector, ruleList[j].trim() + ";");   
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -564,6 +624,9 @@ define(function (require, exports, module) {
 
         // Listen for click events on the frame's body
         frameDOM.body.addEventListener('click', handleFrameClick, false);
+
+        // inject frame with media queries as inline style element
+        refreshMediaQueries(false);
     }
 
     /** 
@@ -581,33 +644,47 @@ define(function (require, exports, module) {
      *  Called when the user clicks on the + button to add a new query.
      */
     function handleAddQuery(e) {
-
+        
         var w = slider.value;
+        
+        // create the query mark at the top of the preview window
+        // and set it as the current media query
+        currentQuery = addQueryMark(w);
+
+        // If the inline editor is open, update it with the newly selected query.
+        if(isInlineOpen)
+            updateInlineWidget();
+
+        // Calling this function will write the new query to the style block 
+        // in the iframe and also to the media-queries.css file.
+        refreshMediaQueries();
+    }
+
+    function addQueryMark(w) {
 
         // First check that there isn't already a query for this width.
-        if (queries[w] == undefined) {
+        var q = queries[w];
+        if (q == undefined) {
 
-            // Create a new Query object.
+            // Create a new Query object and add to master list
             var q = new Query(w);
-
-            // Set is as the current media query.
-            currentQuery = q;
-
-            // Add the new query into the master list.
             queries[w] = q;
 
             // Add the current width to the sort array.
+            // Sort so the smallest number is first.
             sort.push(w);
-
-            // Sort so the largest number is first.
             sort.sort(function(a, b) {
                 return a - b
             });
-
+        }
+        
+        // if query mark div does not yet exist, create it and add
+        if (document.querySelector('#queryMark' + w) === null) {
+            
             // Create a new colored mark div and add it to the track.
             var mark = track.insertBefore(document.createElement('div'), track.firstChild);
             mark.className = "mark";
-            mark.id = w;
+            mark.id = 'queryMark' + w;
 
             // Create the label that displays the pixel width.
             var label = mark.appendChild(document.createElement('div'));
@@ -622,7 +699,7 @@ define(function (require, exports, module) {
             
             // This loop goes through all of the created media queries and 
             // essentially redraws all the marks with the correct color and size.        
-            for (var i = 0, len = sort.length; i<len; i++) {
+            for (var i = 0, z = 5000; i < sort.length; i++) {
                 
                 var left = 0;
                 var w = parseInt(queries[sort[i]].width);
@@ -651,22 +728,17 @@ define(function (require, exports, module) {
                         queries[sort[i]].color.b + "))";
             }
         }
-
-        // If the inline editor is open, update it with the newly selected query.
-        if(isInlineOpen)
-            updateInlineWidget();
-
-        // Calling this function will write the new query to the style block 
-        // in the iframe and also to the media-queries.css file.
-        refreshMediaQueries();
+        
+        return q;
     }
-
+    
     /** 
      *  Called when the user clicks on one of the colored query marks in the track.
      */
     function handleQueryClicked(e) {
 
-        var w = parseInt(e.target.id);
+        // parse the width from the id. 9 is the length of queryMark prefix in id
+        var w = parseInt(e.target.id.substr(9));
         var q = queries[w];
 
         // Set the clicked query as the current query.
@@ -725,8 +797,6 @@ define(function (require, exports, module) {
      */
     function handlePanelResize(e, size) {
   
-        console.log("resize: " + size);
-
         // Only refresh codemirror every other call (perf).    
         if(size & 1) {
             cm.refresh();
@@ -1129,8 +1199,12 @@ define(function (require, exports, module) {
             inlineEditor = new ResponseInlineEdit();
 
             // Load the editor with the CSS we generated.
+<<<<<<< HEAD
             console.log( 'init load' );
             inlineEditor.load(hostEditor, inlineSelector, 0, count+2, editorContents.contents);
+=======
+            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, str);
+>>>>>>> switching-behaviour
 
             // Called when the editor is added to the DOM.          
             inlineEditor.onAdded = function() {
@@ -1140,8 +1214,12 @@ define(function (require, exports, module) {
                 // Let everyone know the editor is open.
                 isInlineOpen = true;
 
+<<<<<<< HEAD
                 var eh = inlineEditor.$htmlContent[0].querySelector(".inlineEditorHolder");
                 console.log( eh );
+=======
+                var eh = document.querySelector(".inlineEditorHolder");
+>>>>>>> switching-behaviour
 
                 // Create a new mark that will show at the top of the inline editor
                 // with the correct query color to remind the user of what they're changing.
@@ -1421,7 +1499,7 @@ define(function (require, exports, module) {
      *  Function that goes through all of the media query data and writes it to the 
      *  style block in the iframe and also to the media-queries.css file.
      */
-    function refreshMediaQueries() {
+    function refreshMediaQueries(writeToFile) {
         
         // Defining some vars we'll need.
         var s = "";
@@ -1453,7 +1531,9 @@ define(function (require, exports, module) {
         style.textContent = s;
         
         // Write the new text to the media-queries.css file.
-        FileUtils.writeText(mediaQueryDoc.file, s);
+        if (writeToFile === undefined || writeToFile) {
+            FileUtils.writeText(mediaQueryDoc.file, s);   
+        }
     }
 
     /** 

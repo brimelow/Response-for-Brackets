@@ -59,7 +59,6 @@ define(function (require, exports, module) {
     *          the temp CSS file, [4] display up to this end line, [5] the tempCSSDoc 
     */
     ResponseInlineEdit.prototype.load = function (hostEditor, selector, start, end, str) {
-        console.log( 'im inside');
         ResponseInlineEdit.prototype.parentClass.load.apply(this, arguments);
 
         this.doc = new DocumentModule.Document((new InMemoryFile('temp-response.css', FileSystem)), (new Date()), str);
@@ -82,7 +81,6 @@ define(function (require, exports, module) {
         this.sizeInlineWidgetToContents();
 
         // Append the editor div to the main div created in the super class
-        console.log( 'adding this.editorDiv: ', this.editorDiv );
         this.$htmlContent.append(this.editorDiv);
     };
     
