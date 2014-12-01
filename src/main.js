@@ -42,6 +42,7 @@ define(function (require, exports, module) {
     var AppInit = brackets.getModule("utils/AppInit");
     var FileSystem = brackets.getModule("filesystem/FileSystem");
     var CSSUtils = brackets.getModule("language/CSSUtils");
+    var HTMLUtils = brackets.getModule("language/HTMLUtils");
     
     /*================  Load my custom modules  ================*/  
 
@@ -179,14 +180,6 @@ define(function (require, exports, module) {
     // The main Brackets sidebar div.
     var sidebar;
 
-
-    var cmDOM = {};
-    /*    ⬆    */
-    /* I use these to map cm lines(top) to frame DOM(below) */
-    /*    ⬇    */
-    var frDOM = {};
-
-   
     // Is the code currently animating.
     var isAnimating = false;
     
@@ -460,6 +453,7 @@ define(function (require, exports, module) {
     function buildDOMCache() {
 
         var lines = cm.getValue().split(/\n/);
+        var frDOM = [], cmDOM = [];
 
         for(var i=0; i<lines.length; i++) {
             var tags = lines[i].match(/(?:<)(\w+)(?=\s|>)/g);
@@ -486,6 +480,11 @@ define(function (require, exports, module) {
                 frDOM[tag].push(elements[i])
             }
 
+        }
+
+        return {
+            frameDom: frDOM,
+            codeDom: cmDOM
         }
     }
 
@@ -605,9 +604,6 @@ define(function (require, exports, module) {
         // Store a reference to the iframe document.
         frameDOM = this.document;
         frameDOM.body.firstElementChild.style.overflowX = 'hidden';
-
-        // Now we create our DOM mapping cache.
-        buildDOMCache();
 
         // Add an empty style block in the iframe head tag. This is where we
         // will write the CSS changes so they update live in the preview.
@@ -878,6 +874,7 @@ define(function (require, exports, module) {
 
         // Get the HTML tag name that the cursor is currently on.
         var tag = cm.getTokenAt(cur).state.htmlState.tagName;
+        //var tagInfo = HTMLUtils.getTagInfo()
         
         var ind;
 
@@ -886,16 +883,18 @@ define(function (require, exports, module) {
             cm.removeLineClass(selected.line, "background");
         }
 
+        var domCache = buildDOMCache();
+
         // Check to see if the editor even contains any tags of this type.
-        if(cmDOM[tag]) {
+        if(domCache.codeDom[tag]) {
             
             // Find out index position of the tag amongst all of the existing tags of this type.   
-            ind = cmDOM[tag].indexOf(line);
+            ind = domCache.codeDom[tag].indexOf(line);
             
             // Now find the corrensponding DOM element using the position index.
             // IMPORTANT: If the user adds or changes lines in the HTML editor you will
             // need to rebuild the mapping cache. I never wrote the code for that.
-            var el = frDOM[tag][ind];
+            var el = domCache.frameDom[tag][ind];
 
             // Set the selected line object using the line number and DOM element.
             selected = {el:el, line:line};
@@ -968,9 +967,10 @@ define(function (require, exports, module) {
         }
 
         var tag = target.tagName.toLowerCase();
+        var domCache = buildDOMCache();
 
         // Find out the position index of the this tag in the cache.
-        var ind = frDOM[tag].indexOf(target);
+        var ind = domCache.frameDom[tag].indexOf(target);
 
         // We'll use the codemirror scroller element to animate our code into view.
         var scroller = cm.display.scroller;
@@ -978,7 +978,7 @@ define(function (require, exports, module) {
         var editorHeight = (scroller.offsetHeight > 0) ? scroller.offsetHeight : parseInt(scroller.style.height);
         
         // Find out the correct line number from the cache.
-        var line = cmDOM[tag][ind];
+        var line = domCache.codeDom[tag][ind];
         
         // Set this as the new selected line.
         selected = {el:target, line:line};
@@ -1143,16 +1143,16 @@ define(function (require, exports, module) {
             cm.removeLineClass(selected.line, "background");
 
         var cursor = cm.getCursor();
-        
-        // Find out the tag name they were on when they hit Cmd-E. If could not
-        // be determined then return so message is displayed to user
-        var tag = cm.getTokenAt(cursor).state.htmlState.tagName;
-        if (tag ===  null) {
+
+        // get the tag information for the currently cursor position in the HTML
+        // document. If could not be determined then return so message is displayed to user
+        var tagInfo = HTMLUtils.getTagInfo(hostEditor, pos);
+        if (tagInfo.tagName === "") {
             return null;
         }
         
-        // Get a reference to the DOM element in the iframe.
-        var el = frDOM[tag][cmDOM[tag].indexOf(cursor.line)];
+        // get the first element in the frame dom that matches the tagInfo
+        var el = _getFrameElement(frameDOM, tagInfo);
 
         // Set this element to the inlineElement property that is used elsewhere.
         inlineElement = el;
@@ -1203,8 +1203,6 @@ define(function (require, exports, module) {
 
             // Called when the editor is added to the DOM.          
             inlineEditor.onAdded = function() {
-                
-                console.log("onAdded invoked");
 
                 // Let everyone know the editor is open.
                 isInlineOpen = true;
@@ -1230,10 +1228,6 @@ define(function (require, exports, module) {
 
                 // Get a reference to the codemirror instance of the inline editor.
                 inlineCm = inlineEditor.editor._codeMirror;
-
-                // Since the select box is invisible we still need to set the first line.
-                //inlineCm.doc.setLine(0, inlineSelector + " {");
-                //inlineCm.doc.replaceRange(inlineSelector + " {", 0);
 
                 // Loops through the existingEdits array and highlights the appropriate lines
                 // in the inline editor.
@@ -1268,15 +1262,11 @@ define(function (require, exports, module) {
 
                 // Style the inline mark to match the color of the current query.
                 mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
-                
-                console.log("onAdded finished");
             }
             
             // Called when the inline editor is closed.
             inlineEditor.onClosed = function() {
 
-                console.log("onClosed invoked");
-                
                 // Call parent function first.
                 ResponseInlineEdit.prototype.parentClass.onAdded.apply(this, arguments);
 
@@ -1291,7 +1281,6 @@ define(function (require, exports, module) {
                 selectSelector.options.length = 0;
                 $(selectSelector).remove();
 */
-                console.log("onClosed finished");
             } 
 
             // I had to mod the EditorManager module so it always chooses me.
@@ -1300,6 +1289,28 @@ define(function (require, exports, module) {
         //});
 
         return result.promise();
+
+        // uses the tagInfo from the editor to create adom element in the frame document
+        // that needs to be parsed for editing. we don't look up the element as we need
+        // more control in what is not included when getting the css rules associated to the
+        // element
+        function _getFrameElement(frameDom, tagInfo) {
+
+            var element = frameDom.createElement(tagInfo.tagName);
+
+            if (tagInfo.position.tokenType === HTMLUtils.ATTR_NAME || tagInfo.position.tokenType === HTMLUtils.ATTR_VALUE) {
+                if (tagInfo.attr.name === "class") {
+                    // Class selector
+                    element.className = tagInfo.attr.value.trim();
+
+                } else if (tagInfo.attr.name === "id") {
+                    // ID selector
+                    element.id = tagInfo.attr.value.trim();
+                }
+            }
+
+            return element;
+        }
     }
 
     /**
