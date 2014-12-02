@@ -67,12 +67,6 @@ define(function (require, exports, module) {
     // Path to this extension.
     var modulePath;
 
-    // Holds the starting top position of the sidebar triangle.
-    var triangleOffset;
-
-    // The little arrow in the working set that shows which file is open.
-    var triangle;
-
     // Path to the current open project.
     var projectRoot;
 
@@ -354,12 +348,6 @@ define(function (require, exports, module) {
         var doc = document;
         doc.body.backgroundColor = "#303030";
 
-        // Get a reference to the triangle in the project panel so we can adjust its top.
-        //triangle = document.querySelector(".sidebar-selection-triangle");
-
-        // Get the current triangle top value
-        //triangleOffset = triangle.offsetTop;
-
         // I wrote my own DOM insertion utility to avoid jQuery here. Insanely faster.
         // See the details of this function in the ResponseUtils.js module.
         var domArray = [{tag:"div",attr:{id:"response", class:"quiet-scrollbars"}, parent:-1},
@@ -433,10 +421,6 @@ define(function (require, exports, module) {
         // Create a vertical splitter to divide the editor and the response UI
         Splitter.makeResizable(response, 'vert', 100, cm);
         splitter = document.querySelector('.vert-splitter');
-
-        // Position the selection triangle
-        //triangle.style.top = (response.offsetHeight + triangleOffset + 15) + "px";
-        //triangleOffset = triangle.offsetTop - response.offsetHeight;
         
         // Manually fire the window resize event to position everything correctly.
         handleWindowResize(null);
@@ -501,10 +485,8 @@ define(function (require, exports, module) {
         frame.addEventListener('mouseout', handleFrameMouseOut, false);
         addButt.addEventListener('click', handleAddQuery, false);
         window.addEventListener('resize', handleWindowResize, false);
-        $(response).on('panelResizeStart', handlePanelStart);
         $(response).on('panelResizeUpdate', handlePanelResize);
         inspectButton.addEventListener('click', handleInspectToggle, false);
-
     }
 
     /** 
@@ -814,15 +796,6 @@ define(function (require, exports, module) {
         mainView.style.height = (window.innerHeight - size - 16) + 'px';
     }
 
-    /** 
-     *  Called when the user starts resizing using the splitter.
-     */
-    function handlePanelStart(e, size) {
-
-        // This is used to adjust the position of project triangle.
-        //triangleOffset = triangle.offsetTop - response.offsetHeight;
-
-    }
 
     /** 
      *  Called when the user clicks on the inspect mode toggle button.
