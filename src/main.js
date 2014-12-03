@@ -89,6 +89,9 @@ define(function (require, exports, module) {
     // Iframe containing the live HTML preview.
     var frame;
 
+    // The track indicator that display the current width of the slider
+    var trackLabel;
+    
     // The track where the color media query bars are shown.
     var track;
 
@@ -360,6 +363,7 @@ define(function (require, exports, module) {
             {tag:"a",attr:{class:"divider"}, parent:1},
             {tag:"div",attr:{id:"layoutText"}, text:"LAYOUT", parent:1},
             {tag:"a",attr:{id:"vertButt",class:"vert-active"}, parent:1},
+            {tag:"div",attr:{id:"track-label"}, parent:1},
             {tag:"div",attr:{id:"track"}, parent:0},
             {tag:"input",attr:{id:"slider",type:"range",min:"0"}, parent:0}];
 
@@ -378,7 +382,8 @@ define(function (require, exports, module) {
         vertButt = document.getElementById("vertButt");
         slider = document.getElementById("slider");
         track = document.getElementById("track");
-
+        trackLabel = document.getElementById("track-label");
+        
         // This set of DOM elements creates a dialog for when you try to do 
         // quick edit without first creating a media query. Never used in the demo.
         domArray = [{tag:"div",attr:{class:"response-dialog template modal hide"}, parent:-1},
@@ -411,7 +416,10 @@ define(function (require, exports, module) {
         // Get a reference to the iframe and also set its width to the slider value.
         frame = doc.getElementById('frame');
         frame.style.width = slider.value + 'px';
-
+        
+        // update the track label with the current value
+        trackLabel.textContent = slider.value + 'px';
+        
         var h = window.innerHeight;
 
         // Set the initial heights of the panels to 60% response / 40% code editor.
@@ -537,6 +545,9 @@ define(function (require, exports, module) {
             slider.max = response.offsetWidth;
             slider.value = response.offsetWidth;
             frame.style.width = slider.value + "px";
+        
+            // update the track label with the current value
+            trackLabel.textContent = slider.value + 'px';
 
             // Refresh codemirror
             cm.refresh();          
@@ -572,6 +583,9 @@ define(function (require, exports, module) {
             slider.max = slider.offsetWidth;
             slider.value = slider.max;
             frame.style.width = slider.value + "px";
+        
+            // update the track label with the current value
+            trackLabel.textContent = slider.value + 'px';
 
             // Refresh codemirror
             cm.refresh();
@@ -730,6 +744,9 @@ define(function (require, exports, module) {
         slider.value = w;
         frame.style.width = w + "px";
         
+        // update the track label with the current value
+        trackLabel.textContent = slider.value + 'px';
+
         // In horizontal mode the code editor also snaps to the query width to give more space.      
         if(mode == HORIZONTAL) {
             Splitter.updateElement(w);
@@ -765,6 +782,10 @@ define(function (require, exports, module) {
             slider.max = slider.value = responseWidth;
             frame.style.width = responseWidth + 'px';
             mainView.style.left = (responseWidth + 15) + 'px';
+        
+            // update the track label with the current value
+            trackLabel.textContent = slider.value + 'px';
+
             return;
         }
 
@@ -772,6 +793,9 @@ define(function (require, exports, module) {
         mainView.style.height = (h - responseHeight - 16) + 'px';
         slider.max = slider.value = w;
         frame.style.width = w + 'px';
+        
+        // update the track label with the current value
+        trackLabel.textContent = slider.value + 'px';
     }
 
     /** 
@@ -789,6 +813,10 @@ define(function (require, exports, module) {
             mainView.style.left = (parseInt(size) + 15) + 'px';
             slider.value = slider.max = size;
             frame.style.width = slider.value + "px";
+
+            // update the track label with the current value
+            trackLabel.textContent = slider.value + 'px';
+
             return;
         } 
 
@@ -992,6 +1020,9 @@ define(function (require, exports, module) {
 
         // Set the width of the frame to match the slider value.
         frame.style.width = slider.value + 'px';
+        
+        // update the track label with the current value
+        trackLabel.textContent = slider.value + 'px';
     }
 
     /** 
