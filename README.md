@@ -1,23 +1,19 @@
 # How to install Response for Brackets
 
-## Hacking brackets
-1. Install the latest Brackets build (this gives you the native shell binaries which you'll use in step 6)
-2. Fork the brackets repo
-3. Clone your fork of the repo: `git clone https://github.com/<username>/brackets.git`
-4. Fetch submodules: `cd brackets` and `git submodule update --init`
-5. Add an "upstream" remote: `git remote add upstream https://github.com/adobe/brackets.git`
-6. Run `setup_for_hacking` script
+## Hacking brackets 
+There is no longer a need to hack brackets
 
- | system | command |
- |-----|--------|
- | Mac | `tools/setup_for_hacking.sh "/Applications/Brackets.app"` |
- | Windows | `tools\setup_for_hacking.bat "C:\Program Files (x86)\Brackets"`<br>(MUST be run in a Command Prompt started with "Run as Administrator") |
- | Linux | `sudo tools/setup_for_hacking.sh "/opt/brackets"` |
+## Installing the extension from extension manager
+1. Open Extension Manager
+2. Find the "Response for Brackets - original" extension and install it
 
-7. Copy the files from the `src/bracketsCoreChanges` into your cloned `brackets/src` folder 
+## Installing the extension manually
+1. Choose Help > Show Extensions Folder (or open it manually)
+2. Drill down to the user folder
+3. Create a 'Response-for-Brackets' folder
+4. Copy all the files from this repo `src` folder to the 'Response-for-Brackets' folder created in step 3
+5. Quit and re-launch Brackets or hit f5 to reload with extensions
 
-## Installing the extension
-8. Copy all the files from this repo `src` folder to your `C:\Users\<username>\AppData\Roaming\Brackets\extensions\user` folder
 
 # Original project
 

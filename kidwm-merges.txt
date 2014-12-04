@@ -1,0 +1,48 @@
+* 68dd3bf (origin/master, origin/HEAD) use Live Preview Base URL from Project Settings *****
+	- not sure what the point of this is. the previewPath being created in kidwm is using the ProjectManager.getBaseUrl property if it is set but it is not using the filename of the current loaded html file. To me this is confusing. needs some discussion on the implementation details
+
+* 8ab989a (HEAD, myfork/master, master) fix path handling for Windows *****
+	- this code is no longer used in original. it is now using Filesystem.resolve as part of the fix to not overwriting media-queries on subsequent loads. But do have a concern as the code to create the media-queries.css is not using a utf8 flag so not sure what charset original is creating the file in.
+
+* 86fcde4 fix for brackets 0.44, close #9
+	- no changes required. update for selecting triangle but this is commented out in original.
+
+* 1cb3a5a add some checks to prevent error *****
+	- does some error handling for triangle / triangleOffset but this is all commented out in original. will remove the triangle code from original so the code is cleaner
+	- in kidwm, there is a check to see if inspectButton is already set and if so, then it just returns. not sure how the user can turn of the inspect then as you can no longer 'toggle'. on the first toggle to turn on inspect it will turn on. but when the user clicks on the inspect toggle again to turn it off, then the code to turn off inspect will never run. won't implement this change
+
+* cd55706 fix version in package.json, close #1
+	- no changes required
+
+* b56dda5 Create package.json
+	- package.json has already been created in original
+
+* 2832fac Create README.md
+	- readme already exists in original but needs to be updated to reflect current status
+
+* 4c96391 add indicator of frame width *****
+	- not implemented yet. but it should be enhanced to be an editable label so users can use that to specify the width as an alternative to using the slider. It should all be positioned beside the + button from a UX perspective
+
+* 03b8126 add a button to exit responsive mode
+	- not required in original as the toolbar icon can be used to open and close the responsive view following the same behaviour of other toolbar features like photoshop preview and live edit
+
+* f6323d8 Only activate inline editor in responsive mode
+	- already address but using a more robust solution. Original doesn't just stop the inline editor from loading. Instead it fallsback to the original editor
+
+* b2b9ceb Prevent creating UI more than once
+	- already addressed but using a more robust solution to allow responsive mode to be turned off and on using toolbar icon. However there needs some futher enhancements as it is not possible to leave responsive mode if viewing a non-html document. Need to handle switching between documents better on the whole.
+
+* e4a7dc9 move temp.css to memory *****
+	- why do we have temp.css? this seems to be partially implemented in original. ResponseInlieEdit.js is setting this.doc to be a InMemoryFile called temp-response.css but main.js doesn't have the appropriate changes. kidwm version has updated main.js to use the InMemoryFile. needs further discussion on the implementation details and the reasons for it
+
+* d803c76 fix inline editor
+	- already addressed but in a different manner. in kidwm, ResponseInlineEdit.js is still creating the div.inlineEditorHolder on load but then appends the inlinemark to div.inline-text-editor instead. div.inlineEditorHolder is not used at all. In original, the inlinemark is still appended to div.inlineEditorHolder but the css has been updated to display it properly. think we can leave as is
+
+* c2448ef remove using getPropertyShorthand()
+	- no changes required. already implemented
+
+* 66e6f94 add priority of inline editor provider
+	- no changes required. already implemented
+
+* f66c1ab add files
+	- no changes required. already implemented
