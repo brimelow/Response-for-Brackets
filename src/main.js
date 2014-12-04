@@ -204,11 +204,6 @@ define(function (require, exports, module) {
 
         e.stopImmediatePropagation();
         
-        // Only provide a CSS editor when cursor is in HTML content
-        if (DocumentManager.getCurrentDocument().language.getId() !== "html") {
-            return;
-        }
-
         var iconLink = e.target;
         //document.body.classList.toggle('responsive-mode');
 
@@ -231,6 +226,11 @@ define(function (require, exports, module) {
             return;
 
         } else {
+
+            // Only provide a CSS editor when cursor is in HTML content
+            if (DocumentManager.getCurrentDocument().language.getId() !== "html") {
+                return;
+            }
 
             modulePath = FileUtils.getNativeModuleDirectoryPath(module);
             projectRoot = ProjectManager.getProjectRoot().fullPath;
