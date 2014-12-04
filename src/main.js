@@ -24,6 +24,12 @@ THE SOFTWARE. */
 
 define(function (require, exports, module) {
     "use strict";
+
+    /*====================  Define constants  =====================*/
+
+    var MENU_RESPONSE_ID = "brimelow.reponsive.mainmenu";
+    var CMD_RESPONSEMODE_ID = "brimelow.response.cmd.launch";
+    var CMD_INSPECTMODE_ID = "brimelow.response.cmd.inspect";
     
     /*================  Load needed brackets modules  ================*/   
 
@@ -58,6 +64,9 @@ define(function (require, exports, module) {
     
     // represents a media query and its custom selectors/rules
     var Query = require("Query").Query;
+
+    // Load the nls string module for this plugin. 
+    var Strings = require("strings");
 
 
     /*================  Define module properties  ================*/  
@@ -1524,23 +1533,14 @@ define(function (require, exports, module) {
         icon.addEventListener('click', Response, false);
     });
 
-    // There are 2 commands registered. One to go into responsive mode, and one to
-    // go in and out of inspect mode.
-    var MENU_RESPONSE_ID = "brimelow.reponsive.mainmenu";
-    var CMD_RESPONSEMODE_ID = "brimelow.response.cmd.launch";
-    var CMD_INSPECTMODE_ID = "brimelow.response.cmd.inspect";
-
     // Build commands and menu system
-    var customMenu = Menus.addMenu("Responsive", MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
+    var customMenu = Menus.addMenu(Strings.MENU_MAIN, MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
     
-    CommandManager.register("Responsive Mode", CMD_RESPONSEMODE_ID, Response);
+    CommandManager.register(Strings.SUBMENU_RESPSONSEMODE, CMD_RESPONSEMODE_ID, Response);
     customMenu.addMenuItem(CMD_RESPONSEMODE_ID, "Shift-Alt-R");
 
     // Toggle inspect mode.
-    CommandManager.register("Inspect Mode", CMD_INSPECTMODE_ID, handleInspectToggle);
-    /*function() {
-        handleInspectToggle();
-    });*/
+    CommandManager.register(Strings.SUBMENU_INSPECTMODE, CMD_INSPECTMODE_ID, handleInspectToggle);
     customMenu.addMenuItem(CMD_INSPECTMODE_ID, "Shift-Alt-I");
 
     // Register as an inline provider.
