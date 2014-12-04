@@ -174,9 +174,6 @@ define(function (require, exports, module) {
     // Div that provides the dark overlay in inspect mode.
     var highlight;
 
-    // The main Brackets sidebar div.
-    var sidebar;
-
     // Is the code currently animating.
     var isAnimating = false;
     
@@ -376,24 +373,6 @@ define(function (require, exports, module) {
         slider = document.getElementById("slider");
         track = document.getElementById("track");
         trackLabel = document.getElementById("track-label");
-        
-        // This set of DOM elements creates a dialog for when you try to do 
-        // quick edit without first creating a media query. Never used in the demo.
-        domArray = [{tag:"div",attr:{class:"response-dialog template modal hide"}, parent:-1},
-            {tag:"div",attr:{class:"modal-header"}, parent:0},
-            {tag:"a",attr:{class:"close", href:"#"}, text:"x", parent:1},
-            {tag:"h1",attr:{class:"dialog-title"}, parent:1},
-            {tag:"div",attr:{class:"modal-body"}, parent:0},
-            {tag:"div",attr:{class:"dialog-message"}, parent:4},
-            {tag:"p",attr:{},parent:5},
-            {tag:"div",attr:{class:"modal-footer"}, parent:0},
-            {tag:"a",attr:{class:"dialog-button btn primary right","data-button-id":"ok"}, text:"Ok", parent:7}];
-        
-        frag = ResponseUtils.createDOMFragment(domArray);
-        doc.body.appendChild(frag);
-
-        // I hide the sidebar in the vertical split mode.
-        sidebar = document.getElementById('sidebar');
 
         // Set the ruler slider to the width of brackets.
         slider.value = slider.max = response.offsetWidth;
@@ -499,6 +478,11 @@ define(function (require, exports, module) {
     /** 
      *  Called when the user clicks on one of the editor layout
      *  toggle buttons (either vertical or horizontal)
+     *
+     * note: the buttons are not named correctly. the 'horzButt' is actually 
+     * when the user is in vertical layout (up and down) while 'vertButt' is
+     * when the user is in horizontal layout (left to right). the code should
+     * be updated at some point to remove this confusion
      */
     function handleChangeLayout(e) {
 
@@ -520,14 +504,6 @@ define(function (require, exports, module) {
             // Remove the current panel splitter
             if (splitter != undefined) 
                 response.removeChild(splitter);
-
-            // Hide the sidebar in horizontal mode
-            /*
-            sidebar.style.display = "none";
-            document.querySelector(".content").style.left = "0px";           
-            var horzSizer = sidebar.parentElement.insertBefore(document.querySelector(".horz-resizer"), sidebar);
-            horzSizer.style.left = "0px";
-            */
 
             // Create a new splitter for this mode
             Splitter.makeResizable(response, 'horz', 344, cm);
@@ -1051,22 +1027,6 @@ define(function (require, exports, module) {
             inlineCm.removeLineClass(existingEdits[i].line, "background");
             inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
         }
-/*
-        var w;
-
-        // Finds the absolute position of the opening curly brace on line 1.
-        var coords = inlineCm.charCoords({line:0, ch:v.length});
-
-        // This conditional block finds the correct width the select box should
-        // be set to based on the number of chars in the new selector text.
-        if(mode & 1)
-            w = coords.right - response.offsetWidth - 60;
-        else
-            w = coords.right - sidebar.offsetWidth - 40;
-
-        // Resize the select element to the correct width.
-        selectSelector.style.width = w + "px";
-*/        
     }
 
     /** 
@@ -1243,23 +1203,6 @@ define(function (require, exports, module) {
 
                 // Sets cursor to the end of line 2 in the inline editor.
                 inlineEditor.editor.setCursorPos(1, 0);
-
-                // Caclulates the position right after the selector text so we can resize
-                // the selector select box to width of the selector text.
-                var coords = inlineCm.charCoords({line:0,ch:inlineSelector.length});
-                
-                var w;
-
-                // Were in horizontal mode so calculate the width correctly.
-                if(mode & 1)
-                    w = coords.right - response.offsetWidth - 60;
-
-                // Were in vertical mode so calculate the width accordingly.
-                else
-                    w = coords.right - sidebar.offsetWidth - 40;
-
-                // Set the width of the selector select box.
-                //selectSelector.style.width = w + "px";
 
                 // Listen for changes in the inline editor.
                 inlineCm.on("change", inlineChange);
