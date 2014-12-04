@@ -199,17 +199,16 @@ define(function (require, exports, module) {
      */
     function Response(e) {
 
-        e.stopImmediatePropagation();
+        if (e) e.stopImmediatePropagation();
         
-        var iconLink = e.target;
-        //document.body.classList.toggle('responsive-mode');
+        var iconLink = document.getElementById('response-icon');
 
         // Prevent creating UI more than once
-        if(document.querySelector('#response')) {
+        if (document.querySelector('#response')) {
 
-            // update toolbar icon to indicate we are leaving responsive mode
-            iconLink.style.backgroundPosition = '0 0';
-            document.body.classList.remove('responsive-mode');
+            // ensure inspect mode is off so handlers are removed 
+            // but don't update inspect mode menu item
+            toggleInspectMode(false);
             
             // remove the #response view
             var element = document.getElementById("response");
@@ -219,6 +218,13 @@ define(function (require, exports, module) {
             handleWindowResize(null);
 
             cm.refresh();
+
+            // update toolbar icon and menu state to indicate we are leaving responsive mode
+            iconLink.style.backgroundPosition = '0 0';
+            document.body.classList.remove('responsive-mode');
+            
+            var command = CommandManager.get(CMD_RESPONSEMODE_ID);
+            command.setChecked(false);
             
             return;
 
@@ -234,10 +240,6 @@ define(function (require, exports, module) {
             mainEditor = EditorManager.getCurrentFullEditor();
             cm = mainEditor._codeMirror;
             mainView = document.querySelector('.main-view');
-
-            // update toolbar icon to indicate we are in responsive mode
-            iconLink.style.backgroundPosition = '0 -26px';
-            document.body.classList.add('responsive-mode');
 
             // Is there a brackets function for loading non-module scripts?
             // I couldn't find one so I wrote a simple one.
@@ -271,6 +273,13 @@ define(function (require, exports, module) {
 
                         // refresh media queries from file if they exist
                         _reloadMediaQueriesFromFile(doc);
+                    
+                        // update toolbar icon to indicate we are in responsive mode
+                        iconLink.style.backgroundPosition = '0 -26px';
+                        document.body.classList.add('responsive-mode');
+
+                        var command = CommandManager.get(CMD_RESPONSEMODE_ID);
+                        command.setChecked(true);
                     }
                 );
             });
@@ -593,6 +602,10 @@ define(function (require, exports, module) {
         // Listen for click events on the frame's body
         frameDOM.body.addEventListener('click', handleFrameClick, false);
 
+        // update the inspect mode based on the menu state
+        var command = CommandManager.get(CMD_INSPECTMODE_ID);
+        toggleInspectMode(command.getChecked());
+
         // inject frame with media queries as inline style element
         refreshMediaQueries(false);
     }
@@ -738,8 +751,7 @@ define(function (require, exports, module) {
      */
     function handleWindowResize(e) {
 
-        if(e)
-            e.stopImmediatePropagation();
+        if(e) e.stopImmediatePropagation();
 
         var w = window.innerWidth;
         var h = window.innerHeight;
@@ -804,33 +816,45 @@ define(function (require, exports, module) {
 
         if(e) e.stopImmediatePropagation();
 
-        // Just set e to be a refence to the inspect button.
-        e = inspectButton;
+        // update the inspect menu state
+        var command = CommandManager.get(CMD_INSPECTMODE_ID);
+        command.setChecked(!command.getChecked());
+        
+        toggleInspectMode(command.getChecked());
+    }
+    
+    function toggleInspectMode(enabled) {
+        
+        // update the state of the inspect button
+        var inspectBtn = document.getElementById("inspectButton");
+        if (inspectBtn) {
+            
+            // change the button visuals and remove any highlighted code lines
+            // and the highlight div.
+            
+            if (enabled) {
 
-        // If inspect mode is currently on, change the button visuals and
-        // also remove any highlighted code lines and the highlight div.
-        if(e.classList.contains("inspectButtonOn")) {
-            e.classList.remove("inspectButtonOn");
-            if(selected) {
-                cm.removeLineClass(selected.line, "background");
+                // if menu state is now checked, means it was just turned on. 
+                inspectBtn.classList.add("inspectButtonOn");
+                highlight.style.display = 'block';
+                selected = null;
+                frameDOM.body.addEventListener('mouseover', handleInspectHover, false);
+                cm.display.wrapper.addEventListener('click', handleCodeClick, false);
+                
+            } else {
+
+                // If menu state is no longer checked, then it was just turned off
+                inspectBtn.classList.remove("inspectButtonOn");
+                if(selected) {
+                    cm.removeLineClass(selected.line, "background");
+                }
+                highlight.style.display = 'none';
+                cm.display.wrapper.removeEventListener('click', handleCodeClick);
+                frameDOM.body.removeEventListener('mouseover', handleInspectHover);
+                return;
+                
             }
-            highlight.style.display = 'none';
-            cm.display.wrapper.removeEventListener('click', handleCodeClick);
-            frameDOM.body.removeEventListener('mouseover', handleInspectHover);
-            return;
-        }
-
-        // Inspect mode is not currently activated so here we change the button
-        // visual, show the highlight div, and begin listening to mouse events
-        // on both the codemirror editor and the iframe.
-        else {
-            e.classList.add("inspectButtonOn");
-            highlight.style.display = 'block';
-            selected = null;
-            frameDOM.body.addEventListener('mouseover', handleInspectHover, false);
-            cm.display.wrapper.addEventListener('click', handleCodeClick, false);
-        }
-
+        }        
     }
 
     /** 
@@ -1491,7 +1515,7 @@ define(function (require, exports, module) {
         // Here we add the toolbar icon that launches you into responsive mode.
         var icon = document.createElement('a');
         icon.href = "#";
-        icon.className = "responseIcon";
+        icon.id = "response-icon";
 
         var iconURL = require.toUrl('./images/toolbar-icon.png');
         icon.style.cssText = "content: ''; background: url('"+iconURL+"') 0 0 no-repeat;";
@@ -1502,23 +1526,23 @@ define(function (require, exports, module) {
 
     // There are 2 commands registered. One to go into responsive mode, and one to
     // go in and out of inspect mode.
-    var LAUNCH_ID = "response.launch";
-    var INSPECT_ID = "response.inspect";
+    var MENU_RESPONSE_ID = "brimelow.reponsive.mainmenu";
+    var CMD_RESPONSEMODE_ID = "brimelow.response.cmd.launch";
+    var CMD_INSPECTMODE_ID = "brimelow.response.cmd.inspect";
 
-    // Launch into responsive mode.
-    CommandManager.register("Responsive Mode", LAUNCH_ID, Response);
+    // Build commands and menu system
+    var customMenu = Menus.addMenu("Responsive", MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
+    
+    CommandManager.register("Responsive Mode", CMD_RESPONSEMODE_ID, Response);
+    customMenu.addMenuItem(CMD_RESPONSEMODE_ID, "Shift-Alt-R");
 
     // Toggle inspect mode.
-    CommandManager.register("Inspect Mode", INSPECT_ID, function() {
+    CommandManager.register("Inspect Mode", CMD_INSPECTMODE_ID, handleInspectToggle);
+    /*function() {
         handleInspectToggle();
-    });
-    
-    // Add the two commands to the File menu.
-    var menu = Menus.getMenu(Menus.AppMenuBar.FILE_MENU); 
-    menu.addMenuItem(LAUNCH_ID, "Ctrl-2");
-    menu.addMenuItem(INSPECT_ID, "Ctrl-1");
+    });*/
+    customMenu.addMenuItem(CMD_INSPECTMODE_ID, "Shift-Alt-I");
 
     // Register as an inline provider.
     EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);
-
 });
