@@ -28,8 +28,11 @@ define(function (require, exports, module) {
     /*================  Load needed brackets modules  ================*/   
 
     var CommandManager = brackets.getModule("command/CommandManager");
+    var Commands        = brackets.getModule("command/Commands");
     var Menus = brackets.getModule("command/Menus");
     var DocumentManager = brackets.getModule("document/DocumentManager");
+    var MainViewManager = brackets.getModule("view/MainViewManager");
+    var WorkspaceManager = brackets.getModule("view/WorkspaceManager");
     var NativeFileSystem = brackets.getModule("file/NativeFileSystem").NativeFileSystem;
     var FileUtils = brackets.getModule("file/FileUtils");
     var ProjectManager = brackets.getModule("project/ProjectManager");
@@ -37,7 +40,9 @@ define(function (require, exports, module) {
     var ExtensionUtils = brackets.getModule("utils/ExtensionUtils");
     var Dialogs = brackets.getModule("widgets/Dialogs");
     var AppInit = brackets.getModule("utils/AppInit");
-
+    var FileSystem = brackets.getModule("filesystem/FileSystem");
+    var CSSUtils = brackets.getModule("language/CSSUtils");
+    var HTMLUtils = brackets.getModule("language/HTMLUtils");
     
     /*================  Load my custom modules  ================*/  
 
@@ -50,6 +55,9 @@ define(function (require, exports, module) {
 
     // Set of DOM and CSS utility methods.
     var ResponseUtils = require("ResponseUtils");
+    
+    // represents a media query and its custom selectors/rules
+    var Query = require("Query").Query;
 
 
     /*================  Define module properties  ================*/  
@@ -60,17 +68,15 @@ define(function (require, exports, module) {
     // Path to this extension.
     var modulePath;
 
-    // Holds the starting top position of the sidebar triangle.
-    var triangleOffset;
-
-    // The little arrow in the working set that shows which file is open.
-    var triangle;
-
     // Path to the current open project.
     var projectRoot;
 
     // Document for the generated media-queries.css file.
     var mediaQueryDoc;
+    
+    // The file where media queries will be stored. This should be moved into 
+    // a preferences so it can be customized
+    var mediaQueryFile = 'css/media-queries.css';
 
     // I write to this temp document to show in the inline editor.
     var tempCSSDoc;
@@ -84,6 +90,9 @@ define(function (require, exports, module) {
     // Iframe containing the live HTML preview.
     var frame;
 
+    // The track indicator that display the current width of the slider
+    var trackLabel;
+    
     // The track where the color media query bars are shown.
     var track;
 
@@ -105,13 +114,6 @@ define(function (require, exports, module) {
     // Editor in current full editor.
     var mainEditor;
 
-    // Select element allowing user to choose the right selector.
-    var selectSelector;
-
-    // Wrapper div for selector select box.
-
-    var selectWrapper;
-    
     // + button for adding a new media query.
     var addButt;
 
@@ -132,9 +134,6 @@ define(function (require, exports, module) {
 
     // Array for sorting the queries.
     var sort = [];
-
-    // Crazy high starting index for query color bars.
-    var z = 5000;
 
     // The currently selected media query.
     var currentQuery;
@@ -178,14 +177,6 @@ define(function (require, exports, module) {
     // The main Brackets sidebar div.
     var sidebar;
 
-
-    var cmDOM = {};
-    /*    ⬆    */
-    /* I use these to map cm lines(top) to frame DOM(below) */
-    /*    ⬇    */
-    var frDOM = {};
-
-   
     // Is the code currently animating.
     var isAnimating = false;
     
@@ -204,65 +195,145 @@ define(function (require, exports, module) {
     // The splitter that allows resizing of the split view.
     var splitter;
     
-
     /*================  Begin function definitions  ================*/  
 
     /** 
      *  Main entry point of extension that is called when responsive mode is launched.
      */
-    function Response() {
+    function Response(e) {
 
-        modulePath = FileUtils.getNativeModuleDirectoryPath(module);
-        projectRoot = ProjectManager.getProjectRoot().fullPath;
-        mainEditor = EditorManager.getCurrentFullEditor();
-        cm = mainEditor._codeMirror;
-        mainView = document.querySelector('.main-view');
+        e.stopImmediatePropagation();
+        
+        // Only provide a CSS editor when cursor is in HTML content
+        if (DocumentManager.getCurrentDocument().language.getId() !== "html") {
+            return;
+        }
 
-        // Is there a brackets function for loading non-module scripts?
-        // I couldn't find one so I wrote a simple one.    
-        ResponseUtils.loadExternalScript(modulePath + "/js/TweenMax.min.js", document.head);
-        ResponseUtils.loadExternalScript(modulePath + "/Query.js", document.head);    
+        var iconLink = e.target;
+        //document.body.classList.toggle('responsive-mode');
 
-        // Load in the main CSS for the responsive UI.    
-        ExtensionUtils.addLinkedStyleSheet(modulePath + "/css/respond.css");
+        // Prevent creating UI more than once
+        if(document.querySelector('#response')) {
 
-        // Store the current HTML document that we'll be working with.
-        currentDoc = DocumentManager.getCurrentDocument();
+            // update toolbar icon to indicate we are leaving responsive mode
+            iconLink.style.backgroundPosition = '0 0';
+            document.body.classList.remove('responsive-mode');
+            
+            // remove the #response view
+            var element = document.getElementById("response");
+            element.parentNode.removeChild(element);
 
-        // There must be a better way of doing what I did here. Basically I'm
-        // opening or creating a file  called media-queries.css. I then add 
-        // the file to the working set but immediately switch back and select 
-        // the HTML file. All of this was just to help the demo go smoothly.
-        brackets.fs.writeFile(projectRoot + "/media-queries.css", "", "utf8", function() {
-            DocumentManager.getDocumentForPath(projectRoot + '/media-queries.css').done(
-                function(doc) {
+            // Manually fire the window resize event to position everything correctly.
+            handleWindowResize(null);
 
-                    // Save reference to the new files document.
-                    mediaQueryDoc = doc;
-                    DocumentManager.addToWorkingSet(doc.file);
+            cm.refresh();
+            
+            return;
 
-                    // Write a blank document.
-                    FileUtils.writeText(mediaQueryDoc.file, '');
-                    DocumentManager.setCurrentDocument(currentDoc);
+        } else {
 
-                    // now we are ready to create the response UI
-                    createResponseUI();
+            modulePath = FileUtils.getNativeModuleDirectoryPath(module);
+            projectRoot = ProjectManager.getProjectRoot().fullPath;
+            mainEditor = EditorManager.getCurrentFullEditor();
+            cm = mainEditor._codeMirror;
+            mainView = document.querySelector('.main-view');
+
+            // update toolbar icon to indicate we are in responsive mode
+            iconLink.style.backgroundPosition = '0 -26px';
+            document.body.classList.add('responsive-mode');
+
+            // Is there a brackets function for loading non-module scripts?
+            // I couldn't find one so I wrote a simple one.
+            ResponseUtils.loadExternalScript(modulePath + "/js/TweenMax.min.js", document.head);
+            ResponseUtils.loadExternalScript(modulePath + "/Query.js", document.head);
+
+            // Load in the main CSS for the responsive UI.
+            ExtensionUtils.addLinkedStyleSheet(modulePath + "/css/respond.css");
+
+            // Store the current HTML document that we'll be working with.
+            currentDoc = DocumentManager.getCurrentDocument();
+
+            // Check if the media-queries css file exists. If it doesn't, then create a
+            // new file. If it does, then reload and refresh UI
+            FileSystem.resolve(projectRoot + mediaQueryFile, function(result, file, fileSystemStats) {
+                
+                // create an empty file as one doesn't exist yet                
+                if ('NotFound' === result) {
+                    FileSystem.getFileForPath(projectRoot + mediaQueryFile).write('');
                 }
-            );
-        });
+                
+                DocumentManager.getDocumentForPath(projectRoot + mediaQueryFile)
+                    .done(function(doc) {
 
-        // Since the inline editors require an actual file to read from, here I create
-        // a temporary CSS file to write to. The contents of this file populates the inline editor.
-        brackets.fs.writeFile(modulePath + "/temp.css", "", "utf8", function(){
-            DocumentManager.getDocumentForPath(modulePath + '/temp.css').done(
-                function(doc) {
-                    tempCSSDoc = doc;
-                    FileUtils.writeText(tempCSSDoc.file, '');
-                    DocumentManager.setCurrentDocument(currentDoc);
+                        // Save reference to the new files document.
+                        mediaQueryDoc = doc;
+                        MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
+
+                        // now we are ready to create the response UI
+                        createResponseUI();
+
+                        // refresh media queries from file if they exist
+                        _reloadMediaQueriesFromFile(doc);
+                    }
+                );
+            });
+        }
+        
+        function _reloadMediaQueriesFromFile(mediaQueryDoc) {
+
+            // break the css file into media queries. assumption is that the output for 
+            // each media query starts with "@media only screen and (max-width:###px) {"
+            var mediaQueryRegex = /@media only screen and \(max-width:[0-9]+px\) {\s*([\.#\w:\(\)\-]+\s*{\s*[\w\s:%;-]*}\s*)*}/g;
+            var mediaQueries = mediaQueryDoc.getText().match(mediaQueryRegex);
+
+            //reset master query list 
+            queries = {};
+            sort = [];
+
+            if (mediaQueries != null && mediaQueries.length > 0) {
+                for (var i = 0; i < mediaQueries.length; i++) {
+                    
+                    // get the width for the current media query
+                    var matches = /max-width:([0-9]+)px/g.exec(mediaQueries[i]);
+                    var w = matches[1];
+                    
+                    // add a query  mark to the top of the preview window
+                    var queryMark = addQueryMark(w);
+
+                    // extract all the selectors from the current media query
+                    var selectors = CSSUtils.extractAllSelectors(mediaQueries[i], mediaQueryDoc.getLanguage().getMode());
+                    
+                    // add the rules associated to each selector to the queryMark
+                    _addRulesToMediaQueries(queryMark, mediaQueries[i], selectors)
                 }
-            );
-        });
-
+            }
+        }
+        
+        /*
+         * Iterates through the list of supplied selectors and updates the 
+         * queryMark with the selector and the list of rules associated to 
+         * the selector
+         */
+        function _addRulesToMediaQueries(queryMark, mediaQuery, selectors) {
+            
+            if (selectors != null && selectors.length > 0) {
+                for (var i = 0; i < selectors.length; i++) {
+                    var escapedSelector = selectors[i].selector.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+                    var ruleListRegex = new RegExp(escapedSelector + "\\s+{([\\s\\w\\d:;%\-]*)}", "g");
+                    
+                    var matches = ruleListRegex.exec(mediaQuery);
+                    if (matches != null) {
+                        var ruleList = matches[1].split(';');
+                        // doing length - 1 here as the last item in the split array will be an empty string
+                        // assumption is that the last char in rule list is a ;.
+                        // NOTE: Is it possible for the last rule not to have a ; ???? need better logic if this valid
+                        for (var j = 0; j < ruleList.length - 1; j++) {
+                            queryMark.addRule(selectors[i].selector, ruleList[j].trim() + ";");   
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /** 
@@ -272,12 +343,6 @@ define(function (require, exports, module) {
 
         var doc = document;
         doc.body.backgroundColor = "#303030";
-
-        // Get a reference to the triangle in the project panel so we can adjust its top.
-        triangle = document.querySelector(".sidebar-selection-triangle");
-
-        // Get the current triangle top value
-        triangleOffset = triangle.offsetTop;
 
         // I wrote my own DOM insertion utility to avoid jQuery here. Insanely faster.
         // See the details of this function in the ResponseUtils.js module.
@@ -291,6 +356,7 @@ define(function (require, exports, module) {
             {tag:"a",attr:{class:"divider"}, parent:1},
             {tag:"div",attr:{id:"layoutText"}, text:"LAYOUT", parent:1},
             {tag:"a",attr:{id:"vertButt",class:"vert-active"}, parent:1},
+            {tag:"div",attr:{id:"track-label"}, parent:1},
             {tag:"div",attr:{id:"track"}, parent:0},
             {tag:"input",attr:{id:"slider",type:"range",min:"0"}, parent:0}];
 
@@ -309,7 +375,8 @@ define(function (require, exports, module) {
         vertButt = document.getElementById("vertButt");
         slider = document.getElementById("slider");
         track = document.getElementById("track");
-
+        trackLabel = document.getElementById("track-label");
+        
         // This set of DOM elements creates a dialog for when you try to do 
         // quick edit without first creating a media query. Never used in the demo.
         domArray = [{tag:"div",attr:{class:"response-dialog template modal hide"}, parent:-1},
@@ -342,14 +409,10 @@ define(function (require, exports, module) {
         // Get a reference to the iframe and also set its width to the slider value.
         frame = doc.getElementById('frame');
         frame.style.width = slider.value + 'px';
-
-        // This is the select box that allows users to choose the a CSS selector
-        // when they are in quick edit mode. It is also wrapped in a div element.
-        selectSelector = document.createElement('select');
-        selectWrapper = document.createElement('div');
-        selectWrapper.id = "selectWrapper";
-        selectWrapper.appendChild(selectSelector);
-
+        
+        // update the track label with the current value
+        trackLabel.textContent = slider.value + 'px';
+        
         var h = window.innerHeight;
 
         // Set the initial heights of the panels to 60% response / 40% code editor.
@@ -359,10 +422,6 @@ define(function (require, exports, module) {
         // Create a vertical splitter to divide the editor and the response UI
         Splitter.makeResizable(response, 'vert', 100, cm);
         splitter = document.querySelector('.vert-splitter');
-
-        // Position the selection triangle
-        triangle.style.top = (response.offsetHeight + triangleOffset + 15) + "px";
-        triangleOffset = triangle.offsetTop - response.offsetHeight;
         
         // Manually fire the window resize event to position everything correctly.
         handleWindowResize(null);
@@ -386,6 +445,7 @@ define(function (require, exports, module) {
     function buildDOMCache() {
 
         var lines = cm.getValue().split(/\n/);
+        var frDOM = [], cmDOM = [];
 
         for(var i=0; i<lines.length; i++) {
             var tags = lines[i].match(/(?:<)(\w+)(?=\s|>)/g);
@@ -413,6 +473,11 @@ define(function (require, exports, module) {
             }
 
         }
+
+        return {
+            frameDom: frDOM,
+            codeDom: cmDOM
+        }
     }
 
     /** 
@@ -420,7 +485,6 @@ define(function (require, exports, module) {
      */
     function setupEventHandlers() {
 
-        selectSelector.addEventListener('change', handleSelectorChange, false);
         horzButt.addEventListener('click', handleChangeLayout, false);
         vertButt.addEventListener('click', handleChangeLayout, false);
         slider.addEventListener('change', handleSliderChange, false);
@@ -428,10 +492,8 @@ define(function (require, exports, module) {
         frame.addEventListener('mouseout', handleFrameMouseOut, false);
         addButt.addEventListener('click', handleAddQuery, false);
         window.addEventListener('resize', handleWindowResize, false);
-        $(response).on('panelResizeStart', handlePanelStart);
         $(response).on('panelResizeUpdate', handlePanelResize);
         inspectButton.addEventListener('click', handleInspectToggle, false);
-
     }
 
     /** 
@@ -460,10 +522,12 @@ define(function (require, exports, module) {
                 response.removeChild(splitter);
 
             // Hide the sidebar in horizontal mode
+            /*
             sidebar.style.display = "none";
             document.querySelector(".content").style.left = "0px";           
             var horzSizer = sidebar.parentElement.insertBefore(document.querySelector(".horz-resizer"), sidebar);
             horzSizer.style.left = "0px";
+            */
 
             // Create a new splitter for this mode
             Splitter.makeResizable(response, 'horz', 344, cm);
@@ -480,6 +544,9 @@ define(function (require, exports, module) {
             slider.max = response.offsetWidth;
             slider.value = response.offsetWidth;
             frame.style.width = slider.value + "px";
+        
+            // update the track label with the current value
+            trackLabel.textContent = slider.value + 'px';
 
             // Refresh codemirror
             cm.refresh();          
@@ -515,6 +582,9 @@ define(function (require, exports, module) {
             slider.max = slider.offsetWidth;
             slider.value = slider.max;
             frame.style.width = slider.value + "px";
+        
+            // update the track label with the current value
+            trackLabel.textContent = slider.value + 'px';
 
             // Refresh codemirror
             cm.refresh();
@@ -531,9 +601,6 @@ define(function (require, exports, module) {
         frameDOM = this.document;
         frameDOM.body.firstElementChild.style.overflowX = 'hidden';
 
-        // Now we create our DOM mapping cache.
-        buildDOMCache();
-
         // Add an empty style block in the iframe head tag. This is where we
         // will write the CSS changes so they update live in the preview.
         style = frameDOM.head.appendChild(document.createElement('style'));
@@ -549,6 +616,9 @@ define(function (require, exports, module) {
 
         // Listen for click events on the frame's body
         frameDOM.body.addEventListener('click', handleFrameClick, false);
+
+        // inject frame with media queries as inline style element
+        refreshMediaQueries(false);
     }
 
     /** 
@@ -566,33 +636,47 @@ define(function (require, exports, module) {
      *  Called when the user clicks on the + button to add a new query.
      */
     function handleAddQuery(e) {
-
+        
         var w = slider.value;
+        
+        // create the query mark at the top of the preview window
+        // and set it as the current media query
+        currentQuery = addQueryMark(w);
+
+        // If the inline editor is open, update it with the newly selected query.
+        if(isInlineOpen)
+            updateInlineWidget();
+
+        // Calling this function will write the new query to the style block 
+        // in the iframe and also to the media-queries.css file.
+        refreshMediaQueries();
+    }
+
+    function addQueryMark(w) {
 
         // First check that there isn't already a query for this width.
-        if (queries[w] == undefined) {
+        var q = queries[w];
+        if (q == undefined) {
 
-            // Create a new Query object.
+            // Create a new Query object and add to master list
             var q = new Query(w);
-
-            // Set is as the current media query.
-            currentQuery = q;
-
-            // Add the new query into the master list.
             queries[w] = q;
 
             // Add the current width to the sort array.
+            // Sort so the smallest number is first.
             sort.push(w);
-
-            // Sort so the largest number is first.
             sort.sort(function(a, b) {
                 return a - b
             });
-
+        }
+        
+        // if query mark div does not yet exist, create it and add
+        if (document.querySelector('#queryMark' + w) === null) {
+            
             // Create a new colored mark div and add it to the track.
             var mark = track.insertBefore(document.createElement('div'), track.firstChild);
             mark.className = "mark";
-            mark.id = w;
+            mark.id = 'queryMark' + w;
 
             // Create the label that displays the pixel width.
             var label = mark.appendChild(document.createElement('div'));
@@ -607,7 +691,7 @@ define(function (require, exports, module) {
             
             // This loop goes through all of the created media queries and 
             // essentially redraws all the marks with the correct color and size.        
-            for (var i = 0, len = sort.length; i<len; i++) {
+            for (var i = 0, z = 5000; i < sort.length; i++) {
                 
                 var left = 0;
                 var w = parseInt(queries[sort[i]].width);
@@ -636,22 +720,17 @@ define(function (require, exports, module) {
                         queries[sort[i]].color.b + "))";
             }
         }
-
-        // If the inline editor is open, update it with the newly selected query.
-        if(isInlineOpen)
-            updateInlineWidget();
-
-        // Calling this function will write the new query to the style block 
-        // in the iframe and also to the media-queries.css file.
-        refreshMediaQueries();
+        
+        return q;
     }
-
+    
     /** 
      *  Called when the user clicks on one of the colored query marks in the track.
      */
     function handleQueryClicked(e) {
 
-        var w = parseInt(e.target.id);
+        // parse the width from the id. 9 is the length of queryMark prefix in id
+        var w = parseInt(e.target.id.substr(9));
         var q = queries[w];
 
         // Set the clicked query as the current query.
@@ -661,6 +740,9 @@ define(function (require, exports, module) {
         slider.value = w;
         frame.style.width = w + "px";
         
+        // update the track label with the current value
+        trackLabel.textContent = slider.value + 'px';
+
         // In horizontal mode the code editor also snaps to the query width to give more space.      
         if(mode == HORIZONTAL) {
             Splitter.updateElement(w);
@@ -696,6 +778,10 @@ define(function (require, exports, module) {
             slider.max = slider.value = responseWidth;
             frame.style.width = responseWidth + 'px';
             mainView.style.left = (responseWidth + 15) + 'px';
+        
+            // update the track label with the current value
+            trackLabel.textContent = slider.value + 'px';
+
             return;
         }
 
@@ -703,7 +789,9 @@ define(function (require, exports, module) {
         mainView.style.height = (h - responseHeight - 16) + 'px';
         slider.max = slider.value = w;
         frame.style.width = w + 'px';
-       
+        
+        // update the track label with the current value
+        trackLabel.textContent = slider.value + 'px';
     }
 
     /** 
@@ -712,36 +800,26 @@ define(function (require, exports, module) {
     function handlePanelResize(e, size) {
   
         // Only refresh codemirror every other call (perf).    
-        if(size & 1)
+        if(size & 1) {
             cm.refresh();
-
+        }
+        
         // Adjust things properly if in horizontal mode.
         if (mode & 1) {
             mainView.style.left = (parseInt(size) + 15) + 'px';
             slider.value = slider.max = size;
             frame.style.width = slider.value + "px";
+
+            // update the track label with the current value
+            trackLabel.textContent = slider.value + 'px';
+
             return;
         } 
 
-        // Adjust this triangle position if the sidebar is open.
-        if(sidebar.offsetWidth > 0) {
-            triangle.style.top = (size + triangleOffset) + "px";
-        }
-
         // Were in vertical mode so adjust things accordingly.
         mainView.style.height = (window.innerHeight - size - 16) + 'px';
-
     }
 
-    /** 
-     *  Called when the user starts resizing using the splitter.
-     */
-    function handlePanelStart(e, size) {
-
-        // This is used to adjust the position of project triangle.
-        triangleOffset = triangle.offsetTop - response.offsetHeight;
-
-    }
 
     /** 
      *  Called when the user clicks on the inspect mode toggle button.
@@ -797,6 +875,7 @@ define(function (require, exports, module) {
 
         // Get the HTML tag name that the cursor is currently on.
         var tag = cm.getTokenAt(cur).state.htmlState.tagName;
+        //var tagInfo = HTMLUtils.getTagInfo()
         
         var ind;
 
@@ -805,16 +884,18 @@ define(function (require, exports, module) {
             cm.removeLineClass(selected.line, "background");
         }
 
+        var domCache = buildDOMCache();
+
         // Check to see if the editor even contains any tags of this type.
-        if(cmDOM[tag]) {
+        if(domCache.codeDom[tag]) {
             
             // Find out index position of the tag amongst all of the existing tags of this type.   
-            ind = cmDOM[tag].indexOf(line);
+            ind = domCache.codeDom[tag].indexOf(line);
             
             // Now find the corrensponding DOM element using the position index.
             // IMPORTANT: If the user adds or changes lines in the HTML editor you will
             // need to rebuild the mapping cache. I never wrote the code for that.
-            var el = frDOM[tag][ind];
+            var el = domCache.frameDom[tag][ind];
 
             // Set the selected line object using the line number and DOM element.
             selected = {el:el, line:line};
@@ -887,9 +968,10 @@ define(function (require, exports, module) {
         }
 
         var tag = target.tagName.toLowerCase();
+        var domCache = buildDOMCache();
 
         // Find out the position index of the this tag in the cache.
-        var ind = frDOM[tag].indexOf(target);
+        var ind = domCache.frameDom[tag].indexOf(target);
 
         // We'll use the codemirror scroller element to animate our code into view.
         var scroller = cm.display.scroller;
@@ -897,7 +979,7 @@ define(function (require, exports, module) {
         var editorHeight = (scroller.offsetHeight > 0) ? scroller.offsetHeight : parseInt(scroller.style.height);
         
         // Find out the correct line number from the cache.
-        var line = cmDOM[tag][ind];
+        var line = domCache.codeDom[tag][ind];
         
         // Set this as the new selected line.
         selected = {el:target, line:line};
@@ -938,6 +1020,9 @@ define(function (require, exports, module) {
 
         // Set the width of the frame to match the slider value.
         frame.style.width = slider.value + 'px';
+        
+        // update the track label with the current value
+        trackLabel.textContent = slider.value + 'px';
     }
 
     /** 
@@ -948,14 +1033,25 @@ define(function (require, exports, module) {
         
         var v = e.target.value;
 
+        if (inlineSelector === v) return;
+        
         // Change the selector to the new value chosen.
         inlineSelector = v;
 
-        // Our select box is actually invisble so we still need to write
-        // the selector and curly brace to the first line of the inline editor.
-        inlineCm.doc.setLine(0, v + " {");
-        inlineCm.refresh();
+        // Build the editor contents. 
+        // Note: For some reason count is 0 when refreshed but 4 when editor is created
+        var editorContents = refreshCodeEditor(currentQuery, cssResults);
 
+        // Set the text in the inline editor to our new string.
+        inlineCm.setValue(editorContents.contents);
+
+        // Loop through the existingEdits array and highlight lines appropriately.
+        var existingEdits = editorContents.existingEdits;
+        for(var i=0, len=existingEdits.length; i<len; i++) {
+            inlineCm.removeLineClass(existingEdits[i].line, "background");
+            inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
+        }
+/*
         var w;
 
         // Finds the absolute position of the opening curly brace on line 1.
@@ -970,6 +1066,7 @@ define(function (require, exports, module) {
 
         // Resize the select element to the correct width.
         selectSelector.style.width = w + "px";
+*/        
     }
 
     /** 
@@ -1014,169 +1111,115 @@ define(function (require, exports, module) {
      *  is the main or host editor and the second is the cursor position.
      */
     function inlineEditorProvider(hostEditor, pos) {
+        
+        // Only provide a CSS editor when cursor is in HTML content
+        if (hostEditor.getLanguageForSelection().getId() !== "html") {
+            return null;
+        }
+                
+        // Only provide CSS editor if the selection is within a single line
+        var sel = hostEditor.getSelection();
+        if (sel.start.line !== sel.end.line) {
+            return null;
+        }
 
-        // If there isn't a media query, show the dialog and the just bail.
+        // We are not in responsive mode yet (toolbar icon not selected). Fallback
+        // to the default CSS inline editor
+        if (!response) {
+            return null;
+        }
+        
+        // If there isn't a media query, show the message that a query has not been selected
         if(currentQuery == undefined) {
-            Dialogs.showModalDialog("response-dialog", "No Media Queries Defined", 
-                "You first need to create a media query using the toolbar at the top" +
-                "before you can begin editing your CSS properties.", true);
-            
             if(selected)
                 cm.removeLineClass(selected.line, "background");
             
-            return;
+            hostEditor.displayErrorMessageAtCursor("There have not been any media queries defined.");
+            return $.Deferred().promise();
         }
         
+        // We are now going to write the string the temporary CSS file so we can display
+        // it in the inline editor. A jQuery deffered object is used for async.
+        var result = new $.Deferred();
+                
         // If there is a selected line of code in the editor, remove the highlight.
         if(selected)
             cm.removeLineClass(selected.line, "background");
 
         var cursor = cm.getCursor();
-        
-        // Find out the tag name they were on when they hit Cmd-E.
-        var tag = cm.getTokenAt(cursor).state.htmlState.tagName;
 
-        // Get a reference to the DOM element in the iframe.
-        var el = frDOM[tag][cmDOM[tag].indexOf(cursor.line)];
+        // get the tag information for the currently cursor position in the HTML
+        // document. If could not be determined then return so message is displayed to user
+        var tagInfo = HTMLUtils.getTagInfo(hostEditor, pos);
+        if (tagInfo.tagName === "") {
+            return null;
+        }
         
+        // get the first element in the frame dom that matches the tagInfo
+        var el = _getFrameElement(frameDOM, tagInfo);
+
         // Set this element to the inlineElement property that is used elsewhere.
         inlineElement = el;
 
         // Call my utility method that finds all of the CSS rules that are
         // currently set for this element. See the comments in ResponseUtils.js.
-        var res = ResponseUtils.getAuthorCSSRules(frameDOM, el);
-        
-        // Store the results so we can use them elsewhere.
-        cssResults = res;
+        cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, el);
 
-        // Array to hold information about whether a rule has already been set by this or another query.
-        var existingEdits = [];
-
-        var i = 0;
-        
-        // Loop through the returned CSS selectors and populate the select box.
-        while(i < res.selectors.length) {
-            var s = selectSelector.appendChild(document.createElement('option'));
-            s.text = s.value = res.selectors[i];
-
-            // We will select the first selector in the array as the are sorted based on specificity.
-            if(i == 0) {
-                s.selected = true;
-                selectSelector.selectedIndex = 0;
-            }
-
-            i++;
-        }
-
-        // Store the selected selector.
-        inlineSelector = res.selectors[0];
+        // Create a select box to contain the list of possible selectors for 
+        // the current element
+        var selectSelector = document.createElement("select");
+        selectSelector.addEventListener('change', handleSelectorChange, false);
+        refreshSelectorSelectbox(selectSelector, cssResults);
 
         // If element has an ID, add it to the selectors and use it as the selector.
+        // NOTE: removing this for now as should be part of 'new rule' feature. Not
+        //       added automatically
+        /*
         if(el.id) {
             var s = document.createElement('option');
             s.text = "#" + el.id;
             inlineSelector = s.text;
             selectSelector.appendChild(s);
         }
-
-        // Here we begin writing the string that we will use to populate the inline editor.
-        var str = inlineSelector + " {\n";
-
-        var cq = currentQuery;    
-
-        // The line count starts at 4 because of the selector, whitespace, etc.  
+        */
+        
         var count = 4;
 
-        // Go through all of the returned CSS rules and write to the output string.
-        for(var prop in res.rules) {
-            
-            var pvalue = undefined;
-            count++;
-            
-            // Here we loop through all of the defined media queries to see if this rule
-            // has already been set by one of them. This is used to show inheritance.
-            for(var sel in queries) {
+        var cq = currentQuery;
 
-                var q = queries[sel];
-
-                // If the media query (q) has a width greater than the currently selected
-                // query and has already set a value for this property, then the current
-                // query will inherit that value.
-                if(q != cq && parseInt(q.width) > parseInt(cq.width) && 
-                    q.selectors[inlineSelector]) {
-
-                    // Check if it has the property set and if so, add it to the existingEdits
-                    // array so we can highlight it appropriately. Also stores the value.
-                    if(q.selectors[inlineSelector].rules[prop]) {
-                       pvalue = q.selectors[inlineSelector].rules[prop];
-                       existingEdits.push({query:q, line:count-4});
-                       pvalue = pvalue.replace(/;/, '');
-                       break;
-                    }
-                } 
-
-                // Check if the currently selected query has this property already set.
-                // If so then we add it to the existingEdits array for highlighting purposes.
-                // It also stores the value 'pvalue' so we can use that in the output.
-                else if(cq == q && q.selectors[inlineSelector]) {
-
-                    if(q.selectors[inlineSelector].rules[prop]) {
-                       pvalue = q.selectors[inlineSelector].rules[prop];
-                       existingEdits.push({query:q, line:count-4});
-                       pvalue = pvalue.replace(/;/, '');
-                       break;
-
-                    }
-                }               
-            }
-
-            // If this property hasn't been set by anyone, we use the original value returned.
-            if(pvalue == undefined)
-                pvalue = res.rules[prop];
-
-            // Finally we add the CSS rule to the output string.
-            str += "\t" + prop + ": " + pvalue.trim() + ";\n";
-        }
-
-        // Closing curly brace = were done!
-        str += "}";
-
-        // We are now going to write the string the temporary CSS file so we can display
-        // it in the inline editor. A jQuery deffered object is used for async.
-        var result = new $.Deferred();
+        // build the editor contents
+        // The line count starts at 4 because of the selector, whitespace, etc.  
+        // Note: For some reason count is 0 when refreshed but 4 when editor is created
+        var editorContents = refreshCodeEditor(currentQuery, cssResults);
 
         // Write the string to the temporary CSS file.
-        FileUtils.writeText(tempCSSDoc.file, str).done(function (e) {
+        //FileUtils.writeText(tempCSSDoc.file, str).done(function (e) {
             
             // Refresh the files document with the new text.
-            tempCSSDoc.refreshText(str, new Date());
+            //tempCSSDoc.refreshText(str, new Date());
 
             // Create a new inline editor. This is my stripped-down version of the
             // MultiRangeInlineEditor module.
             inlineEditor = new ResponseInlineEdit();
 
             // Load the editor with the CSS we generated.
-            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, tempCSSDoc);
+            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, editorContents.contents);
 
             // Called when the editor is added to the DOM.          
             inlineEditor.onAdded = function() {
-                
+
                 // Let everyone know the editor is open.
                 isInlineOpen = true;
 
-                var eh = document.querySelector(".inlineEditorHolder");
+                var eh = inlineEditor.$htmlContent[0].querySelector(".inlineEditorHolder");
 
                 // Create a new mark that will show at the top of the inline editor
                 // with the correct query color to remind the user of what they're changing.
                 var mark = document.createElement("div");
                 mark.className = "inlinemark";
-                mark.id = 'mark' + cq.width + 'inline';
                 
                 // Add mark to the inline editor holder div.
                 eh.appendChild(mark);
-
-                // Add the selector select box. It is positioned absolutely.
-                mark.appendChild(selectSelector);
 
                 // Create the pixel width text that is displayed on the mark.
                 var wd = document.createElement("div");
@@ -1184,21 +1227,22 @@ define(function (require, exports, module) {
                 wd.appendChild(document.createTextNode(cq.width + "px"));
                 mark.appendChild(wd);
 
-                // Get a reference to the codemirror instance of the inline editor.
-                inlineCm = inlineEditor.editors[0]._codeMirror;
+                // Add the selector select box. It is positioned absolutely.
+                mark.appendChild(selectSelector);
 
-                // Since the select box is invisible we still need to set the first line.
-                inlineCm.doc.setLine(0, inlineSelector + " {");
+                // Get a reference to the codemirror instance of the inline editor.
+                inlineCm = inlineEditor.editor._codeMirror;
 
                 // Loops through the existingEdits array and highlights the appropriate lines
                 // in the inline editor.
+                var existingEdits = editorContents.existingEdits;
                 for(var i=0, len=existingEdits.length; i<len; i++) {
                     inlineCm.removeLineClass(existingEdits[i].line, "background");
                     inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
                 }
 
                 // Sets cursor to the end of line 2 in the inline editor.
-                inlineCm.setCursor(1, 100);
+                inlineEditor.editor.setCursorPos(1, 0);
 
                 // Caclulates the position right after the selector text so we can resize
                 // the selector select box to width of the selector text.
@@ -1215,7 +1259,7 @@ define(function (require, exports, module) {
                     w = coords.right - sidebar.offsetWidth - 40;
 
                 // Set the width of the selector select box.
-                selectSelector.style.width = w + "px";
+                //selectSelector.style.width = w + "px";
 
                 // Listen for changes in the inline editor.
                 inlineCm.on("change", inlineChange);
@@ -1231,24 +1275,153 @@ define(function (require, exports, module) {
                 ResponseInlineEdit.prototype.parentClass.onAdded.apply(this, arguments);
 
                 // Set a bunch of stuff so we know the inline editor is no longer showing.
+                // NOTE: commented this out for now as it was causing a race condition with 
+                //       the onAdded event (issue #18)
+/*
                 selected = null;
                 isInlineOpen = false;
                 inlineSelector = null;
                 highlight.style.display = 'none';
                 selectSelector.options.length = 0;
                 $(selectSelector).remove();
-
+*/
             } 
 
             // I had to mod the EditorManager module so it always chooses me.
             result.resolve(inlineEditor);
-
-        });
+        
+        //});
 
         return result.promise();
-  
+
+        // uses the tagInfo from the editor to create adom element in the frame document
+        // that needs to be parsed for editing. we don't look up the element as we need
+        // more control in what is not included when getting the css rules associated to the
+        // element
+        function _getFrameElement(frameDom, tagInfo) {
+
+            var element = frameDom.createElement(tagInfo.tagName);
+
+            if (tagInfo.position.tokenType === HTMLUtils.ATTR_NAME || tagInfo.position.tokenType === HTMLUtils.ATTR_VALUE) {
+                if (tagInfo.attr.name === "class") {
+                    // Class selector
+                    element.className = tagInfo.attr.value.trim();
+
+                } else if (tagInfo.attr.name === "id") {
+                    // ID selector
+                    element.id = tagInfo.attr.value.trim();
+                }
+            }
+
+            return element;
+        }
     }
 
+    /**
+     * Called to refresh the contents of the selector drop down in the inline editor
+     * @params: the first is a reference to the selector dom element and the second is 
+     *          the css rules for the selected html dom element
+     */
+    function refreshSelectorSelectbox(selectSelector, res) {
+        
+        var i = 0;
+
+        // Choose the first selector if a selector is not already selected or
+        // if the current one is no longer available.
+        if (!inlineSelector || res.selectors.indexOf(inlineSelector) == -1)
+            inlineSelector = res.selectors[0];
+        
+        // clear all options from the select box first
+        $(selectSelector).empty();
+        
+        // Loop through the returned CSS selectors and populate the select box.
+        while(i < res.selectors.length) {
+            var s = selectSelector.appendChild(document.createElement('option'));
+            s.text = s.value = res.selectors[i];
+
+            // We will select the first selector in the array as the are sorted based on specificity.
+            if (res.selectors[i] === inlineSelector) {
+                s.selected = true;
+                selectSelector.selectedIndex = i;
+            }
+
+            i++;
+        }
+    }
+    
+    function refreshCodeEditor(cq, res) {
+        
+        // Array to hold information about whether a rule has already been set by this or another query.
+        var existingEdits = [];
+        
+        // indicates the current line number. setting for 1 as the first line (0) is the selector
+        var lineNumber = 0;
+        
+        // Here we begin writing the string that we will use to populate the inline editor.
+        var str = inlineSelector + " {\n";
+
+        // Go through all of the returned CSS rules and write to the output string.
+        if (res.rules[inlineSelector] !== null) {
+            for(var prop in res.rules[inlineSelector]) {
+
+                var pvalue = undefined;
+                lineNumber++;
+
+                // Here we loop through all of the defined media queries to see if this rule
+                // has already been set by one of them. This is used to show inheritance.
+                for(var sel in queries) {
+
+                    var q = queries[sel];
+
+                    // If the media query (q) has a width greater than the currently selected
+                    // query and has already set a value for this property, then the current
+                    // query will inherit that value.
+                    if(q != cq && parseInt(q.width) > parseInt(cq.width) && 
+                        q.selectors[inlineSelector]) {
+
+                        // Check if it has the property set and if so, add it to the existingEdits
+                        // array so we can highlight it appropriately. Also stores the value.
+                        if(q.selectors[inlineSelector].rules[prop]) {
+                           pvalue = q.selectors[inlineSelector].rules[prop];
+                           existingEdits.push({query:q, line:lineNumber});
+                           pvalue = pvalue.replace(/;/, '');
+                           break;
+                        }
+                    } 
+
+                    // Check if the currently selected query has this property already set.
+                    // If so then we add it to the existingEdits array for highlighting purposes.
+                    // It also stores the value 'pvalue' so we can use that in the output.
+                    else if(cq == q && q.selectors[inlineSelector]) {
+
+                        if(q.selectors[inlineSelector].rules[prop]) {
+                           pvalue = q.selectors[inlineSelector].rules[prop];
+                           existingEdits.push({query:q, line:lineNumber});
+                           pvalue = pvalue.replace(/;/, '');
+                           break;
+
+                        }
+                    }               
+                }
+
+                // If this property hasn't been set by anyone, we use the original value returned.
+                if(pvalue == undefined)
+                    pvalue = res.rules[inlineSelector][prop];
+
+                // Finally we add the CSS rule to the output string.
+                str += "\t" + prop + ": " + pvalue.trim() + ";\n";
+            }
+        } else {
+            // no rules so create an empty line
+            str += "\t\n";
+        }
+
+        // Closing curly brace = we're done!
+        str += "}";
+        
+        return { contents: str, existingEdits: existingEdits, numLines: lineNumber };
+    }
+    
     /** 
      *  Called when there is a text change in the inline editor.
      *  @params: the first is the codemirror instance, the second is the change object.
@@ -1292,94 +1465,35 @@ define(function (require, exports, module) {
         var cq = currentQuery;
         var i = 0;
 
-        // Begin writing the output string that will populate the inline editor.
-        var str = inlineSelector + " {\n";
-
-        var eh = document.querySelector(".inlineEditorHolder");
-        var im = document.querySelector(".inlinemark");
-
-        // If there is a already an inline mark in the DOM, get rid of it.
-        if(im) {
-            im.style.cssText = "";
-            eh.removeChild(im);
-        }
-
-        // Create a new inline colored mark to put in the inline editor.
-        var mark = document.createElement("div");
-        mark.className = "inlinemark";
-        mark.id = "mark" + cq.width + "inline";       
-        eh.appendChild(mark);
-
-        // Add the selector select box to the mark div.
-        mark.appendChild(selectSelector);
-
-        // Create the pixel width text display and add it to the mark div.
-        var wd = document.createElement("div");
-        wd.className = "wd";
-        wd.appendChild(document.createTextNode(cq.width + "px"));
-        mark.appendChild(wd);
-        
-        // Set the appropriate color for the newly selected query.
+        // update the background colour of the inline mark
+        var mark = document.querySelector(".inlinemark");
         mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+        
+        var wd = document.querySelector(".inlinemark > .wd");
+        wd.innerHTML = cq.width + "px";
+
+        // Set the appropriate color for the newly selected query.
 
         var count = 0;
         var existingEdits = [];
 
-        // Loop through the CSS results we got when we opened the inline editor.
-        for(var prop in cssResults.rules) {
-            
-            var pvalue = undefined;
-            count++;
-            
-            // Loop through all of the defined media queries.
-            for(var sel in queries) {
+        // Refresh rules for current query and loop through.
+        cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, inlineElement);
 
-                var q = queries[sel];
+        // refresh the selector drop down
+        var selectSelector = inlineEditor.$htmlContent[0].querySelector("select");
+        refreshSelectorSelectbox(selectSelector, cssResults);
 
-                // If the query is the current query and it has this selector already.
-                if(cq == q && q.selectors[inlineSelector]) {
-
-                    // If this property has been set already store the value.
-                    if(q.selectors[inlineSelector].rules[prop]) {
-                       pvalue = q.selectors[inlineSelector].rules[prop];
-                       existingEdits.push({query:q, line:count});
-                       pvalue = pvalue.replace(/;/, '');
-                       break;
-
-                    }
-                }  
-
-                // If the query's width is greater than the currently selected query
-                // and the the query has this selector already.
-                else if(q != cq && parseInt(q.width) > parseInt(cq.width) && 
-                    q.selectors[inlineSelector]) {
-
-                    // If there is already a property value, store it.
-                    if(q.selectors[inlineSelector].rules[prop]) {
-                       pvalue = q.selectors[inlineSelector].rules[prop];
-                       existingEdits.push({query:q, line:count});
-                       pvalue = pvalue.replace(/;/, '');
-                       break;
-                    }
-                } 
-                             
-            }
-
-            // If nobody has set this property yet, just use the original returned result.
-            if(pvalue == undefined)
-                pvalue = cssResults.rules[prop];
-
-            // Add the CSS for this property to the output string.
-            str += "\t" + prop + ": " + pvalue.trim() + ";\n";
-        }
-
-        // Finish the string.
-        str += "}";
+        // Build the editor contents. 
+        // Note: For some reason count is 0 when refreshed but 4 when editor is created
+        var editorContents = refreshCodeEditor(cq, cssResults);
 
         // Set the text in the inline editor to our new string.
-        inlineCm.setValue(str);
+        inlineCm.setValue(editorContents.contents);
 
         // Loop through the existingEdits array and highlight lines appropriately.
+        var existingEdits = editorContents.existingEdits;
+
         for(var i=0, len=existingEdits.length; i<len; i++) {
             inlineCm.removeLineClass(existingEdits[i].line, "background");
             inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
@@ -1390,7 +1504,7 @@ define(function (require, exports, module) {
      *  Function that goes through all of the media query data and writes it to the 
      *  style block in the iframe and also to the media-queries.css file.
      */
-    function refreshMediaQueries() {
+    function refreshMediaQueries(writeToFile) {
         
         // Defining some vars we'll need.
         var s = "";
@@ -1422,19 +1536,23 @@ define(function (require, exports, module) {
         style.textContent = s;
         
         // Write the new text to the media-queries.css file.
-        FileUtils.writeText(mediaQueryDoc.file, s);
+        if (writeToFile === undefined || writeToFile) {
+            FileUtils.writeText(mediaQueryDoc.file, s);   
+        }
     }
 
     /** 
      *  Called when brackets has opened and is ready.
      */
     AppInit.appReady(function () {
-        var iconURL = require.toUrl('./images/icon.png');
         // Here we add the toolbar icon that launches you into responsive mode.
         var icon = document.createElement('a');
         icon.href = "#";
         icon.className = "responseIcon";
-        icon.style.cssText = "margin: 10px 0 5px;content: '';background: url('"+iconURL+"') 0 0 no-repeat;display: inline-block;width: 14px;height: 17px;display: inline-block;";
+
+        var iconURL = require.toUrl('./images/toolbar-icon.png');
+        icon.style.cssText = "content: ''; background: url('"+iconURL+"') 0 0 no-repeat;";
+
         document.querySelector('#main-toolbar .buttons').appendChild(icon);
         icon.addEventListener('click', Response, false);
     });
@@ -1458,6 +1576,6 @@ define(function (require, exports, module) {
     menu.addMenuItem(INSPECT_ID, "Ctrl-1");
 
     // Register as an inline provider.
-    EditorManager.registerInlineEditProvider(inlineEditorProvider);
+    EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);
 
 });

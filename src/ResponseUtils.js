@@ -176,7 +176,7 @@ define(function (require, exports, module) {
 
                                 // See if we can shorten things by checking if there is a 
                                 // shorthand version of this rule (i.e. margin:20px vs margin-top:20px etc.)
-                                if(declaration.getPropertyShorthand(lines[j][1]) != null) {
+                                /*if(declaration.getPropertyShorthand(lines[j][1]) != null) {
 
                                     // Get the shorthand property name.
                                     var pname = declaration.getPropertyShorthand(lines[j][1]);
@@ -185,10 +185,10 @@ define(function (require, exports, module) {
                                     res.rules[pname] = declaration.getPropertyValue(pname);
                                 }
 
-                                else {
+                                else {*/
                                     // Store the property name and value returned to us.
                                     res.rules[lines[j][1]] = lines[j][2];
-                                }
+                                //}
 
                             }
                         }
@@ -214,23 +214,17 @@ define(function (require, exports, module) {
         // Create a new return object.
         var res = new CSSResponse();
 
-        // Loop thorugh the returned CSS rule objects.
-        if(rules.length > 0) {
-
+        if(rules != null && rules.length > 0) {
+            // Loop thorugh the returned CSS rule objects.
             for(var i=rules.length-1; i>-1; i--) {
-
-                // If the return object doesn't have this selector set yet, add it 
-                // to the selectors array.
-                if(res.selectors.indexOf(rules[i].selectorText) == -1)
-                    res.selectors.push(rules[i].selectorText);
 
                 // Use the helper function above to parse out all the rules
                 // from the cssText string.
                 var lines = parseCSSRules(rules[i].style.cssText);
-
                 var declaration = rules[i].style;
 
                 // Loop through the retuned lines of CSS.
+                var rulelist = {};
                 for(var j=0, len=lines.length; j<len; j++) {
                     
                     // There is a property name proceed;  
@@ -238,7 +232,7 @@ define(function (require, exports, module) {
                         
                         // See if we can shorten things by checking if there is a 
                         // shorthand version of this rule (i.e. margin:20px vs margin-top:20px etc.)
-                        if(declaration.getPropertyShorthand(lines[j][1]) != null) {
+                        /*if(declaration.getPropertyShorthand(lines[j][1]) != null) {
 
                             // Get the shorthand property name.
                             var pname = declaration.getPropertyShorthand(lines[j][1]);
@@ -249,12 +243,42 @@ define(function (require, exports, module) {
 
                         else {
 
-                            // No shortand available so just use the returned value.
-                            res.rules[lines[j][1]] = lines[j][2];
-                        }
+                            // No shortand available so just use the returned value.*/
+                            rulelist[lines[j][1]] = lines[j][2];
+                        //}
 
                     }
                 }
+
+                var selector = rules[i].selectorText;
+                
+                // If the return object doesn't have this selector set yet, add it 
+                // to the selectors array.
+                if (res.selectors.indexOf(selector) == -1) {
+                    res.selectors.push(selector);
+                    res.rules[selector] = rulelist;
+                } else {
+                    res.rules[selector] = $.extend(res.rules[selector], rulelist);
+                }
+
+                
+            }
+        } else {
+            // create empty CSS rules for each class or id on the element
+            if (el.id.length > 0) {
+                res.selectors.push('#' + el.id);
+                res.rules['#' + el.id] = null;
+            }
+
+            for (var i = 0; i < el.classList.length; i++) {
+                res.selectors.push('.' + el.classList[i]);
+                res.rules['.' + el.classList[i]] = null;
+            }
+            
+            // and id or class has not been defined...adding the tag name instead
+            if (res.selectors.length == 0) {
+                res.selectors.push(el.tagName.toLowerCase());
+                res.rules[el.tagName.toLowerCase()] = null;                
             }
         }
 
