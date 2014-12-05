@@ -503,6 +503,35 @@ input[type='range']::-webkit-slider-thumb {
 	box-shadow: inset 0px -1px 0px hsl(0, 0%, 24%), inset 0px 1px 6px hsl(0, 0%, 8%) !important;
 }
 
+#response-refresh {
+	position: absolute;
+	background-image: url('../images/refreshIcon.svg'), -webkit-linear-gradient(top, hsl(180, 2%, 29%) 0%, hsl(180, 2%, 22%) 100%);
+	top: 5px;
+	left: 328px;
+	width: 22px;
+	height: 19px;
+	padding: 3px 4px;
+	background-repeat: no-repeat;
+	background-position: center 5px, 0 0;
+	background-size: 16px, 100%;
+	border: 1px solid #171717;
+	box-shadow: inset 0px 1px 0px #5E5E5E;
+}
+
+#response-refresh:hover {
+	background-image: url('../images/refreshIcon.svg'),
+		-webkit-linear-gradient(top, #393C3C 0%, #282A2A 100%);
+	border: 1px solid #171717;
+	box-shadow: inset 0px 1px 0px #4D4D4D;
+}
+
+#response-refresh:active, .horz-active {
+	background-image: url('../images/refreshIcon.svg'), -webkit-linear-gradient(bottom, hsl(180, 3%, 20%) 0%, hsl(180, 2%, 17%) 100%) !important;
+	background-repeat: no-repeat;
+	border: 1px solid hsl(0, 0%, 9%) !important;
+	box-shadow: inset 0px -1px 0px hsl(0, 0%, 24%), inset 0px 1px 6px hsl(0, 0%, 8%) !important;
+}
+
 .divider {
 	position: absolute;
 	width: 1px;
