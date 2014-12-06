@@ -27,9 +27,10 @@ define(function (require, exports, module) {
 
     /*====================  Define constants  =====================*/
 
-    var MENU_RESPONSE_ID = "brimelow.reponsive.mainmenu";
-    var CMD_RESPONSEMODE_ID = "brimelow.response.cmd.launch";
-    var CMD_INSPECTMODE_ID = "brimelow.response.cmd.inspect";
+    var EXT_PREFIX = "responsive";
+    var MENU_RESPONSE_ID = EXT_PREFIX + ".mainmenu";
+    var CMD_RESPONSEMODE_ID = EXT_PREFIX + ".cmd.launch";
+    var CMD_INSPECTMODE_ID = EXT_PREFIX + ".cmd.inspect";
     
     /*================  Load needed brackets modules  ================*/   
 
@@ -49,6 +50,7 @@ define(function (require, exports, module) {
     var FileSystem = brackets.getModule("filesystem/FileSystem");
     var CSSUtils = brackets.getModule("language/CSSUtils");
     var HTMLUtils = brackets.getModule("language/HTMLUtils");
+    var PreferencesManager = brackets.getModule("preferences/PreferencesManager");
     
     /*================  Load my custom modules  ================*/  
 
@@ -83,10 +85,6 @@ define(function (require, exports, module) {
     // Document for the generated media-queries.css file.
     var mediaQueryDoc;
     
-    // The file where media queries will be stored. This should be moved into 
-    // a preferences so it can be customized
-    var mediaQueryFile = 'css/media-queries.css';
-
     // I write to this temp document to show in the inline editor.
     var tempCSSDoc;
 
@@ -261,37 +259,70 @@ define(function (require, exports, module) {
             // Store the current HTML document that we'll be working with.
             currentDoc = DocumentManager.getCurrentDocument();
 
+            var mediaQueryFilePath = projectRoot + prefs.get("mediaQueryFile");
+            
             // Check if the media-queries css file exists. If it doesn't, then create a
             // new file. If it does, then reload and refresh UI
-            FileSystem.resolve(projectRoot + mediaQueryFile, function(result, file, fileSystemStats) {
+            FileSystem.resolve(mediaQueryFilePath, function(result, file, fileSystemStats) {
+                console.log("resolved path to media query file");
                 
                 // create an empty file as one doesn't exist yet                
                 if ('NotFound' === result) {
-                    FileSystem.getFileForPath(projectRoot + mediaQueryFile).write('');
+                    console.log("creating media query file: " + prefs.get("mediaQueryFile"));
+                    
+                    var mediaQueryFile = FileSystem.getFileForPath(mediaQueryFilePath);
+                    
+                    // create the parent dir if it doesn't yet exist. currently only supports a single node
+                    console.log("creating parent dir if it doesn't exist");
+                    var parentDir = FileSystem.getDirectoryForPath(mediaQueryFile.parentPath);
+                    parentDir.exists(function(error, exists) {
+                        if (!exists) parentDir.create(); 
+                    });
+                
+                    console.log("writing to media query file to force create");
+                    mediaQueryFile.write('', function(error, stats) {
+                        console.log("error: " + error + "; stats: " + stats);
+                        if (error === null) {
+                            _getMediaQueryDocument(mediaQueryFilePath);
+                        }
+                    });
+                    console.log("write completed");
+                
+                } else {
+                    _getMediaQueryDocument(mediaQueryFilePath);
                 }
                 
-                DocumentManager.getDocumentForPath(projectRoot + mediaQueryFile)
-                    .done(function(doc) {
-
-                        // Save reference to the new files document.
-                        mediaQueryDoc = doc;
-                        MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
-
-                        // now we are ready to create the response UI
-                        createResponseUI();
-
-                        // refresh media queries from file if they exist
-                        _reloadMediaQueriesFromFile(doc);
-                    
-                        // update toolbar icon to indicate we are in responsive mode
-                        iconLink.style.backgroundPosition = '0 -26px';
-                        document.body.classList.add('responsive-mode');
-
-                        var command = CommandManager.get(CMD_RESPONSEMODE_ID);
-                        command.setChecked(true);
-                    }
-                );
+                
             });
+        }
+        
+        function _getMediaQueryDocument(filePath) {
+            
+            console.log("getting document for media query");
+            DocumentManager.getDocumentForPath(projectRoot + prefs.get("mediaQueryFile"))
+                .done(function(doc) {
+                    console.log("retrieved document");
+
+                    // Save reference to the new files document.
+                    mediaQueryDoc = doc;
+                    MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
+
+                    // now we are ready to create the response UI
+                    createResponseUI();
+
+                    // refresh media queries from file if they exist
+                    _reloadMediaQueriesFromFile(doc);
+
+                    // update toolbar icon to indicate we are in responsive mode
+                    iconLink.style.backgroundPosition = '0 -26px';
+                    document.body.classList.add('responsive-mode');
+
+                    var command = CommandManager.get(CMD_RESPONSEMODE_ID);
+                    command.setChecked(true);
+                })
+                .fail(function(error) {
+                    console.log("error: " + error)
+                });
         }
         
         function _reloadMediaQueriesFromFile(mediaQueryDoc) {
@@ -1533,6 +1564,14 @@ define(function (require, exports, module) {
         icon.addEventListener('click', Response, false);
     });
 
+    // Configure preferences for the extension
+    var prefs = PreferencesManager.getExtensionPrefs(EXT_PREFIX),
+        stateManager = PreferencesManager.stateManager.getPrefixedSystem(EXT_PREFIX);
+    
+    prefs.definePreference("mediaQueryFile", "string", "css/media-queries.css").on("change", function () {
+        console.log("The media query property changed: ", prefs.get("mediaQueryFile"));
+    });
+    
     // Build commands and menu system
     var customMenu = Menus.addMenu(Strings.MENU_MAIN, MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
     
