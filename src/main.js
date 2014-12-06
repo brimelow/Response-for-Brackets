@@ -627,7 +627,7 @@ define(function (require, exports, module) {
     function handleFrameLoaded(e) {
 
         // Store a reference to the iframe document.
-        frameDOM = this.document;
+        frameDOM = document.getElementById("frame").contentWindow.document;
         frameDOM.body.firstElementChild.style.overflowX = 'hidden';
 
         // Add an empty style block in the iframe head tag. This is where we
@@ -655,13 +655,28 @@ define(function (require, exports, module) {
     }
 
     /**
-     * Called when user clicks on refresh button. Simply reloads the iframe
+     * Called when user clicks on refresh button. reloading the iframe wasn't
+     * triggering the onload event (handleFrameLoaded) so instead we are removing 
+     * iframe and recreating it.
+     * 
+     * note: there should probably be a better way to do this so the onload
+     * event (handleFrameLoaded) is triggered
      */
     function handleRefreshClick(e) {
         
         if (e) e.stopImmediatePropagation();
         
-        frame.contentWindow.location.reload();
+        // remove the #response view
+        var element = document.getElementById("response");
+        element.parentNode.removeChild(element);
+
+        // reload the iframe
+        Response();
+        
+        //frame.contentWindow.addEventListener('load', handleFrameLoaded, false);
+        //frame.contentWindow.location.reload(true);
+        //handleFrameLoaded();
+        //frame.src += '?c=' + Math.random();
     }
     
     /** 
