@@ -14,7 +14,14 @@ There is no longer a need to hack brackets
 4. Copy all the files from this repo `src` folder to the 'Response-for-Brackets' folder created in step 3
 5. Quit and re-launch Brackets or hit f5 to reload with extensions
 
+# Preferences
 
-# Original project
+The location and filename of the media query css file can now be defined as a property so each project can dictate its own location. The property name is responsive.mediaQueryFile and an example of a .brackets.json file in the projects location is:
 
-For more information please visit [Response-forBrackets](https://github.com/brimelow/Response-for-Brackets) by [@brimelow](https://github.com/brimelow)
+    {
+        "responsive.mediaQueryFile": "css2/media-queries2.css"
+    }
+
+The default value for the media query css file is css/media-queries.css
+
+
