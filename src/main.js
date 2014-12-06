@@ -402,6 +402,7 @@ define(function (require, exports, module) {
             {tag:"a",attr:{class:"divider"}, parent:1},
             {tag:"div",attr:{id:"layoutText"}, text:"LAYOUT", parent:1},
             {tag:"a",attr:{id:"vertButt",class:"vert-active"}, parent:1},
+            {tag:"a",attr:{id:"response-refresh", href:"#"}, parent:1},
             {tag:"div",attr:{id:"track-label"}, parent:1},
             {tag:"div",attr:{id:"track"}, parent:0},
             {tag:"input",attr:{id:"slider",type:"range",min:"0"}, parent:0}];
@@ -423,6 +424,9 @@ define(function (require, exports, module) {
         track = document.getElementById("track");
         trackLabel = document.getElementById("track-label");
 
+        var refreshBtn = document.getElementById("response-refresh");
+        refreshBtn.addEventListener('click', handleRefreshClick, false);
+        
         // Set the ruler slider to the width of brackets.
         slider.value = slider.max = response.offsetWidth;
 
@@ -650,6 +654,16 @@ define(function (require, exports, module) {
         refreshMediaQueries(false);
     }
 
+    /**
+     * Called when user clicks on refresh button. Simply reloads the iframe
+     */
+    function handleRefreshClick(e) {
+        
+        if (e) e.stopImmediatePropagation();
+        
+        frame.contentWindow.location.reload();
+    }
+    
     /** 
      *  Called when user mouses off the iframe.
      */
