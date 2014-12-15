@@ -31,6 +31,8 @@ define(function (require, exports, module) {
     var MENU_RESPONSE_ID = EXT_PREFIX + ".mainmenu";
     var CMD_RESPONSEMODE_ID = EXT_PREFIX + ".cmd.launch";
     var CMD_INSPECTMODE_ID = EXT_PREFIX + ".cmd.inspect";
+    var CMD_HORZLAYOUT_ID = EXT_PREFIX + ".cmd.horizontal";
+    var CMD_VERTLAYOUT_ID = EXT_PREFIX + ".cmd.vertical";
     
     /*================  Load needed brackets modules  ================*/   
 
@@ -508,8 +510,8 @@ define(function (require, exports, module) {
      */
     function setupEventHandlers() {
 
-        horzButt.addEventListener('click', handleChangeLayout, false);
-        vertButt.addEventListener('click', handleChangeLayout, false);
+        //horzButt.addEventListener('click', handleHorzLayoutBtnClick, false);
+        //vertButt.addEventListener('click', handleVertLayoutBtnClick, false);
         slider.addEventListener('change', handleSliderChange, false);
         frame.contentWindow.addEventListener('load', handleFrameLoaded, false);
         frame.addEventListener('mouseout', handleFrameMouseOut, false);
@@ -528,10 +530,46 @@ define(function (require, exports, module) {
      * when the user is in horizontal layout (left to right). the code should
      * be updated at some point to remove this confusion
      */
-    function handleChangeLayout(e) {
 
-        e.stopImmediatePropagation();
+    function handleHorzLayoutToggle(e) {
 
+        if (e) e.stopImmediatePropagation();
+
+        var horzCmd = CommandManager.get(CMD_HORZLAYOUT_ID);
+        if (!horzCmd.getChecked()) {
+            
+            // update menu state if not already correct
+            horzCmd.setChecked(true);
+
+            var vertCmd = CommandManager.get(CMD_VERTLAYOUT_ID);
+            vertCmd.setChecked(false);
+        
+            // update the layout
+            _toggleLayoutMode(horzCmd, vertCmd);
+        }
+    }
+    
+    function handleVertLayoutToggle(e) {
+
+        if (e) e.stopImmediatePropagation();
+
+        var vertCmd = CommandManager.get(CMD_VERTLAYOUT_ID);
+        if (!vertCmd.getChecked()) {
+            
+            // update menu state if not already correct
+            vertCmd.setChecked(true);
+
+            var horzCmd = CommandManager.get(CMD_HORZLAYOUT_ID);
+            horzCmd.setChecked(false);
+        
+            // update the layout
+            _toggleLayoutMode(vertCmd, horzCmd);
+        }
+    }
+
+    function _toggleLayoutMode(newLayoutCmd, oldLayoutCmd) {
+
+/*        
         // User wants to go into horizontal mode
         if(this.id == 'horzButt' && mode == VERTICAL) {
 
@@ -609,6 +647,7 @@ define(function (require, exports, module) {
             // Refresh codemirror
             cm.refresh();
         }
+*/
     }
 
 
@@ -1611,6 +1650,18 @@ define(function (require, exports, module) {
     // Toggle inspect mode.
     CommandManager.register(Strings.SUBMENU_INSPECTMODE, CMD_INSPECTMODE_ID, handleInspectToggle);
     customMenu.addMenuItem(CMD_INSPECTMODE_ID, "Shift-Alt-I");
+
+    customMenu.addMenuDivider();
+    
+    // Toggle inspect mode.
+    CommandManager.register(Strings.SUBMENU_HORZLAYOUT, CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
+    customMenu.addMenuItem(CMD_HORZLAYOUT_ID, "Shift-Alt-H");
+
+    // Toggle inspect mode.
+    var layoutCmd = CommandManager.register(Strings.SUBMENU_VERTLAYOUT, CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
+    layoutCmd.setChecked(true);
+    customMenu.addMenuItem(CMD_VERTLAYOUT_ID, "Shift-Alt-V");
+    
 
     // Register as an inline provider.
     EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);
