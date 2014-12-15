@@ -111,12 +111,6 @@ define(function (require, exports, module) {
     // Main container for the response tools and iFrame.
     var response;
 
-    // Button that switches the layout to horizontal.
-    var horzButt;
-
-    // Button that switches the layout to vertical.
-    var vertButt;
-
     // Codemirror instance for the current full editor.
     var cm;
 
@@ -394,7 +388,7 @@ define(function (require, exports, module) {
             {tag:"a",attr:{class:"divider"}, parent:1},
             {tag:"a",attr:{class:"divider"}, parent:1},
             {tag:"div",attr:{id:"layoutText"}, text:"LAYOUT", parent:1},
-            {tag:"a",attr:{id:"vertButt",class:"vert-active"}, parent:1},
+            {tag:"a",attr:{id:"vertButt", href:"#"}, parent:1},
             {tag:"a",attr:{id:"response-refresh", href:"#"}, parent:1},
             {tag:"div",attr:{id:"track-label"}, parent:1},
             {tag:"div",attr:{id:"track"}, parent:0},
@@ -410,13 +404,17 @@ define(function (require, exports, module) {
         response = document.getElementById("response");
         inspectButton = document.getElementById("inspectButton");
         addButt = document.getElementById("addButt");
-        vertButt = document.getElementById("vertButt");
-        horzButt = document.getElementById("horzButt");
-        vertButt = document.getElementById("vertButt");
         slider = document.getElementById("slider");
         track = document.getElementById("track");
         trackLabel = document.getElementById("track-label");
 
+        // add click handler for vertical/horizontal layout buttons
+        var horzLayoutBtn = document.getElementById("horzButt");
+        horzLayoutBtn.addEventListener('click', handleHorzLayoutToggle, false);
+        var vertLayoutBtn = document.getElementById("vertButt");
+        vertLayoutBtn.addEventListener('click', handleVertLayoutToggle, false);
+
+        // add click handler for refresh button
         var refreshBtn = document.getElementById("response-refresh");
         refreshBtn.addEventListener('click', handleRefreshClick, false);
         
@@ -510,8 +508,6 @@ define(function (require, exports, module) {
      */
     function setupEventHandlers() {
 
-        //horzButt.addEventListener('click', handleHorzLayoutBtnClick, false);
-        //vertButt.addEventListener('click', handleVertLayoutBtnClick, false);
         slider.addEventListener('change', handleSliderChange, false);
         frame.contentWindow.addEventListener('load', handleFrameLoaded, false);
         frame.addEventListener('mouseout', handleFrameMouseOut, false);
@@ -533,10 +529,20 @@ define(function (require, exports, module) {
 
     function handleHorzLayoutToggle(e) {
 
-        if (e) e.stopImmediatePropagation();
+        var btnClicked = false;
+        
+        // if e is defined then it means the click came from the button in the preview pane. 
+        // need to check if it is not already 'active' and signal it was clicked if it is 
+        // not active
+        if (e) {
+            e.stopImmediatePropagation();
+            btnClicked = !document.body.classList.contains('response-horz');
+        }
 
+        // check if the layout state has changed. making sure not clicking on an already
+        // active menu
         var horzCmd = CommandManager.get(CMD_HORZLAYOUT_ID);
-        if (!horzCmd.getChecked()) {
+        if (btnClicked || !horzCmd.getChecked()) {
             
             // update menu state if not already correct
             horzCmd.setChecked(true);
@@ -544,17 +550,30 @@ define(function (require, exports, module) {
             var vertCmd = CommandManager.get(CMD_VERTLAYOUT_ID);
             vertCmd.setChecked(false);
         
-            // update the layout
-            _toggleLayoutMode(horzCmd, vertCmd);
+            // set the mode. would like to get rid of this variable and use menu state instead
+            mode = HORIZONTAL;
+            
+            // update the layout if the preview pane is visible
+            showHorizontalLayout();
         }
     }
     
     function handleVertLayoutToggle(e) {
 
-        if (e) e.stopImmediatePropagation();
+        var btnClicked = false;
+        
+        // if e is defined then it means the click came from the button in the preview pane. 
+        // need to check if it is not already 'active' and signal it was clicked if it is 
+        // not active
+        if (e) {
+            e.stopImmediatePropagation();
+            btnClicked = !document.body.classList.contains('response-vert');
+        }
 
+        // check if the layout state has changed. making sure not clicking on an already
+        // active menu
         var vertCmd = CommandManager.get(CMD_VERTLAYOUT_ID);
-        if (!vertCmd.getChecked()) {
+        if (btnClicked || !vertCmd.getChecked()) {
             
             // update menu state if not already correct
             vertCmd.setChecked(true);
@@ -562,22 +581,46 @@ define(function (require, exports, module) {
             var horzCmd = CommandManager.get(CMD_HORZLAYOUT_ID);
             horzCmd.setChecked(false);
         
-            // update the layout
-            _toggleLayoutMode(vertCmd, horzCmd);
+            // set the mode. would like to get rid of this variable and use menu state instead
+            mode = VERTICAL;
+            
+            // update the layout if the preview pane is visible
+            showVerticalLayout();
         }
     }
 
+    function showHorizontalLayout() {
+        
+        // Update only if the response element exists
+        if (document.querySelector('#response')) {
+
+            // update the global class to indicate layout
+            document.body.classList.remove('response-vert');
+            document.body.classList.add('response-horz');
+
+        }
+    }
+
+    function showVerticalLayout() {
+        
+        // Update only if the response element exists
+        if (document.querySelector('#response')) {
+
+            // update the global class to indicate layout
+            document.body.classList.remove('response-horz');
+            document.body.classList.add('response-vert');
+
+        }
+    }
+    
+    
     function _toggleLayoutMode(newLayoutCmd, oldLayoutCmd) {
 
 /*        
         // User wants to go into horizontal mode
         if(this.id == 'horzButt' && mode == VERTICAL) {
 
-            mode = HORIZONTAL;
-
             // Changes the CSS to adjust to the new mode
-            vertButt.classList.remove("vert-active");
-            horzButt.classList.add("horz-active");
             response.style.cssText = null;
             mainView.style.cssText = null;
             response.classList.add("response-vert");
@@ -614,8 +657,6 @@ define(function (require, exports, module) {
         else if(this.id == 'vertButt' && mode == HORIZONTAL) {
 
             // Change the CSS needed for this mode
-            vertButt.classList.add("vert-active");
-            horzButt.classList.remove("horz-active");
             response.style.cssText = null;
             mainView.style.cssText = null;
             response.classList.remove("response-vert");
@@ -629,7 +670,6 @@ define(function (require, exports, module) {
             Splitter.makeResizable(response, 'vert', 100, cm);
 
             splitter = document.querySelector('.vert-splitter');
-            mode = VERTICAL;
 
             var w = window.innerWidth;
             var h = window.innerHeight;
