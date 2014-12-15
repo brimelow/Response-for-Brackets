@@ -164,7 +164,7 @@
 */
 }
 
-.responsive-mode .main-view-horz {
+.responsive-mode.response-horz .main-view {
     position: absolute;
 	right: 0;
 	top: 0;
@@ -172,7 +172,7 @@
 	margin-top: 0;
 }
 
-.responsive-mode .response-horz {
+.responsive-mode.response-horz #response {
 	height: 100%;
 }
 
@@ -438,7 +438,6 @@ input[type='range']::-webkit-slider-thumb {
     position: absolute;
     top: 7px;    
     right: 55px;
-    width: 200px;
     text-align: right;
     color: #fff;
 }
@@ -466,7 +465,7 @@ input[type='range']::-webkit-slider-thumb {
 	box-shadow: inset 0px 1px 0px #4D4D4D;
 }
 
-#vertButt:active, .vert-active {
+#vertButt:active, .response-vert #vertButt {
 	background-image: url('../images/vertIcon.png'), -webkit-linear-gradient(bottom, hsl(180, 3%, 20%) 0%, hsl(180, 2%, 17%) 100%) !important;
 	background-repeat: no-repeat !important;
 	border: 1px solid hsl(0, 0%, 9%) !important;
@@ -496,7 +495,7 @@ input[type='range']::-webkit-slider-thumb {
 	box-shadow: inset 0px 1px 0px #4D4D4D;
 }
 
-#horzButt:active, .horz-active {
+#horzButt:active, .response-horz #horzButt {
 	background-image: url('../images/horzIcon.png'), -webkit-linear-gradient(bottom, hsl(180, 3%, 20%) 0%, hsl(180, 2%, 17%) 100%) !important;
 	background-repeat: no-repeat;
 	border: 1px solid hsl(0, 0%, 9%) !important;
@@ -525,14 +524,14 @@ input[type='range']::-webkit-slider-thumb {
 	box-shadow: inset 0px 1px 0px #4D4D4D;
 }
 
-#response-refresh:active, .horz-active {
+#response-refresh:active {
 	background-image: url('../images/refreshIcon.svg'), -webkit-linear-gradient(bottom, hsl(180, 3%, 20%) 0%, hsl(180, 2%, 17%) 100%) !important;
 	background-repeat: no-repeat;
 	border: 1px solid hsl(0, 0%, 9%) !important;
 	box-shadow: inset 0px -1px 0px hsl(0, 0%, 24%), inset 0px 1px 6px hsl(0, 0%, 8%) !important;
 }
 
-.divider {
+.menu-divider {
 	position: absolute;
 	width: 1px;
 	height: 35px;

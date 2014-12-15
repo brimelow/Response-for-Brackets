@@ -31,6 +31,8 @@ define(function (require, exports, module) {
     var MENU_RESPONSE_ID = EXT_PREFIX + ".mainmenu";
     var CMD_RESPONSEMODE_ID = EXT_PREFIX + ".cmd.launch";
     var CMD_INSPECTMODE_ID = EXT_PREFIX + ".cmd.inspect";
+    var CMD_HORZLAYOUT_ID = EXT_PREFIX + ".cmd.horizontal";
+    var CMD_VERTLAYOUT_ID = EXT_PREFIX + ".cmd.vertical";
     
     /*================  Load needed brackets modules  ================*/   
 
@@ -109,12 +111,6 @@ define(function (require, exports, module) {
     // Main container for the response tools and iFrame.
     var response;
 
-    // Button that switches the layout to horizontal.
-    var horzButt;
-
-    // Button that switches the layout to vertical.
-    var vertButt;
-
     // Codemirror instance for the current full editor.
     var cm;
 
@@ -165,9 +161,6 @@ define(function (require, exports, module) {
     
     // The inspect mode toggle button.
     var inspectButton;
-
-    // Is the inline editor open?
-    var isInlineOpen = false;
     
     // Selector for the element in the inline editor.
     var inlineSelector;
@@ -224,7 +217,8 @@ define(function (require, exports, module) {
             // Manually fire the window resize event to position everything correctly.
             handleWindowResize(null);
 
-            cm.refresh();
+            // refresh layout
+            WorkspaceManager.recomputeLayout(true);
 
             // update toolbar icon and menu state to indicate we are leaving responsive mode
             iconLink.style.backgroundPosition = '0 0';
@@ -242,19 +236,10 @@ define(function (require, exports, module) {
                 return;
             }
 
-            modulePath = FileUtils.getNativeModuleDirectoryPath(module);
             projectRoot = ProjectManager.getProjectRoot().fullPath;
             mainEditor = EditorManager.getCurrentFullEditor();
             cm = mainEditor._codeMirror;
             mainView = document.querySelector('.main-view');
-
-            // Is there a brackets function for loading non-module scripts?
-            // I couldn't find one so I wrote a simple one.
-            ResponseUtils.loadExternalScript(modulePath + "/js/TweenMax.min.js", document.head);
-            ResponseUtils.loadExternalScript(modulePath + "/Query.js", document.head);
-
-            // Load in the main CSS for the responsive UI.
-            ExtensionUtils.addLinkedStyleSheet(modulePath + "/css/respond.css");
 
             // Store the current HTML document that we'll be working with.
             currentDoc = DocumentManager.getCurrentDocument();
@@ -397,11 +382,10 @@ define(function (require, exports, module) {
             {tag:"a",attr:{id:"inspectButton", href:"#"}, parent:1},
             {tag:"div",attr:{id:"inspectText"}, text:"INSPECT", parent:1},
             {tag:"a",attr:{id:"addButt", href:"#"}, parent:1},
-            {tag:"a",attr:{id:"horzButt", href:"#"}, parent:1},
-            {tag:"a",attr:{class:"divider"}, parent:1},
-            {tag:"a",attr:{class:"divider"}, parent:1},
+            {tag:"a",attr:{id:"horzButt", href:"#", title:Strings.SUBMENU_HORZLAYOUT}, parent:1},
+            {tag:"a",attr:{class:"menu-divider"}, parent:1},
             {tag:"div",attr:{id:"layoutText"}, text:"LAYOUT", parent:1},
-            {tag:"a",attr:{id:"vertButt",class:"vert-active"}, parent:1},
+            {tag:"a",attr:{id:"vertButt", href:"#", title:Strings.SUBMENU_VERTLAYOUT}, parent:1},
             {tag:"a",attr:{id:"response-refresh", href:"#"}, parent:1},
             {tag:"div",attr:{id:"track-label"}, parent:1},
             {tag:"div",attr:{id:"track"}, parent:0},
@@ -417,13 +401,17 @@ define(function (require, exports, module) {
         response = document.getElementById("response");
         inspectButton = document.getElementById("inspectButton");
         addButt = document.getElementById("addButt");
-        vertButt = document.getElementById("vertButt");
-        horzButt = document.getElementById("horzButt");
-        vertButt = document.getElementById("vertButt");
         slider = document.getElementById("slider");
         track = document.getElementById("track");
         trackLabel = document.getElementById("track-label");
 
+        // add click handler for vertical/horizontal layout buttons
+        var horzLayoutBtn = document.getElementById("horzButt");
+        horzLayoutBtn.addEventListener('click', handleHorzLayoutToggle, false);
+        var vertLayoutBtn = document.getElementById("vertButt");
+        vertLayoutBtn.addEventListener('click', handleVertLayoutToggle, false);
+
+        // add click handler for refresh button
         var refreshBtn = document.getElementById("response-refresh");
         refreshBtn.addEventListener('click', handleRefreshClick, false);
         
@@ -517,8 +505,6 @@ define(function (require, exports, module) {
      */
     function setupEventHandlers() {
 
-        horzButt.addEventListener('click', handleChangeLayout, false);
-        vertButt.addEventListener('click', handleChangeLayout, false);
         slider.addEventListener('change', handleSliderChange, false);
         frame.contentWindow.addEventListener('load', handleFrameLoaded, false);
         frame.addEventListener('mouseout', handleFrameMouseOut, false);
@@ -537,30 +523,88 @@ define(function (require, exports, module) {
      * when the user is in horizontal layout (left to right). the code should
      * be updated at some point to remove this confusion
      */
-    function handleChangeLayout(e) {
 
-        e.stopImmediatePropagation();
+    function handleHorzLayoutToggle(e) {
 
-        // User wants to go into horizontal mode
-        if(this.id == 'horzButt' && mode == VERTICAL) {
+        var btnClicked = false;
+        
+        // if e is defined then it means the click came from the button in the preview pane. 
+        // need to check if it is not already 'active' and signal it was clicked if it is 
+        // not active
+        if (e) {
+            e.stopImmediatePropagation();
+            btnClicked = !document.body.classList.contains('response-horz');
+        }
 
+        // check if the layout state has changed. making sure not clicking on an already
+        // active menu
+        var horzCmd = CommandManager.get(CMD_HORZLAYOUT_ID);
+        if (btnClicked || !horzCmd.getChecked()) {
+            
+            // update menu state if not already correct
+            horzCmd.setChecked(true);
+
+            var vertCmd = CommandManager.get(CMD_VERTLAYOUT_ID);
+            vertCmd.setChecked(false);
+        
+            // set the mode. would like to get rid of this variable and use menu state instead
             mode = HORIZONTAL;
+            
+            // update the layout if the preview pane is visible
+            showHorizontalLayout();
+        }
+    }
+    
+    function handleVertLayoutToggle(e) {
 
-            // Changes the CSS to adjust to the new mode
-            vertButt.classList.remove("vert-active");
-            horzButt.classList.add("horz-active");
+        var btnClicked = false;
+        
+        // if e is defined then it means the click came from the button in the preview pane. 
+        // need to check if it is not already 'active' and signal it was clicked if it is 
+        // not active
+        if (e) {
+            e.stopImmediatePropagation();
+            btnClicked = !document.body.classList.contains('response-vert');
+        }
+
+        // check if the layout state has changed. making sure not clicking on an already
+        // active menu
+        var vertCmd = CommandManager.get(CMD_VERTLAYOUT_ID);
+        if (btnClicked || !vertCmd.getChecked()) {
+            
+            // update menu state if not already correct
+            vertCmd.setChecked(true);
+
+            var horzCmd = CommandManager.get(CMD_HORZLAYOUT_ID);
+            horzCmd.setChecked(false);
+        
+            // set the mode. would like to get rid of this variable and use menu state instead
+            mode = VERTICAL;
+            
+            // update the layout if the preview pane is visible
+            showVerticalLayout();
+        }
+    }
+
+    function showHorizontalLayout() {
+        
+        // Update only if the response element exists
+        if (document.querySelector('#response')) {
+
+            // update the global class to indicate layout
+            document.body.classList.remove('response-vert');
+            document.body.classList.add('response-horz');
+
+            // clear any inline css rules on div#response and div.main-view
             response.style.cssText = null;
             mainView.style.cssText = null;
-            response.classList.add("response-vert");
-            mainView.classList.add("main-view-horz");
 
             // Remove the current panel splitter
             if (splitter != undefined) 
                 response.removeChild(splitter);
-
+            
             // Create a new splitter for this mode
             Splitter.makeResizable(response, 'horz', 344, cm);
-
             splitter = document.querySelector('.horz-splitter');
             splitter.style.right = '-16px';
             
@@ -577,20 +621,23 @@ define(function (require, exports, module) {
             // update the track label with the current value
             trackLabel.textContent = slider.value + 'px';
 
-            // Refresh codemirror
-            cm.refresh();          
+            // refresh layout
+            WorkspaceManager.recomputeLayout(true);
         }
+    }
 
-        // User wants to go into vertical mode
-        else if(this.id == 'vertButt' && mode == HORIZONTAL) {
+    function showVerticalLayout() {
+        
+        // Update only if the response element exists
+        if (document.querySelector('#response')) {
 
-            // Change the CSS needed for this mode
-            vertButt.classList.add("vert-active");
-            horzButt.classList.remove("horz-active");
+            // update the global class to indicate layout
+            document.body.classList.remove('response-horz');
+            document.body.classList.add('response-vert');
+
+            // clear any inline css rules on div#response and div.main-view
             response.style.cssText = null;
             mainView.style.cssText = null;
-            response.classList.remove("response-vert");
-            mainView.classList.remove("main-view-horz");
 
             // Remove the current panel splitter
             if (splitter != undefined) 
@@ -600,7 +647,6 @@ define(function (require, exports, module) {
             Splitter.makeResizable(response, 'vert', 100, cm);
 
             splitter = document.querySelector('.vert-splitter');
-            mode = VERTICAL;
 
             var w = window.innerWidth;
             var h = window.innerHeight;
@@ -615,8 +661,8 @@ define(function (require, exports, module) {
             // update the track label with the current value
             trackLabel.textContent = slider.value + 'px';
 
-            // Refresh codemirror
-            cm.refresh();
+            // refresh layout
+            WorkspaceManager.recomputeLayout(true);
         }
     }
 
@@ -650,6 +696,14 @@ define(function (require, exports, module) {
         var command = CommandManager.get(CMD_INSPECTMODE_ID);
         toggleInspectMode(command.getChecked());
 
+        // update the layout based on vert/horz mode
+        var horzCmd = CommandManager.get(CMD_HORZLAYOUT_ID);
+        if (horzCmd.getChecked()) {
+            showHorizontalLayout();
+        } else {
+            showVerticalLayout();
+        }
+        
         // inject frame with media queries as inline style element
         refreshMediaQueries(false);
     }
@@ -685,9 +739,8 @@ define(function (require, exports, module) {
     function handleFrameMouseOut(e) {
 
         // Hide the highlight if the inline editor isn't open. Just a UI tweak.
-        if(!isInlineOpen && highlight)
+        if (highlight)
             highlight.style.display = 'none';
-
     }
 
     /** 
@@ -701,9 +754,8 @@ define(function (require, exports, module) {
         // and set it as the current media query
         currentQuery = addQueryMark(w);
 
-        // If the inline editor is open, update it with the newly selected query.
-        if(isInlineOpen)
-            updateInlineWidget();
+        // update inline editor with the newly selected query.
+        updateInlineWidget();
 
         // Calling this function will write the new query to the style block 
         // in the iframe and also to the media-queries.css file.
@@ -809,10 +861,8 @@ define(function (require, exports, module) {
         // Refresh codemirror
         cm.refresh();
 
-        // If the inline editor is open, update it with the newly selected query.
-        if(isInlineOpen)
-            updateInlineWidget();
-
+        // update the inline editor with the newly selected query.
+        updateInlineWidget();
     }
 
     /** 
@@ -934,7 +984,7 @@ define(function (require, exports, module) {
         e.stopImmediatePropagation();
 
         // Ignore if the inline editor is open.
-        if(isInlineOpen || isAnimating)
+        if(isAnimating)
             return;
 
         // Get current cursor location.
@@ -970,7 +1020,7 @@ define(function (require, exports, module) {
             selected = {el:el, line:line};
             
             // If we found an element and the inline editor isn't open, then proceed.
-            if(el && !isInlineOpen) {
+            if (el) {
                 
                 // Boolean that tells you if the scroll position of the iframe is currently being animated.
                 isAnimating = true;
@@ -1011,10 +1061,8 @@ define(function (require, exports, module) {
 
         e.stopImmediatePropagation();
 
-        // If the inline editor isn't open, position the highlight.
-        if(!isInlineOpen)
-            positionHighlight(e.target);
-
+        // position the highlight.
+        positionHighlight(e.target);
     }
 
     /** 
@@ -1026,7 +1074,7 @@ define(function (require, exports, module) {
         e.preventDefault();
 
         // If inline editor is open, say goodbye.
-        if(isInlineOpen || !inspectButton.classList.contains("inspectButtonOn"))
+        if(!inspectButton.classList.contains("inspectButtonOn"))
             return;
 
         var target = e.target;
@@ -1261,9 +1309,6 @@ define(function (require, exports, module) {
             // Called when the editor is added to the DOM.          
             inlineEditor.onAdded = function() {
 
-                // Let everyone know the editor is open.
-                isInlineOpen = true;
-
                 var eh = inlineEditor.$htmlContent[0].querySelector(".inlineEditorHolder");
 
                 // Create a new mark that will show at the top of the inline editor
@@ -1315,7 +1360,6 @@ define(function (require, exports, module) {
                 //       the onAdded event (issue #18)
 /*
                 selected = null;
-                isInlineOpen = false;
                 inlineSelector = null;
                 highlight.style.display = 'none';
                 selectSelector.options.length = 0;
@@ -1492,9 +1536,6 @@ define(function (require, exports, module) {
      */
     function updateInlineWidget() {
 
-        if (!isInlineOpen)
-            return;
-
         // Update the highlight.
         positionHighlight(inlineElement);
 
@@ -1593,13 +1634,30 @@ define(function (require, exports, module) {
         icon.addEventListener('click', Response, false);
     });
 
+    modulePath = FileUtils.getNativeModuleDirectoryPath(module);
+
+    // Is there a brackets function for loading non-module scripts?
+    // I couldn't find one so I wrote a simple one.
+    ResponseUtils.loadExternalScript(modulePath + "/js/TweenMax.min.js", document.head);
+    ResponseUtils.loadExternalScript(modulePath + "/Query.js", document.head);
+
+    // Load in the main CSS for the responsive UI.
+    ExtensionUtils.addLinkedStyleSheet(modulePath + "/css/respond.css");
+    
     // Configure preferences for the extension
     var prefs = PreferencesManager.getExtensionPrefs(EXT_PREFIX),
         stateManager = PreferencesManager.stateManager.getPrefixedSystem(EXT_PREFIX);
     
-    prefs.definePreference("mediaQueryFile", "string", "css/media-queries.css").on("change", function () {
-        console.log("The media query property changed: ", prefs.get("mediaQueryFile"));
+    prefs.definePreference("mediaQueryFile", "string", "css/media-queries.css");
+    prefs.definePreference("preferredLayout", "string", "vertical").on("change", function () {
+        
+        if (prefs.get("preferredLayout").toLowerCase() === "horizontal") {
+            handleHorzLayoutToggle();
+        } else {
+            handleVertLayoutToggle();
+        }
     });
+
     
     // Build commands and menu system
     var customMenu = Menus.addMenu(Strings.MENU_MAIN, MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
@@ -1611,6 +1669,16 @@ define(function (require, exports, module) {
     CommandManager.register(Strings.SUBMENU_INSPECTMODE, CMD_INSPECTMODE_ID, handleInspectToggle);
     customMenu.addMenuItem(CMD_INSPECTMODE_ID, "Shift-Alt-I");
 
+    customMenu.addMenuDivider();
+    
+    // Toggle inspect mode.
+    var horzLayoutCmd = CommandManager.register(Strings.SUBMENU_HORZLAYOUT, CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
+    customMenu.addMenuItem(CMD_HORZLAYOUT_ID, "Shift-Alt-H");
+
+    // Toggle inspect mode.
+    var vertLayoutCmd = CommandManager.register(Strings.SUBMENU_VERTLAYOUT, CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
+    customMenu.addMenuItem(CMD_VERTLAYOUT_ID, "Shift-Alt-V");
+    
     // Register as an inline provider.
     EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);
 });
