@@ -531,7 +531,7 @@ input[type='range']::-webkit-slider-thumb {
 	box-shadow: inset 0px -1px 0px hsl(0, 0%, 24%), inset 0px 1px 6px hsl(0, 0%, 8%) !important;
 }
 
-.divider {
+.menu-divider {
 	position: absolute;
 	width: 1px;
 	height: 35px;
