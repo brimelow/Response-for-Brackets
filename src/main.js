@@ -220,7 +220,8 @@ define(function (require, exports, module) {
             // Manually fire the window resize event to position everything correctly.
             handleWindowResize(null);
 
-            cm.refresh();
+            // refresh layout
+            WorkspaceManager.recomputeLayout(true);
 
             // update toolbar icon and menu state to indicate we are leaving responsive mode
             iconLink.style.backgroundPosition = '0 0';
@@ -624,8 +625,8 @@ define(function (require, exports, module) {
             // update the track label with the current value
             trackLabel.textContent = slider.value + 'px';
 
-            // Refresh codemirror
-            cm.refresh();
+            // refresh layout
+            WorkspaceManager.recomputeLayout(true);
         }
     }
 
@@ -664,8 +665,8 @@ define(function (require, exports, module) {
             // update the track label with the current value
             trackLabel.textContent = slider.value + 'px';
 
-            // Refresh codemirror
-            cm.refresh();
+            // refresh layout
+            WorkspaceManager.recomputeLayout(true);
         }
     }
 
