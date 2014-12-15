@@ -438,7 +438,6 @@ input[type='range']::-webkit-slider-thumb {
     position: absolute;
     top: 7px;    
     right: 55px;
-    width: 200px;
     text-align: right;
     color: #fff;
 }
@@ -525,7 +524,7 @@ input[type='range']::-webkit-slider-thumb {
 	box-shadow: inset 0px 1px 0px #4D4D4D;
 }
 
-#response-refresh:active, .horz-active {
+#response-refresh:active {
 	background-image: url('../images/refreshIcon.svg'), -webkit-linear-gradient(bottom, hsl(180, 3%, 20%) 0%, hsl(180, 2%, 17%) 100%) !important;
 	background-repeat: no-repeat;
 	border: 1px solid hsl(0, 0%, 9%) !important;
