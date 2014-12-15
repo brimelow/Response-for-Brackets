@@ -27,7 +27,9 @@
 /*global define */
 
 define({
-    "MENU_MAIN"              : "Response",
+    "MENU_MAIN"                 : "Response",
     "SUBMENU_RESPSONSEMODE"     : "Responsive Mode",
-    "SUBMENU_INSPECTMODE"       : "Inspect Mode"
+    "SUBMENU_INSPECTMODE"       : "Inspect Mode",
+    "SUBMENU_HORZLAYOUT"        : "Horizontal Layout",
+    "SUBMENU_VERTLAYOUT"        : "Vertical Layout"
 });
