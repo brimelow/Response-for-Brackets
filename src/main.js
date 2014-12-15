@@ -161,9 +161,6 @@ define(function (require, exports, module) {
     
     // The inspect mode toggle button.
     var inspectButton;
-
-    // Is the inline editor open?
-    var isInlineOpen = false;
     
     // Selector for the element in the inline editor.
     var inlineSelector;
@@ -742,9 +739,8 @@ define(function (require, exports, module) {
     function handleFrameMouseOut(e) {
 
         // Hide the highlight if the inline editor isn't open. Just a UI tweak.
-        if(!isInlineOpen && highlight)
+        if (highlight)
             highlight.style.display = 'none';
-
     }
 
     /** 
@@ -758,9 +754,8 @@ define(function (require, exports, module) {
         // and set it as the current media query
         currentQuery = addQueryMark(w);
 
-        // If the inline editor is open, update it with the newly selected query.
-        if(isInlineOpen)
-            updateInlineWidget();
+        // update inline editor with the newly selected query.
+        updateInlineWidget();
 
         // Calling this function will write the new query to the style block 
         // in the iframe and also to the media-queries.css file.
@@ -866,10 +861,8 @@ define(function (require, exports, module) {
         // Refresh codemirror
         cm.refresh();
 
-        // If the inline editor is open, update it with the newly selected query.
-        if(isInlineOpen)
-            updateInlineWidget();
-
+        // update the inline editor with the newly selected query.
+        updateInlineWidget();
     }
 
     /** 
@@ -991,7 +984,7 @@ define(function (require, exports, module) {
         e.stopImmediatePropagation();
 
         // Ignore if the inline editor is open.
-        if(isInlineOpen || isAnimating)
+        if(isAnimating)
             return;
 
         // Get current cursor location.
@@ -1027,7 +1020,7 @@ define(function (require, exports, module) {
             selected = {el:el, line:line};
             
             // If we found an element and the inline editor isn't open, then proceed.
-            if(el && !isInlineOpen) {
+            if (el) {
                 
                 // Boolean that tells you if the scroll position of the iframe is currently being animated.
                 isAnimating = true;
@@ -1068,10 +1061,8 @@ define(function (require, exports, module) {
 
         e.stopImmediatePropagation();
 
-        // If the inline editor isn't open, position the highlight.
-        if(!isInlineOpen)
-            positionHighlight(e.target);
-
+        // position the highlight.
+        positionHighlight(e.target);
     }
 
     /** 
@@ -1083,7 +1074,7 @@ define(function (require, exports, module) {
         e.preventDefault();
 
         // If inline editor is open, say goodbye.
-        if(isInlineOpen || !inspectButton.classList.contains("inspectButtonOn"))
+        if(!inspectButton.classList.contains("inspectButtonOn"))
             return;
 
         var target = e.target;
@@ -1318,9 +1309,6 @@ define(function (require, exports, module) {
             // Called when the editor is added to the DOM.          
             inlineEditor.onAdded = function() {
 
-                // Let everyone know the editor is open.
-                isInlineOpen = true;
-
                 var eh = inlineEditor.$htmlContent[0].querySelector(".inlineEditorHolder");
 
                 // Create a new mark that will show at the top of the inline editor
@@ -1372,7 +1360,6 @@ define(function (require, exports, module) {
                 //       the onAdded event (issue #18)
 /*
                 selected = null;
-                isInlineOpen = false;
                 inlineSelector = null;
                 highlight.style.display = 'none';
                 selectSelector.options.length = 0;
@@ -1548,9 +1535,6 @@ define(function (require, exports, module) {
      *  NOTE: There is quite a bit of duplicated code here from the inlineEditorProvider function.
      */
     function updateInlineWidget() {
-
-        if (!isInlineOpen)
-            return;
 
         // Update the highlight.
         positionHighlight(inlineElement);
