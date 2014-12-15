@@ -598,41 +598,16 @@ define(function (require, exports, module) {
             document.body.classList.remove('response-vert');
             document.body.classList.add('response-horz');
 
-        }
-    }
-
-    function showVerticalLayout() {
-        
-        // Update only if the response element exists
-        if (document.querySelector('#response')) {
-
-            // update the global class to indicate layout
-            document.body.classList.remove('response-horz');
-            document.body.classList.add('response-vert');
-
-        }
-    }
-    
-    
-    function _toggleLayoutMode(newLayoutCmd, oldLayoutCmd) {
-
-/*        
-        // User wants to go into horizontal mode
-        if(this.id == 'horzButt' && mode == VERTICAL) {
-
-            // Changes the CSS to adjust to the new mode
+            // clear any inline css rules on div#response and div.main-view
             response.style.cssText = null;
             mainView.style.cssText = null;
-            response.classList.add("response-vert");
-            mainView.classList.add("main-view-horz");
 
             // Remove the current panel splitter
             if (splitter != undefined) 
                 response.removeChild(splitter);
-
+            
             // Create a new splitter for this mode
             Splitter.makeResizable(response, 'horz', 344, cm);
-
             splitter = document.querySelector('.horz-splitter');
             splitter.style.right = '-16px';
             
@@ -650,17 +625,22 @@ define(function (require, exports, module) {
             trackLabel.textContent = slider.value + 'px';
 
             // Refresh codemirror
-            cm.refresh();          
+            cm.refresh();
         }
+    }
 
-        // User wants to go into vertical mode
-        else if(this.id == 'vertButt' && mode == HORIZONTAL) {
+    function showVerticalLayout() {
+        
+        // Update only if the response element exists
+        if (document.querySelector('#response')) {
 
-            // Change the CSS needed for this mode
+            // update the global class to indicate layout
+            document.body.classList.remove('response-horz');
+            document.body.classList.add('response-vert');
+
+            // clear any inline css rules on div#response and div.main-view
             response.style.cssText = null;
             mainView.style.cssText = null;
-            response.classList.remove("response-vert");
-            mainView.classList.remove("main-view-horz");
 
             // Remove the current panel splitter
             if (splitter != undefined) 
@@ -687,7 +667,6 @@ define(function (require, exports, module) {
             // Refresh codemirror
             cm.refresh();
         }
-*/
     }
 
 
@@ -720,6 +699,14 @@ define(function (require, exports, module) {
         var command = CommandManager.get(CMD_INSPECTMODE_ID);
         toggleInspectMode(command.getChecked());
 
+        // update the layout based on vert/horz mode
+        var horzCmd = CommandManager.get(CMD_HORZLAYOUT_ID);
+        if (horzCmd.getChecked()) {
+            showHorizontalLayout();
+        } else {
+            showVerticalLayout();
+        }
+        
         // inject frame with media queries as inline style element
         refreshMediaQueries(false);
     }
