@@ -30,6 +30,6 @@ define({
     "MENU_MAIN"                 : "Response",
     "SUBMENU_RESPSONSEMODE"     : "Responsive Mode",
     "SUBMENU_INSPECTMODE"       : "Inspect Mode",
-    "SUBMENU_HORZLAYOUT"        : "Horizontal Layout",
-    "SUBMENU_VERTLAYOUT"        : "Vertical Layout"
+    "SUBMENU_HORZLAYOUT"        : "Horizontal View",
+    "SUBMENU_VERTLAYOUT"        : "Vertical View"
 });

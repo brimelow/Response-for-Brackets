@@ -1665,9 +1665,16 @@ define(function (require, exports, module) {
     var prefs = PreferencesManager.getExtensionPrefs(EXT_PREFIX),
         stateManager = PreferencesManager.stateManager.getPrefixedSystem(EXT_PREFIX);
     
-    prefs.definePreference("mediaQueryFile", "string", "css/media-queries.css").on("change", function () {
-        console.log("The media query property changed: ", prefs.get("mediaQueryFile"));
+    prefs.definePreference("mediaQueryFile", "string", "css/media-queries.css");
+    prefs.definePreference("preferredLayout", "string", "vertical").on("change", function () {
+        
+        if (prefs.get("preferredLayout").toLowerCase() === "horizontal") {
+            handleHorzLayoutToggle();
+        } else {
+            handleVertLayoutToggle();
+        }
     });
+
     
     // Build commands and menu system
     var customMenu = Menus.addMenu(Strings.MENU_MAIN, MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
@@ -1682,15 +1689,13 @@ define(function (require, exports, module) {
     customMenu.addMenuDivider();
     
     // Toggle inspect mode.
-    CommandManager.register(Strings.SUBMENU_HORZLAYOUT, CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
+    var horzLayoutCmd = CommandManager.register(Strings.SUBMENU_HORZLAYOUT, CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
     customMenu.addMenuItem(CMD_HORZLAYOUT_ID, "Shift-Alt-H");
 
     // Toggle inspect mode.
-    var layoutCmd = CommandManager.register(Strings.SUBMENU_VERTLAYOUT, CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
-    layoutCmd.setChecked(true);
+    var vertLayoutCmd = CommandManager.register(Strings.SUBMENU_VERTLAYOUT, CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
     customMenu.addMenuItem(CMD_VERTLAYOUT_ID, "Shift-Alt-V");
     
-
     // Register as an inline provider.
     EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);
 });
