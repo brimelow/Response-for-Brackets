@@ -242,19 +242,10 @@ define(function (require, exports, module) {
                 return;
             }
 
-            modulePath = FileUtils.getNativeModuleDirectoryPath(module);
             projectRoot = ProjectManager.getProjectRoot().fullPath;
             mainEditor = EditorManager.getCurrentFullEditor();
             cm = mainEditor._codeMirror;
             mainView = document.querySelector('.main-view');
-
-            // Is there a brackets function for loading non-module scripts?
-            // I couldn't find one so I wrote a simple one.
-            ResponseUtils.loadExternalScript(modulePath + "/js/TweenMax.min.js", document.head);
-            ResponseUtils.loadExternalScript(modulePath + "/Query.js", document.head);
-
-            // Load in the main CSS for the responsive UI.
-            ExtensionUtils.addLinkedStyleSheet(modulePath + "/css/respond.css");
 
             // Store the current HTML document that we'll be working with.
             currentDoc = DocumentManager.getCurrentDocument();
@@ -1593,6 +1584,16 @@ define(function (require, exports, module) {
         icon.addEventListener('click', Response, false);
     });
 
+    modulePath = FileUtils.getNativeModuleDirectoryPath(module);
+
+    // Is there a brackets function for loading non-module scripts?
+    // I couldn't find one so I wrote a simple one.
+    ResponseUtils.loadExternalScript(modulePath + "/js/TweenMax.min.js", document.head);
+    ResponseUtils.loadExternalScript(modulePath + "/Query.js", document.head);
+
+    // Load in the main CSS for the responsive UI.
+    ExtensionUtils.addLinkedStyleSheet(modulePath + "/css/respond.css");
+    
     // Configure preferences for the extension
     var prefs = PreferencesManager.getExtensionPrefs(EXT_PREFIX),
         stateManager = PreferencesManager.stateManager.getPrefixedSystem(EXT_PREFIX);
