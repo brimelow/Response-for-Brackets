@@ -33,6 +33,7 @@ define(function (require, exports, module) {
     var CMD_INSPECTMODE_ID = EXT_PREFIX + ".cmd.inspect";
     var CMD_HORZLAYOUT_ID = EXT_PREFIX + ".cmd.horizontal";
     var CMD_VERTLAYOUT_ID = EXT_PREFIX + ".cmd.vertical";
+    var CMD_PREVIEWURL_ID = EXT_PREFIX + ".cmd.livepreview";
     
     /*================  Load needed brackets modules  ================*/   
 
@@ -180,9 +181,6 @@ define(function (require, exports, module) {
     // Results returned from ResponseUtils.getAuthorCSSRules().
     var cssResults;
 
-    // The current document in the full editor.
-    var currentDoc;
-
     // A style block we will inject into the iframe.
     var style;
 
@@ -231,8 +229,11 @@ define(function (require, exports, module) {
 
         } else {
 
-            // Only provide a CSS editor when cursor is in HTML content
-            if (DocumentManager.getCurrentDocument().language.getId() !== "html") {
+            // Ensure we can create a preview pane. Either the currently main
+            // document needs to be an HTML doc or use the Live Preview URL if
+            // it has been set
+            var previewPaneUrl = _getPreviewPaneUrl();
+            if (!previewPaneUrl) {
                 return;
             }
 
@@ -240,10 +241,7 @@ define(function (require, exports, module) {
             mainEditor = EditorManager.getCurrentFullEditor();
             cm = mainEditor._codeMirror;
             mainView = document.querySelector('.main-view');
-
-            // Store the current HTML document that we'll be working with.
-            currentDoc = DocumentManager.getCurrentDocument();
-
+            
             var mediaQueryFilePath = projectRoot + prefs.get("mediaQueryFile");
             
             // Check if the media-queries css file exists. If it doesn't, then create a
@@ -268,20 +266,52 @@ define(function (require, exports, module) {
                     mediaQueryFile.write('', function(error, stats) {
                         console.log("error: " + error + "; stats: " + stats);
                         if (error === null) {
-                            _getMediaQueryDocument(mediaQueryFilePath);
+                            _getMediaQueryDocument(previewPaneUrl, mediaQueryFilePath);
                         }
                     });
                     console.log("write completed");
                 
                 } else {
-                    _getMediaQueryDocument(mediaQueryFilePath);
+                    _getMediaQueryDocument(previewPaneUrl, mediaQueryFilePath);
                 }
                 
                 
             });
         }
         
-        function _getMediaQueryDocument(filePath) {
+        /**
+         * responsible to determine which URL to use in the iframe preview pane
+         */
+        function _getPreviewPaneUrl() {
+            
+            var previewPaneUrl;
+            
+            // check if we should be using the live preview url
+            var command = CommandManager.get(CMD_PREVIEWURL_ID);
+            if (command.getChecked()) {
+                if (ProjectManager.getBaseUrl()) {
+                    previewPaneUrl = ProjectManager.getBaseUrl();
+                } else {
+                    console.log("Live Preview Base URL not set under File > Project Settings. Need to let user know. defaulting to HTML file if it is open");
+                }
+            }
+            
+            // not configured to use live preview url. use current doc if it is an HTML
+            if (!previewPaneUrl) {
+                var currentDoc = DocumentManager.getCurrentDocument();
+            
+                // Only switch to responsive mode if the current document is HTML or 
+                // a Live Preview Base URL has been defined under File > Project Settings and user
+                // has chosen to open with Live Preview Base URL in the menu
+                if (currentDoc.language.getId() === "html") {
+                    previewPaneUrl = "file://" + currentDoc.file.fullPath;
+                }
+            }
+            
+            return previewPaneUrl;
+        }
+        
+        function _getMediaQueryDocument(previewPaneUrl, filePath) {
             
             console.log("getting document for media query");
             DocumentManager.getDocumentForPath(projectRoot + prefs.get("mediaQueryFile"))
@@ -293,7 +323,7 @@ define(function (require, exports, module) {
                     MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
 
                     // now we are ready to create the response UI
-                    createResponseUI();
+                    createResponseUI(previewPaneUrl);
 
                     // refresh media queries from file if they exist
                     _reloadMediaQueriesFromFile(doc);
@@ -370,7 +400,7 @@ define(function (require, exports, module) {
     /** 
      *  Builds the UI for responsive mode. Lots of DOM injecting here.
      */
-    function createResponseUI() {
+    function createResponseUI(previewPaneUrl) {
 
         var doc = document;
         doc.body.backgroundColor = "#303030";
@@ -421,7 +451,7 @@ define(function (require, exports, module) {
         // Here I add the live preview iframe wrapped in a div.
         domArray = [{tag:"div",attr:{id:"fwrap"}, parent:-1},
                     {tag:"iframe",attr:{id:"frame", class:"quiet-scrollbars", name:"frame",
-                    src:"file://" + currentDoc.file.fullPath}, parent:0}];
+                    src:previewPaneUrl}, parent:0}];
 
         frag = ResponseUtils.createDOMFragment(domArray);
         response.appendChild(frag);
@@ -667,6 +697,20 @@ define(function (require, exports, module) {
     }
 
 
+    /**
+     * Called when user selects live preview menu item. If the menu item
+     * is enabled then the preview pane will load with the url specified under
+     * File > Project Settings
+     */
+    function handleLivePreviewToggle(e) {
+        
+        if(e) e.stopImmediatePropagation();
+
+        // update the inspect menu state
+        var command = CommandManager.get(CMD_PREVIEWURL_ID);
+        command.setChecked(!command.getChecked());
+    }
+    
     /** 
      *  Called when the iframe DOM has fully loaded.
      */
@@ -1618,6 +1662,35 @@ define(function (require, exports, module) {
         }
     }
 
+    function BuildMenuSystem() {
+        
+        // Build commands and menu system
+        var customMenu = Menus.addMenu(Strings.MENU_MAIN, MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
+
+        CommandManager.register(Strings.SUBMENU_RESPSONSEMODE, CMD_RESPONSEMODE_ID, Response);
+        customMenu.addMenuItem(CMD_RESPONSEMODE_ID, "Shift-Alt-R");
+
+        // Toggle inspect mode.
+        CommandManager.register(Strings.SUBMENU_INSPECTMODE, CMD_INSPECTMODE_ID, handleInspectToggle);
+        customMenu.addMenuItem(CMD_INSPECTMODE_ID, "Shift-Alt-I");
+
+        customMenu.addMenuDivider();
+
+        // add menu items to indicate if horizontal or vertical layout should be used for the preview
+        // pane
+        var horzLayoutCmd = CommandManager.register(Strings.SUBMENU_HORZLAYOUT, CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
+        customMenu.addMenuItem(CMD_HORZLAYOUT_ID, "Shift-Alt-H");
+
+        var vertLayoutCmd = CommandManager.register(Strings.SUBMENU_VERTLAYOUT, CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
+        customMenu.addMenuItem(CMD_VERTLAYOUT_ID, "Shift-Alt-V");
+
+        customMenu.addMenuDivider();
+
+        // Add menu item to indicate if live preview url setting should be used for preview pane
+        var vertLayoutCmd = CommandManager.register(Strings.SUBMENU_PREVIEWURL, CMD_PREVIEWURL_ID, handleLivePreviewToggle);
+        customMenu.addMenuItem(CMD_PREVIEWURL_ID, "Shift-Alt-U");
+    }
+    
     /** 
      *  Called when brackets has opened and is ready.
      */
@@ -1658,26 +1731,19 @@ define(function (require, exports, module) {
         }
     });
 
-    
-    // Build commands and menu system
-    var customMenu = Menus.addMenu(Strings.MENU_MAIN, MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
-    
-    CommandManager.register(Strings.SUBMENU_RESPSONSEMODE, CMD_RESPONSEMODE_ID, Response);
-    customMenu.addMenuItem(CMD_RESPONSEMODE_ID, "Shift-Alt-R");
+    prefs.definePreference("useLivePreviewUrl", "boolean", false).on("change", function () {
 
-    // Toggle inspect mode.
-    CommandManager.register(Strings.SUBMENU_INSPECTMODE, CMD_INSPECTMODE_ID, handleInspectToggle);
-    customMenu.addMenuItem(CMD_INSPECTMODE_ID, "Shift-Alt-I");
+        var command = CommandManager.get(CMD_PREVIEWURL_ID);
 
-    customMenu.addMenuDivider();
-    
-    // Toggle inspect mode.
-    var horzLayoutCmd = CommandManager.register(Strings.SUBMENU_HORZLAYOUT, CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
-    customMenu.addMenuItem(CMD_HORZLAYOUT_ID, "Shift-Alt-H");
+        // update the live preview url menu state
+        if (prefs.get("useLivePreviewUrl")) {
+            command.setChecked(true);
+        } else {
+            command.setChecked(false);
+        }
+    });
 
-    // Toggle inspect mode.
-    var vertLayoutCmd = CommandManager.register(Strings.SUBMENU_VERTLAYOUT, CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
-    customMenu.addMenuItem(CMD_VERTLAYOUT_ID, "Shift-Alt-V");
+    BuildMenuSystem();
     
     // Register as an inline provider.
     EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);

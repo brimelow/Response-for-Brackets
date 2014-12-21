@@ -31,5 +31,6 @@ define({
     "SUBMENU_RESPSONSEMODE"     : "Responsive Mode",
     "SUBMENU_INSPECTMODE"       : "Inspect Mode",
     "SUBMENU_HORZLAYOUT"        : "Horizontal View",
-    "SUBMENU_VERTLAYOUT"        : "Vertical View"
+    "SUBMENU_VERTLAYOUT"        : "Vertical View",
+    "SUBMENU_PREVIEWURL"        : "Use Live Preview URL"
 });
