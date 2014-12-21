@@ -163,14 +163,8 @@ define(function (require, exports, module) {
     // The inspect mode toggle button.
     var inspectButton;
     
-    // Selector for the element in the inline editor.
+    // Css selector for the element in the inline editor.
     var inlineSelector;
-
-    // Editor backing the inline editor.
-    var inlineEditor;
-
-    // Div containing tools like layout, inspect, add query.
-    var tools;
     
     // Div that provides the dark overlay in inspect mode.
     var highlight;
@@ -799,7 +793,7 @@ define(function (require, exports, module) {
         currentQuery = addQueryMark(w);
 
         // update inline editor with the newly selected query.
-        updateInlineWidget();
+        updateInlineWidgets();
 
         // Calling this function will write the new query to the style block 
         // in the iframe and also to the media-queries.css file.
@@ -906,7 +900,7 @@ define(function (require, exports, module) {
         cm.refresh();
 
         // update the inline editor with the newly selected query.
-        updateInlineWidget();
+        updateInlineWidgets();
     }
 
     /** 
@@ -1192,16 +1186,16 @@ define(function (require, exports, module) {
      */
     function handleSelectorChange(e) {
         
-        var v = e.target.value;
+        var newSelector = e.target.value;
 
-        if (inlineSelector === v) return;
+        if (inlineSelector === newSelector) return;
         
         // Change the selector to the new value chosen.
-        inlineSelector = v;
+        inlineSelector = newSelector;
 
         // Build the editor contents. 
         // Note: For some reason count is 0 when refreshed but 4 when editor is created
-        var editorContents = refreshCodeEditor(currentQuery, cssResults);
+        var editorContents = refreshCodeEditor(currentQuery, cssResults, newSelector);
 
         // Set the text in the inline editor to our new string.
         inlineCm.setValue(editorContents.contents);
@@ -1315,18 +1309,6 @@ define(function (require, exports, module) {
         var selectSelector = document.createElement("select");
         selectSelector.addEventListener('change', handleSelectorChange, false);
         refreshSelectorSelectbox(selectSelector, cssResults);
-
-        // If element has an ID, add it to the selectors and use it as the selector.
-        // NOTE: removing this for now as should be part of 'new rule' feature. Not
-        //       added automatically
-        /*
-        if(el.id) {
-            var s = document.createElement('option');
-            s.text = "#" + el.id;
-            inlineSelector = s.text;
-            selectSelector.appendChild(s);
-        }
-        */
         
         var count = 4;
 
@@ -1335,86 +1317,68 @@ define(function (require, exports, module) {
         // build the editor contents
         // The line count starts at 4 because of the selector, whitespace, etc.  
         // Note: For some reason count is 0 when refreshed but 4 when editor is created
-        var editorContents = refreshCodeEditor(currentQuery, cssResults);
+        var editorContents = refreshCodeEditor(currentQuery, cssResults, selectSelector.value);
 
-        // Write the string to the temporary CSS file.
-        //FileUtils.writeText(tempCSSDoc.file, str).done(function (e) {
-            
-            // Refresh the files document with the new text.
-            //tempCSSDoc.refreshText(str, new Date());
+        // Create a new inline editor. This is my stripped-down version of the
+        // MultiRangeInlineEditor module.
+        var inlineEditor = new ResponseInlineEdit();
+        inlineEditor.editorNode = inlineElement;
 
-            // Create a new inline editor. This is my stripped-down version of the
-            // MultiRangeInlineEditor module.
-            inlineEditor = new ResponseInlineEdit();
+        // Load the editor with the CSS we generated.
+        inlineEditor.load(hostEditor, inlineSelector, 0, count+2, editorContents.contents);
 
-            // Load the editor with the CSS we generated.
-            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, editorContents.contents);
+        // Called when the editor is added to the DOM.
+        inlineEditor.onAdded = function() {
 
-            // Called when the editor is added to the DOM.          
-            inlineEditor.onAdded = function() {
+            var eh = this.$htmlContent[0].querySelector(".inlineEditorHolder");
 
-                var eh = inlineEditor.$htmlContent[0].querySelector(".inlineEditorHolder");
+            // Create a new mark that will show at the top of the inline editor
+            // with the correct query color to remind the user of what they're changing.
+            var mark = document.createElement("div");
+            mark.className = "inlinemark";
 
-                // Create a new mark that will show at the top of the inline editor
-                // with the correct query color to remind the user of what they're changing.
-                var mark = document.createElement("div");
-                mark.className = "inlinemark";
-                
-                // Add mark to the inline editor holder div.
-                eh.appendChild(mark);
+            // Add mark to the inline editor holder div.
+            eh.appendChild(mark);
 
-                // Create the pixel width text that is displayed on the mark.
-                var wd = document.createElement("div");
-                wd.className = "wd";
-                wd.appendChild(document.createTextNode(cq.width + "px"));
-                mark.appendChild(wd);
+            // Create the pixel width text that is displayed on the mark.
+            var wd = document.createElement("div");
+            wd.className = "wd";
+            wd.appendChild(document.createTextNode(cq.width + "px"));
+            mark.appendChild(wd);
 
-                // Add the selector select box. It is positioned absolutely.
-                mark.appendChild(selectSelector);
+            // Add the selector select box. It is positioned absolutely.
+            mark.appendChild(selectSelector);
 
-                // Get a reference to the codemirror instance of the inline editor.
-                inlineCm = inlineEditor.editor._codeMirror;
+            // Get a reference to the codemirror instance of the inline editor.
+            inlineCm = this.editor._codeMirror;
 
-                // Loops through the existingEdits array and highlights the appropriate lines
-                // in the inline editor.
-                var existingEdits = editorContents.existingEdits;
-                for(var i=0, len=existingEdits.length; i<len; i++) {
-                    inlineCm.removeLineClass(existingEdits[i].line, "background");
-                    inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
-                }
-
-                // Sets cursor to the end of line 2 in the inline editor.
-                inlineEditor.editor.setCursorPos(1, 0);
-
-                // Listen for changes in the inline editor.
-                inlineCm.on("change", inlineChange);
-
-                // Style the inline mark to match the color of the current query.
-                mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+            // Loops through the existingEdits array and highlights the appropriate lines
+            // in the inline editor.
+            var existingEdits = editorContents.existingEdits;
+            for(var i=0, len=existingEdits.length; i<len; i++) {
+                inlineCm.removeLineClass(existingEdits[i].line, "background");
+                inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
             }
-            
-            // Called when the inline editor is closed.
-            inlineEditor.onClosed = function() {
 
-                // Call parent function first.
-                ResponseInlineEdit.prototype.parentClass.onAdded.apply(this, arguments);
+            // Sets cursor to the end of line 2 in the inline editor.
+            this.editor.setCursorPos(1, 0);
 
-                // Set a bunch of stuff so we know the inline editor is no longer showing.
-                // NOTE: commented this out for now as it was causing a race condition with 
-                //       the onAdded event (issue #18)
-/*
-                selected = null;
-                inlineSelector = null;
-                highlight.style.display = 'none';
-                selectSelector.options.length = 0;
-                $(selectSelector).remove();
-*/
-            } 
+            // Listen for changes in the inline editor.
+            inlineCm.on("change", inlineChange);
 
-            // I had to mod the EditorManager module so it always chooses me.
-            result.resolve(inlineEditor);
-        
-        //});
+            // Style the inline mark to match the color of the current query.
+            mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+        }
+
+        // Called when the inline editor is closed.
+        inlineEditor.onClosed = function() {
+
+            // Call parent function first.
+            ResponseInlineEdit.prototype.parentClass.onAdded.apply(this, arguments);
+        }
+
+        // I had to mod the EditorManager module so it always chooses me.
+        result.resolve(inlineEditor);
 
         return result.promise();
 
@@ -1473,7 +1437,19 @@ define(function (require, exports, module) {
         }
     }
     
-    function refreshCodeEditor(cq, res) {
+    /**
+     *  refreshes the contents of the inline widget, showing the css rules of the
+     *  current css selector (from dropdown)
+     *
+     *  @params cq              : the current media query that has been selected from slider
+     *  @params res             : the css rules that were retrieved from the selected element in the
+     *                            main editor
+     *  @params currentSelector : the current css selector. If not supplied it will default to
+     *                            global inlineSelector variable
+     */
+    function refreshCodeEditor(cq, res, currentSelector) {
+
+        currentSelector = currentSelector || inlineSelector;
         
         // Array to hold information about whether a rule has already been set by this or another query.
         var existingEdits = [];
@@ -1482,11 +1458,11 @@ define(function (require, exports, module) {
         var lineNumber = 0;
         
         // Here we begin writing the string that we will use to populate the inline editor.
-        var str = inlineSelector + " {\n";
+        var str = currentSelector + " {\n";
 
         // Go through all of the returned CSS rules and write to the output string.
-        if (res.rules[inlineSelector] !== null) {
-            for(var prop in res.rules[inlineSelector]) {
+        if (res.rules[currentSelector] !== null) {
+            for(var prop in res.rules[currentSelector]) {
 
                 var pvalue = undefined;
                 lineNumber++;
@@ -1501,12 +1477,12 @@ define(function (require, exports, module) {
                     // query and has already set a value for this property, then the current
                     // query will inherit that value.
                     if(q != cq && parseInt(q.width) > parseInt(cq.width) && 
-                        q.selectors[inlineSelector]) {
+                        q.selectors[currentSelector]) {
 
                         // Check if it has the property set and if so, add it to the existingEdits
                         // array so we can highlight it appropriately. Also stores the value.
-                        if(q.selectors[inlineSelector].rules[prop]) {
-                           pvalue = q.selectors[inlineSelector].rules[prop];
+                        if(q.selectors[currentSelector].rules[prop]) {
+                           pvalue = q.selectors[currentSelector].rules[prop];
                            existingEdits.push({query:q, line:lineNumber});
                            pvalue = pvalue.replace(/;/, '');
                            break;
@@ -1516,10 +1492,10 @@ define(function (require, exports, module) {
                     // Check if the currently selected query has this property already set.
                     // If so then we add it to the existingEdits array for highlighting purposes.
                     // It also stores the value 'pvalue' so we can use that in the output.
-                    else if(cq == q && q.selectors[inlineSelector]) {
+                    else if(cq == q && q.selectors[currentSelector]) {
 
-                        if(q.selectors[inlineSelector].rules[prop]) {
-                           pvalue = q.selectors[inlineSelector].rules[prop];
+                        if(q.selectors[currentSelector].rules[prop]) {
+                           pvalue = q.selectors[currentSelector].rules[prop];
                            existingEdits.push({query:q, line:lineNumber});
                            pvalue = pvalue.replace(/;/, '');
                            break;
@@ -1530,7 +1506,7 @@ define(function (require, exports, module) {
 
                 // If this property hasn't been set by anyone, we use the original value returned.
                 if(pvalue == undefined)
-                    pvalue = res.rules[inlineSelector][prop];
+                    pvalue = res.rules[currentSelector][prop];
 
                 // Finally we add the CSS rule to the output string.
                 str += "\t" + prop + ": " + pvalue.trim() + ";\n";
@@ -1548,7 +1524,9 @@ define(function (require, exports, module) {
     
     /** 
      *  Called when there is a text change in the inline editor.
-     *  @params: the first is the codemirror instance, the second is the change object.
+     *
+     *  @params instance    : the codemirror instance,
+     *  @params change      : the change object.
      */
     function inlineChange(instance, change) {
 
@@ -1578,46 +1556,58 @@ define(function (require, exports, module) {
      *  a new query is created or if one of the colored query marks has been clicked.
      *  NOTE: There is quite a bit of duplicated code here from the inlineEditorProvider function.
      */
-    function updateInlineWidget() {
+    function updateInlineWidgets() {
+
+        // get the inline widgets for the currently open document
+        var hostEditor = EditorManager.getCurrentFullEditor();
+        var inlineWidgets = hostEditor.getInlineWidgets();
 
         // Update the highlight.
         positionHighlight(inlineElement);
 
         var cq = currentQuery;
-        var i = 0;
 
-        // update the background colour of the inline mark
-        var mark = document.querySelector(".inlinemark");
-        mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
-        
-        var wd = document.querySelector(".inlinemark > .wd");
-        wd.innerHTML = cq.width + "px";
+        for (var j = 0; j < inlineWidgets.length; j++) {
 
-        // Set the appropriate color for the newly selected query.
+            var inlineWidgetHtml = inlineWidgets[j].$htmlContent[0];
+            var inlineCodeMirror = inlineWidgets[j].editor._codeMirror;
 
-        var count = 0;
-        var existingEdits = [];
+            // update the background colour of the inline mark
+            var mark = inlineWidgetHtml.querySelector(".inlinemark");
+            mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
 
-        // Refresh rules for current query and loop through.
-        cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, inlineElement);
+            var wd = inlineWidgetHtml.querySelector(".inlinemark > .wd");
+            wd.innerHTML = cq.width + "px";
 
-        // refresh the selector drop down
-        var selectSelector = inlineEditor.$htmlContent[0].querySelector("select");
-        refreshSelectorSelectbox(selectSelector, cssResults);
+            // Set the appropriate color for the newly selected query.
 
-        // Build the editor contents. 
-        // Note: For some reason count is 0 when refreshed but 4 when editor is created
-        var editorContents = refreshCodeEditor(cq, cssResults);
+            var count = 0;
+            var existingEdits = [];
 
-        // Set the text in the inline editor to our new string.
-        inlineCm.setValue(editorContents.contents);
+            // Refresh rules for current query and loop through.
+            cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, inlineWidgets[j].editorNode);
 
-        // Loop through the existingEdits array and highlight lines appropriately.
-        var existingEdits = editorContents.existingEdits;
+            // refresh the selector drop down
+            //BR: issue57
+            //var selectSelector = inlineEditor.$htmlContent[0].querySelector("select");
+            var selectSelector = inlineWidgetHtml.querySelector("select");
+            refreshSelectorSelectbox(selectSelector, cssResults);
+            var currentSelector = selectSelector.value;
 
-        for(var i=0, len=existingEdits.length; i<len; i++) {
-            inlineCm.removeLineClass(existingEdits[i].line, "background");
-            inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
+            // Build the editor contents.
+            // Note: For some reason count is 0 when refreshed but 4 when editor is created
+            var editorContents = refreshCodeEditor(cq, cssResults, currentSelector);
+
+            // Set the text in the inline editor to our new string.
+            inlineCodeMirror.setValue(editorContents.contents);
+
+            // Loop through the existingEdits array and highlight lines appropriately.
+            var existingEdits = editorContents.existingEdits;
+
+            for(var i=0, len=existingEdits.length; i<len; i++) {
+                inlineCodeMirror.removeLineClass(existingEdits[i].line, "background");
+                inlineCodeMirror.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
+            }
         }
     }
 
