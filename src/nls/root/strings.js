@@ -27,10 +27,12 @@
 /*global define */
 
 define({
-    "MENU_MAIN"                 : "Response",
-    "SUBMENU_RESPSONSEMODE"     : "Responsive Mode",
-    "SUBMENU_INSPECTMODE"       : "Inspect Mode",
-    "SUBMENU_HORZLAYOUT"        : "Horizontal View",
-    "SUBMENU_VERTLAYOUT"        : "Vertical View",
-    "SUBMENU_PREVIEWURL"        : "Use Live Preview URL"
+    "MENU_MAIN"                     : "Response",
+    "SUBMENU_RESPSONSEMODE"         : "Responsive Mode",
+    "SUBMENU_INSPECTMODE"           : "Inspect Mode",
+    "SUBMENU_HORZLAYOUT"            : "Horizontal View",
+    "SUBMENU_VERTLAYOUT"            : "Vertical View",
+    "SUBMENU_PREVIEWURL"            : "Use Live Preview URL",
+    "ERR_PREVURL_UNAVAILABLE"       : "Unable to switch to Responsive Mode as the current file is not an HTML document and/or the Live Preview URL is not correctly configured",
+    "ERR_PREVURL_NOTLOADED"         : "Unable to load the preview pane due to misconfiguration. Please check Live Preview URL settings"
 });

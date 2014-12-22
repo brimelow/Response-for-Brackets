@@ -286,7 +286,7 @@ define(function (require, exports, module) {
                 if (ProjectManager.getBaseUrl()) {
                     previewPaneUrl = ProjectManager.getBaseUrl();
                 } else {
-                    console.log("Live Preview Base URL not set under File > Project Settings. Need to let user know. defaulting to HTML file if it is open");
+                    console.info("Live Preview Base URL not set under File > Project Settings. Need to let user know. defaulting to HTML file if it is open");
                 }
             }
             
@@ -299,7 +299,27 @@ define(function (require, exports, module) {
                 // has chosen to open with Live Preview Base URL in the menu
                 if (currentDoc.language.getId() === "html") {
                     previewPaneUrl = "file://" + currentDoc.file.fullPath;
+                } else {
+                    console.info("Unable to switch to Responsive mode as the current document is not HTML");
                 }
+            }
+
+            // display message to user if unable to determine preview pane url
+            if (!previewPaneUrl) {
+
+                // Configure the twipsy
+                var options = {
+                    placement: "left",
+                    trigger: "manual",
+                    autoHideDelay: 5000,
+                    title: function () {
+                        return Strings.ERR_PREVURL_UNAVAILABLE;
+                    }
+                };
+
+
+                // Show the twipsy with the explanation
+                $("#response-icon").twipsy(options).twipsy("show");
             }
             
             return previewPaneUrl;
@@ -710,8 +730,29 @@ define(function (require, exports, module) {
      */
     function handleFrameLoaded(e) {
 
+        if(e) e.stopImmediatePropagation();
+
         // Store a reference to the iframe document.
         frameDOM = document.getElementById("frame").contentWindow.document;
+        
+        if (!frameDOM.body.firstElementChild) {
+            
+            // Configure the twipsy
+            var options = {
+                placement: "left",
+                trigger: "manual",
+                autoHideDelay: 5000,
+                title: function () {
+                    return Strings.ERR_PREVURL_NOTLOADED;
+                }
+            };
+
+            // Show the twipsy with the explanation
+            $("#response-icon").twipsy(options).twipsy("show");
+            
+            return;
+        }
+        
         frameDOM.body.firstElementChild.style.overflowX = 'hidden';
 
         // Add an empty style block in the iframe head tag. This is where we
@@ -993,7 +1034,7 @@ define(function (require, exports, module) {
 
                 // if menu state is now checked, means it was just turned on. 
                 inspectBtn.classList.add("inspectButtonOn");
-                highlight.style.display = 'block';
+                if (highlight) highlight.style.display = 'block';
                 selected = null;
                 frameDOM.body.addEventListener('mouseover', handleInspectHover, false);
                 cm.display.wrapper.addEventListener('click', handleCodeClick, false);
@@ -1005,7 +1046,7 @@ define(function (require, exports, module) {
                 if(selected) {
                     cm.removeLineClass(selected.line, "background");
                 }
-                highlight.style.display = 'none';
+                if (highlight) highlight.style.display = 'none';
                 cm.display.wrapper.removeEventListener('click', handleCodeClick);
                 frameDOM.body.removeEventListener('mouseover', handleInspectHover);
                 return;
