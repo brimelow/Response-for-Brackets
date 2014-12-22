@@ -33,5 +33,5 @@ define({
     "SUBMENU_HORZLAYOUT"            : "Horizontal View",
     "SUBMENU_VERTLAYOUT"            : "Vertical View",
     "SUBMENU_PREVIEWURL"            : "Use Live Preview URL",
-    "ERR_RESPONSIVE_UNAVAILABLE"    : "Unable to switch to Responsive Mode as the current file is not an HTML document and/or the Live Preview URL is not correctly configured"
+    "ERR_PREVURL_UNAVAILABLE"       : "Unable to switch to Responsive Mode as the current file is not an HTML document and/or the Live Preview URL is not correctly configured"
 });

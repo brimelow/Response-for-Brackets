@@ -319,7 +319,7 @@ define(function (require, exports, module) {
                     trigger: "manual",
                     autoHideDelay: 5000,
                     title: function () {
-                        return Strings.ERR_RESPONSIVE_UNAVAILABLE;
+                        return Strings.ERR_PREVURL_UNAVAILABLE;
                     }
                 };
 
