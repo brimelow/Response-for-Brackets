@@ -35,7 +35,7 @@ define(function (require, exports, module) {
     var CMD_VERTLAYOUT_ID = EXT_PREFIX + ".cmd.vertical";
     var CMD_PREVIEWURL_ID = EXT_PREFIX + ".cmd.livepreview";
     
-    /*================  Load needed brackets modules  ================*/   
+    /*================ Load needed brackets modules ================*/
 
     var CommandManager = brackets.getModule("command/CommandManager");
     var Commands        = brackets.getModule("command/Commands");
@@ -55,7 +55,7 @@ define(function (require, exports, module) {
     var HTMLUtils = brackets.getModule("language/HTMLUtils");
     var PreferencesManager = brackets.getModule("preferences/PreferencesManager");
     
-    /*================  Load my custom modules  ================*/  
+    /*================  Load my custom modules  ================*/
 
     // This is a much lighter-weight version of the MultiRangeInlineTextEditor.
     // Ideally I could would be able to use the InlineTextEditor we can't yet.
@@ -74,7 +74,7 @@ define(function (require, exports, module) {
     var Strings = require("strings");
 
 
-    /*================  Define module properties  ================*/  
+    /*================  Define module properties  ================*/
     
     // Reference to the codemirror instance of the inline editor.
     var inlineCm;
@@ -198,6 +198,9 @@ define(function (require, exports, module) {
         // Prevent creating UI more than once
         if (document.querySelector('#response')) {
 
+            // close any open inline editors
+            _closeOpenInlineEditors();
+
             // ensure inspect mode is off so handlers are removed 
             // but don't update inspect mode menu item
             toggleInspectMode(false);
@@ -208,6 +211,7 @@ define(function (require, exports, module) {
 
             // Manually fire the window resize event to position everything correctly.
             handleWindowResize(null);
+            response = null;
 
             // refresh layout
             WorkspaceManager.recomputeLayout(true);
@@ -332,6 +336,9 @@ define(function (require, exports, module) {
                 .done(function(doc) {
                     console.log("retrieved document");
 
+                    // close any open inline editors
+                    _closeOpenInlineEditors();
+
                     // Save reference to the new files document.
                     mediaQueryDoc = doc;
                     MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
@@ -407,6 +414,37 @@ define(function (require, exports, module) {
                         }
                     }
                 }
+            }
+        }
+
+        /**
+         * Responsible for closing any open inline editors.
+         *
+         * Note, we are making use of Document._masterEditor in order to get the editor
+         * associated to the document. This may not be 'legel' but seems to be the only
+         * way to get the editor associated to a document
+         */
+        function _closeOpenInlineEditors() {
+
+            try {
+                var openDocs = DocumentManager.getAllOpenDocuments();
+                for (var i = 0; i < openDocs.length; i++) {
+
+                    var editor = openDocs[i]._masterEditor;
+
+                    if (editor != null) {
+                        var inlineWidgets = editor.getInlineWidgets();
+
+                        // when closing widgets, the array is being modified so need to 
+                        // iterate by modifying the length value
+                        var len = inlineWidgets.length;
+                        while (len--) {
+                            EditorManager.closeInlineWidget(editor, inlineWidgets[len]);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("unexpected error occurred trying to close inline widgets", err);
             }
         }
     }
@@ -1305,7 +1343,7 @@ define(function (require, exports, module) {
 
         // We are not in responsive mode yet (toolbar icon not selected). Fallback
         // to the default CSS inline editor
-        if (!response) {
+        if (!document.querySelector('#response')) {
             return null;
         }
         
@@ -1615,13 +1653,13 @@ define(function (require, exports, module) {
 
             // update the background colour of the inline mark
             var mark = inlineWidgetHtml.querySelector(".inlinemark");
-            mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+            if (mark) {
+                mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
 
-            var wd = inlineWidgetHtml.querySelector(".inlinemark > .wd");
-            wd.innerHTML = cq.width + "px";
-
-            // Set the appropriate color for the newly selected query.
-
+                var wd = inlineWidgetHtml.querySelector(".inlinemark > .wd");
+                wd.innerHTML = cq.width + "px";
+            }
+            
             var count = 0;
             var existingEdits = [];
 
