@@ -207,6 +207,11 @@ define(function (require, exports, module) {
         // Prevent creating UI more than once
         if (document.querySelector('#response')) {
 
+            // close any open inline editors
+            _closeOpenInlineEditors();
+
+            closeResponseMode();
+/*            
             // close docReloadBar if it is still open
             docReloadBar.close();
 
@@ -234,7 +239,7 @@ define(function (require, exports, module) {
             
             var command = CommandManager.get(CMD_RESPONSEMODE_ID);
             command.setChecked(false);
-            
+*/            
             return;
 
         } else {
@@ -1752,6 +1757,35 @@ define(function (require, exports, module) {
         }
     }
     
+    function closeResponseMode() {
+
+        // close docReloadBar if it is still open
+        docReloadBar.close();
+
+        // ensure inspect mode is off so handlers are removed 
+        // but don't update inspect mode menu item
+        toggleInspectMode(false);
+
+        // remove the #response view
+        var element = document.getElementById("response");
+        element.parentNode.removeChild(element);
+
+        // Manually fire the window resize event to position everything correctly.
+        handleWindowResize(null);
+        response = null;
+
+        // refresh layout
+        WorkspaceManager.recomputeLayout(true);
+
+        // update toolbar icon and menu state to indicate we are leaving responsive mode
+        var iconLink = document.getElementById('response-icon');
+        iconLink.style.backgroundPosition = '0 0';
+        document.body.classList.remove('responsive-mode');
+
+        var command = CommandManager.get(CMD_RESPONSEMODE_ID);
+        command.setChecked(false);
+    }
+    
     function buildMenuSystem() {
         
         // Build commands and menu system
@@ -1838,6 +1872,7 @@ define(function (require, exports, module) {
     buildMenuSystem();
 
     MainViewManager.on("currentFileChange", $.proxy(updateCurrentFile));
+    ProjectManager.on("beforeProjectClose", $.proxy(closeResponseMode));
 
     // Register as an inline provider.
     EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);
