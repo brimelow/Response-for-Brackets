@@ -38,22 +38,23 @@ define(function (require, exports, module) {
     /*================ Load needed brackets modules ================*/
 
     var CommandManager = brackets.getModule("command/CommandManager");
-    var Commands        = brackets.getModule("command/Commands");
+    var Commands = brackets.getModule("command/Commands");
     var Menus = brackets.getModule("command/Menus");
     var DocumentManager = brackets.getModule("document/DocumentManager");
     var MainViewManager = brackets.getModule("view/MainViewManager");
     var WorkspaceManager = brackets.getModule("view/WorkspaceManager");
     var NativeFileSystem = brackets.getModule("file/NativeFileSystem").NativeFileSystem;
     var FileUtils = brackets.getModule("file/FileUtils");
+    var FileSystem = brackets.getModule("filesystem/FileSystem");
     var ProjectManager = brackets.getModule("project/ProjectManager");
     var EditorManager = brackets.getModule("editor/EditorManager");
     var ExtensionUtils = brackets.getModule("utils/ExtensionUtils");
-    var Dialogs = brackets.getModule("widgets/Dialogs");
     var AppInit = brackets.getModule("utils/AppInit");
-    var FileSystem = brackets.getModule("filesystem/FileSystem");
     var CSSUtils = brackets.getModule("language/CSSUtils");
     var HTMLUtils = brackets.getModule("language/HTMLUtils");
     var PreferencesManager = brackets.getModule("preferences/PreferencesManager");
+    
+    var ModalBar = brackets.getModule("widgets/ModalBar").ModalBar;
     
     /*================  Load my custom modules  ================*/
 
@@ -61,6 +62,8 @@ define(function (require, exports, module) {
     // Ideally I could would be able to use the InlineTextEditor we can't yet.
     var ResponseInlineEdit = require("ResponseInlineEdit").ResponseInlineEdit;
 
+    var DocReloadBar = require("widgets/DocReloadBar").DocReloadBar;
+    
     // This much lighter-weight version of the Resizer utility
     var Splitter = require("Splitter").Splitter;
 
@@ -76,6 +79,9 @@ define(function (require, exports, module) {
 
     /*================  Define module properties  ================*/
     
+    // Reference to the DocReloadBar
+    var docReloadBar;
+
     // Reference to the codemirror instance of the inline editor.
     var inlineCm;
 
@@ -198,6 +204,9 @@ define(function (require, exports, module) {
         // Prevent creating UI more than once
         if (document.querySelector('#response')) {
 
+            // close docReloadBar if it is still open
+            docReloadBar.close();
+
             // close any open inline editors
             _closeOpenInlineEditors();
 
@@ -212,7 +221,7 @@ define(function (require, exports, module) {
             // Manually fire the window resize event to position everything correctly.
             handleWindowResize(null);
             response = null;
-
+            
             // refresh layout
             WorkspaceManager.recomputeLayout(true);
 
@@ -301,7 +310,7 @@ define(function (require, exports, module) {
                 // Only switch to responsive mode if the current document is HTML or 
                 // a Live Preview Base URL has been defined under File > Project Settings and user
                 // has chosen to open with Live Preview Base URL in the menu
-                if (currentDoc.language.getId() === "html") {
+                if (currentDoc != null && currentDoc.language.getId() === "html") {
                     previewPaneUrl = "file://" + currentDoc.file.fullPath;
                 } else {
                     console.info("Unable to switch to Responsive mode as the current document is not HTML");
@@ -1731,7 +1740,27 @@ define(function (require, exports, module) {
         }
     }
 
-    function BuildMenuSystem() {
+    function updateCurrentFile(e, newFile, newPaneId, oldFile, oldPaneId) {
+        
+        try {
+            if (document.querySelector('#response')) {
+                console.log("currentFileChange event while in response mode", e);
+                console.log("currentFileChange event [newFile: " + newFile + "][newPaneId: " + newPaneId + "][oldFile: " + oldFile + "][oldPaneId: " + oldPaneId + "]");
+
+                // Show the twipsy with the explanation
+                //$("#response-splitter").twipsy("show");
+                //$('#response-doc-change').modal('show');
+                
+                //var docReloadBar = new DocReloadBar();
+                docReloadBar.open();
+                //var modalBar = new ModalBar("<div>this is a test</div>", false);
+            }
+        } catch (err) {
+            console.error("unexpected error occurred trying to handle currentFileChange event", err);
+        }
+    }
+    
+    function buildMenuSystem() {
         
         // Build commands and menu system
         var customMenu = Menus.addMenu(Strings.MENU_MAIN, MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
@@ -1774,6 +1803,8 @@ define(function (require, exports, module) {
 
         document.querySelector('#main-toolbar .buttons').appendChild(icon);
         icon.addEventListener('click', Response, false);
+
+        docReloadBar = new DocReloadBar();
     });
 
     modulePath = FileUtils.getNativeModuleDirectoryPath(module);
@@ -1812,8 +1843,10 @@ define(function (require, exports, module) {
         }
     });
 
-    BuildMenuSystem();
-    
+    buildMenuSystem();
+
+    MainViewManager.on("currentFileChange", $.proxy(updateCurrentFile));
+
     // Register as an inline provider.
     EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);
 });
