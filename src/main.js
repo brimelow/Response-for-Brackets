@@ -1747,13 +1747,8 @@ define(function (require, exports, module) {
                 console.log("currentFileChange event while in response mode", e);
                 console.log("currentFileChange event [newFile: " + newFile + "][newPaneId: " + newPaneId + "][oldFile: " + oldFile + "][oldPaneId: " + oldPaneId + "]");
 
-                // Show the twipsy with the explanation
-                //$("#response-splitter").twipsy("show");
-                //$('#response-doc-change').modal('show');
-                
-                //var docReloadBar = new DocReloadBar();
+                // open the doc reload bar so user can decide if the preview pane should be reloaded
                 docReloadBar.open();
-                //var modalBar = new ModalBar("<div>this is a test</div>", false);
             }
         } catch (err) {
             console.error("unexpected error occurred trying to handle currentFileChange event", err);

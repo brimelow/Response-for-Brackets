@@ -66,6 +66,7 @@ define(function (require, exports, module) {
     }
 
     DocReloadBar.prototype.open = function () {
+        var bar = this;
         
         if (!this._modalBar) {
             this._modalBar = new ModalBar(Mustache.render(_htmlTemplate, Strings), false);
@@ -76,15 +77,18 @@ define(function (require, exports, module) {
                     console.log("ok clicked");
                 })
                 .on("click", "#docreload-cancel", function (e) {
-                    console.log("cancel clicked");
+                    bar.close();
                 });
         }
     }
 
-    DocReloadBar.prototype.close = function () {
+    DocReloadBar.prototype.close = function(e) {
 
-        this._modalBar.close();
-        this._modalBar = null;
+        if (e) e.stopImmediatePropagation();
+        if (this._modalBar) {
+            this._modalBar.close();
+            this._modalBar = null;
+        }
     }
     
     exports.DocReloadBar = DocReloadBar;
