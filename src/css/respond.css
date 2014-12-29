@@ -360,6 +360,9 @@ body.responsive-mode {
 	z-index: 10000;
 	padding: 0;
 }
+#slider:focus {
+    outline: none;
+}
 
 #rightCover {
 	position: absolute;
@@ -687,4 +690,8 @@ input[type='range']::-webkit-slider-thumb {
 .resizing-container {
 	z-index: 9999999999;
 	background: transparent;
+}
+
+#docreload-ok {
+    margin-left: 10px;
 }

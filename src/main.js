@@ -33,33 +33,37 @@ define(function (require, exports, module) {
     var CMD_INSPECTMODE_ID = EXT_PREFIX + ".cmd.inspect";
     var CMD_HORZLAYOUT_ID = EXT_PREFIX + ".cmd.horizontal";
     var CMD_VERTLAYOUT_ID = EXT_PREFIX + ".cmd.vertical";
+    var CMD_PREVIEWURL_ID = EXT_PREFIX + ".cmd.livepreview";
     
-    /*================  Load needed brackets modules  ================*/   
+    /*================ Load needed brackets modules ================*/
 
     var CommandManager = brackets.getModule("command/CommandManager");
-    var Commands        = brackets.getModule("command/Commands");
+    var Commands = brackets.getModule("command/Commands");
     var Menus = brackets.getModule("command/Menus");
     var DocumentManager = brackets.getModule("document/DocumentManager");
     var MainViewManager = brackets.getModule("view/MainViewManager");
     var WorkspaceManager = brackets.getModule("view/WorkspaceManager");
     var NativeFileSystem = brackets.getModule("file/NativeFileSystem").NativeFileSystem;
     var FileUtils = brackets.getModule("file/FileUtils");
+    var FileSystem = brackets.getModule("filesystem/FileSystem");
     var ProjectManager = brackets.getModule("project/ProjectManager");
     var EditorManager = brackets.getModule("editor/EditorManager");
     var ExtensionUtils = brackets.getModule("utils/ExtensionUtils");
-    var Dialogs = brackets.getModule("widgets/Dialogs");
     var AppInit = brackets.getModule("utils/AppInit");
-    var FileSystem = brackets.getModule("filesystem/FileSystem");
     var CSSUtils = brackets.getModule("language/CSSUtils");
     var HTMLUtils = brackets.getModule("language/HTMLUtils");
     var PreferencesManager = brackets.getModule("preferences/PreferencesManager");
     
-    /*================  Load my custom modules  ================*/  
+    var ModalBar = brackets.getModule("widgets/ModalBar").ModalBar;
+    
+    /*================  Load my custom modules  ================*/
 
     // This is a much lighter-weight version of the MultiRangeInlineTextEditor.
     // Ideally I could would be able to use the InlineTextEditor we can't yet.
     var ResponseInlineEdit = require("ResponseInlineEdit").ResponseInlineEdit;
 
+    var DocReloadBar = require("widgets/DocReloadBar").DocReloadBar;
+    
     // This much lighter-weight version of the Resizer utility
     var Splitter = require("Splitter").Splitter;
 
@@ -73,8 +77,11 @@ define(function (require, exports, module) {
     var Strings = require("strings");
 
 
-    /*================  Define module properties  ================*/  
+    /*================  Define module properties  ================*/
     
+    // Reference to the DocReloadBar
+    var docReloadBar;
+
     // Reference to the codemirror instance of the inline editor.
     var inlineCm;
 
@@ -162,14 +169,8 @@ define(function (require, exports, module) {
     // The inspect mode toggle button.
     var inspectButton;
     
-    // Selector for the element in the inline editor.
+    // Css selector for the element in the inline editor.
     var inlineSelector;
-
-    // Editor backing the inline editor.
-    var inlineEditor;
-
-    // Div containing tools like layout, inspect, add query.
-    var tools;
     
     // Div that provides the dark overlay in inspect mode.
     var highlight;
@@ -180,9 +181,6 @@ define(function (require, exports, module) {
     // Results returned from ResponseUtils.getAuthorCSSRules().
     var cssResults;
 
-    // The current document in the full editor.
-    var currentDoc;
-
     // A style block we will inject into the iframe.
     var style;
 
@@ -191,6 +189,9 @@ define(function (require, exports, module) {
     
     // The splitter that allows resizing of the split view.
     var splitter;
+    
+    // indicates whether we are currently working with livePreviewUrl or local files
+    var workingMode;
     
     /*================  Begin function definitions  ================*/  
 
@@ -206,6 +207,17 @@ define(function (require, exports, module) {
         // Prevent creating UI more than once
         if (document.querySelector('#response')) {
 
+            // close any open inline editors
+            _closeOpenInlineEditors();
+
+            closeResponseMode();
+/*            
+            // close docReloadBar if it is still open
+            docReloadBar.close();
+
+            // close any open inline editors
+            _closeOpenInlineEditors();
+
             // ensure inspect mode is off so handlers are removed 
             // but don't update inspect mode menu item
             toggleInspectMode(false);
@@ -216,7 +228,8 @@ define(function (require, exports, module) {
 
             // Manually fire the window resize event to position everything correctly.
             handleWindowResize(null);
-
+            response = null;
+            
             // refresh layout
             WorkspaceManager.recomputeLayout(true);
 
@@ -226,13 +239,16 @@ define(function (require, exports, module) {
             
             var command = CommandManager.get(CMD_RESPONSEMODE_ID);
             command.setChecked(false);
-            
+*/            
             return;
 
         } else {
 
-            // Only provide a CSS editor when cursor is in HTML content
-            if (DocumentManager.getCurrentDocument().language.getId() !== "html") {
+            // Ensure we can create a preview pane. Either the currently main
+            // document needs to be an HTML doc or use the Live Preview URL if
+            // it has been set
+            var previewPaneUrl = _getPreviewPaneUrl();
+            if (!previewPaneUrl) {
                 return;
             }
 
@@ -240,10 +256,7 @@ define(function (require, exports, module) {
             mainEditor = EditorManager.getCurrentFullEditor();
             cm = mainEditor._codeMirror;
             mainView = document.querySelector('.main-view');
-
-            // Store the current HTML document that we'll be working with.
-            currentDoc = DocumentManager.getCurrentDocument();
-
+            
             var mediaQueryFilePath = projectRoot + prefs.get("mediaQueryFile");
             
             // Check if the media-queries css file exists. If it doesn't, then create a
@@ -268,32 +281,91 @@ define(function (require, exports, module) {
                     mediaQueryFile.write('', function(error, stats) {
                         console.log("error: " + error + "; stats: " + stats);
                         if (error === null) {
-                            _getMediaQueryDocument(mediaQueryFilePath);
+                            _getMediaQueryDocument(previewPaneUrl, mediaQueryFilePath);
                         }
                     });
                     console.log("write completed");
                 
                 } else {
-                    _getMediaQueryDocument(mediaQueryFilePath);
+                    _getMediaQueryDocument(previewPaneUrl, mediaQueryFilePath);
                 }
                 
                 
             });
         }
         
-        function _getMediaQueryDocument(filePath) {
+        /**
+         * responsible to determine which URL to use in the iframe preview pane
+         */
+        function _getPreviewPaneUrl() {
+            
+            var previewPaneUrl;
+            
+            workingMode = null;
+            
+            // check if we should be using the live preview url
+            var command = CommandManager.get(CMD_PREVIEWURL_ID);
+            if (command.getChecked()) {
+                if (ProjectManager.getBaseUrl()) {
+                    previewPaneUrl = ProjectManager.getBaseUrl();
+                    workingMode = 'livePreviewUrl';
+                } else {
+                    console.info("Live Preview Base URL not set under File > Project Settings. Need to let user know. defaulting to HTML file if it is open");
+                }
+            }
+            
+            // not configured to use live preview url. use current doc if it is an HTML
+            if (!previewPaneUrl) {
+                var currentDoc = DocumentManager.getCurrentDocument();
+            
+                // Only switch to responsive mode if the current document is HTML or 
+                // a Live Preview Base URL has been defined under File > Project Settings and user
+                // has chosen to open with Live Preview Base URL in the menu
+                if (currentDoc != null && currentDoc.language.getId() === "html") {
+                    previewPaneUrl = "file://" + currentDoc.file.fullPath;
+                    workingMode = 'local';
+                } else {
+                    console.info("Unable to switch to Responsive mode as the current document is not HTML");
+                }
+            }
+
+            // display message to user if unable to determine preview pane url
+            if (!previewPaneUrl) {
+
+                // Configure the twipsy
+                var options = {
+                    placement: "left",
+                    trigger: "manual",
+                    autoHideDelay: 5000,
+                    title: function () {
+                        return Strings.ERR_PREVURL_UNAVAILABLE;
+                    }
+                };
+
+
+                // Show the twipsy with the explanation
+                $("#response-icon").twipsy(options).twipsy("show");
+            }
+            
+            return previewPaneUrl;
+        }
+        
+        function _getMediaQueryDocument(previewPaneUrl, filePath) {
             
             console.log("getting document for media query");
             DocumentManager.getDocumentForPath(projectRoot + prefs.get("mediaQueryFile"))
                 .done(function(doc) {
                     console.log("retrieved document");
 
+                    // close any open inline editors
+                    _closeOpenInlineEditors();
+
                     // Save reference to the new files document.
                     mediaQueryDoc = doc;
                     MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
 
                     // now we are ready to create the response UI
-                    createResponseUI();
+                    createResponseUI(previewPaneUrl);
 
                     // refresh media queries from file if they exist
                     _reloadMediaQueriesFromFile(doc);
@@ -365,12 +437,43 @@ define(function (require, exports, module) {
                 }
             }
         }
+
+        /**
+         * Responsible for closing any open inline editors.
+         *
+         * Note, we are making use of Document._masterEditor in order to get the editor
+         * associated to the document. This may not be 'legel' but seems to be the only
+         * way to get the editor associated to a document
+         */
+        function _closeOpenInlineEditors() {
+
+            try {
+                var openDocs = DocumentManager.getAllOpenDocuments();
+                for (var i = 0; i < openDocs.length; i++) {
+
+                    var editor = openDocs[i]._masterEditor;
+
+                    if (editor != null) {
+                        var inlineWidgets = editor.getInlineWidgets();
+
+                        // when closing widgets, the array is being modified so need to 
+                        // iterate by modifying the length value
+                        var len = inlineWidgets.length;
+                        while (len--) {
+                            EditorManager.closeInlineWidget(editor, inlineWidgets[len]);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("unexpected error occurred trying to close inline widgets", err);
+            }
+        }
     }
 
     /** 
      *  Builds the UI for responsive mode. Lots of DOM injecting here.
      */
-    function createResponseUI() {
+    function createResponseUI(previewPaneUrl) {
 
         var doc = document;
         doc.body.backgroundColor = "#303030";
@@ -421,7 +524,7 @@ define(function (require, exports, module) {
         // Here I add the live preview iframe wrapped in a div.
         domArray = [{tag:"div",attr:{id:"fwrap"}, parent:-1},
                     {tag:"iframe",attr:{id:"frame", class:"quiet-scrollbars", name:"frame",
-                    src:"file://" + currentDoc.file.fullPath}, parent:0}];
+                    src:previewPaneUrl}, parent:0}];
 
         frag = ResponseUtils.createDOMFragment(domArray);
         response.appendChild(frag);
@@ -506,7 +609,11 @@ define(function (require, exports, module) {
     function setupEventHandlers() {
 
         slider.addEventListener('change', handleSliderChange, false);
-        frame.contentWindow.addEventListener('load', handleFrameLoaded, false);
+        
+        // using jquery load event handling as this will trigger when iframe is reloaded
+        // instead of only on the first time it is loaded.
+        $(frame).on("load", handleFrameLoaded);
+        
         frame.addEventListener('mouseout', handleFrameMouseOut, false);
         addButt.addEventListener('click', handleAddQuery, false);
         window.addEventListener('resize', handleWindowResize, false);
@@ -667,13 +774,50 @@ define(function (require, exports, module) {
     }
 
 
+    /**
+     * Called when user selects live preview menu item. If the menu item
+     * is enabled then the preview pane will load with the url specified under
+     * File > Project Settings
+     */
+    function handleLivePreviewToggle(e) {
+        
+        if(e) e.stopImmediatePropagation();
+
+        // update the inspect menu state
+        var command = CommandManager.get(CMD_PREVIEWURL_ID);
+        command.setChecked(!command.getChecked());
+    }
+    
     /** 
      *  Called when the iframe DOM has fully loaded.
      */
     function handleFrameLoaded(e) {
 
+        if(e) e.stopImmediatePropagation();
+
+        console.log("frame loaded event fired");
+        
         // Store a reference to the iframe document.
         frameDOM = document.getElementById("frame").contentWindow.document;
+        
+        if (!frameDOM.body.firstElementChild) {
+            
+            // Configure the twipsy
+            var options = {
+                placement: "left",
+                trigger: "manual",
+                autoHideDelay: 5000,
+                title: function () {
+                    return Strings.ERR_PREVURL_NOTLOADED;
+                }
+            };
+
+            // Show the twipsy with the explanation
+            $("#response-icon").twipsy(options).twipsy("show");
+            
+            return;
+        }
+        
         frameDOM.body.firstElementChild.style.overflowX = 'hidden';
 
         // Add an empty style block in the iframe head tag. This is where we
@@ -709,28 +853,14 @@ define(function (require, exports, module) {
     }
 
     /**
-     * Called when user clicks on refresh button. reloading the iframe wasn't
-     * triggering the onload event (handleFrameLoaded) so instead we are removing 
-     * iframe and recreating it.
-     * 
-     * note: there should probably be a better way to do this so the onload
-     * event (handleFrameLoaded) is triggered
+     * Called when user clicks on refresh button. simply reloads the current page
+     * in the preview pane
      */
     function handleRefreshClick(e) {
         
         if (e) e.stopImmediatePropagation();
-        
-        // remove the #response view
-        var element = document.getElementById("response");
-        element.parentNode.removeChild(element);
 
-        // reload the iframe
-        Response();
-        
-        //frame.contentWindow.addEventListener('load', handleFrameLoaded, false);
-        //frame.contentWindow.location.reload(true);
-        //handleFrameLoaded();
-        //frame.src += '?c=' + Math.random();
+        frame.contentWindow.document.location.reload(true);
     }
     
     /** 
@@ -755,7 +885,7 @@ define(function (require, exports, module) {
         currentQuery = addQueryMark(w);
 
         // update inline editor with the newly selected query.
-        updateInlineWidget();
+        updateInlineWidgets();
 
         // Calling this function will write the new query to the style block 
         // in the iframe and also to the media-queries.css file.
@@ -862,7 +992,7 @@ define(function (require, exports, module) {
         cm.refresh();
 
         // update the inline editor with the newly selected query.
-        updateInlineWidget();
+        updateInlineWidgets();
     }
 
     /** 
@@ -955,7 +1085,7 @@ define(function (require, exports, module) {
 
                 // if menu state is now checked, means it was just turned on. 
                 inspectBtn.classList.add("inspectButtonOn");
-                highlight.style.display = 'block';
+                if (highlight) highlight.style.display = 'block';
                 selected = null;
                 frameDOM.body.addEventListener('mouseover', handleInspectHover, false);
                 cm.display.wrapper.addEventListener('click', handleCodeClick, false);
@@ -967,7 +1097,7 @@ define(function (require, exports, module) {
                 if(selected) {
                     cm.removeLineClass(selected.line, "background");
                 }
-                highlight.style.display = 'none';
+                if (highlight) highlight.style.display = 'none';
                 cm.display.wrapper.removeEventListener('click', handleCodeClick);
                 frameDOM.body.removeEventListener('mouseover', handleInspectHover);
                 return;
@@ -1148,16 +1278,16 @@ define(function (require, exports, module) {
      */
     function handleSelectorChange(e) {
         
-        var v = e.target.value;
+        var newSelector = e.target.value;
 
-        if (inlineSelector === v) return;
+        if (inlineSelector === newSelector) return;
         
         // Change the selector to the new value chosen.
-        inlineSelector = v;
+        inlineSelector = newSelector;
 
         // Build the editor contents. 
         // Note: For some reason count is 0 when refreshed but 4 when editor is created
-        var editorContents = refreshCodeEditor(currentQuery, cssResults);
+        var editorContents = refreshCodeEditor(currentQuery, cssResults, newSelector);
 
         // Set the text in the inline editor to our new string.
         inlineCm.setValue(editorContents.contents);
@@ -1226,7 +1356,7 @@ define(function (require, exports, module) {
 
         // We are not in responsive mode yet (toolbar icon not selected). Fallback
         // to the default CSS inline editor
-        if (!response) {
+        if (!document.querySelector('#response')) {
             return null;
         }
         
@@ -1271,18 +1401,6 @@ define(function (require, exports, module) {
         var selectSelector = document.createElement("select");
         selectSelector.addEventListener('change', handleSelectorChange, false);
         refreshSelectorSelectbox(selectSelector, cssResults);
-
-        // If element has an ID, add it to the selectors and use it as the selector.
-        // NOTE: removing this for now as should be part of 'new rule' feature. Not
-        //       added automatically
-        /*
-        if(el.id) {
-            var s = document.createElement('option');
-            s.text = "#" + el.id;
-            inlineSelector = s.text;
-            selectSelector.appendChild(s);
-        }
-        */
         
         var count = 4;
 
@@ -1291,86 +1409,68 @@ define(function (require, exports, module) {
         // build the editor contents
         // The line count starts at 4 because of the selector, whitespace, etc.  
         // Note: For some reason count is 0 when refreshed but 4 when editor is created
-        var editorContents = refreshCodeEditor(currentQuery, cssResults);
+        var editorContents = refreshCodeEditor(currentQuery, cssResults, selectSelector.value);
 
-        // Write the string to the temporary CSS file.
-        //FileUtils.writeText(tempCSSDoc.file, str).done(function (e) {
-            
-            // Refresh the files document with the new text.
-            //tempCSSDoc.refreshText(str, new Date());
+        // Create a new inline editor. This is my stripped-down version of the
+        // MultiRangeInlineEditor module.
+        var inlineEditor = new ResponseInlineEdit();
+        inlineEditor.editorNode = inlineElement;
 
-            // Create a new inline editor. This is my stripped-down version of the
-            // MultiRangeInlineEditor module.
-            inlineEditor = new ResponseInlineEdit();
+        // Load the editor with the CSS we generated.
+        inlineEditor.load(hostEditor, inlineSelector, 0, count+2, editorContents.contents);
 
-            // Load the editor with the CSS we generated.
-            inlineEditor.load(hostEditor, inlineSelector, 0, count+2, editorContents.contents);
+        // Called when the editor is added to the DOM.
+        inlineEditor.onAdded = function() {
 
-            // Called when the editor is added to the DOM.          
-            inlineEditor.onAdded = function() {
+            var eh = this.$htmlContent[0].querySelector(".inlineEditorHolder");
 
-                var eh = inlineEditor.$htmlContent[0].querySelector(".inlineEditorHolder");
+            // Create a new mark that will show at the top of the inline editor
+            // with the correct query color to remind the user of what they're changing.
+            var mark = document.createElement("div");
+            mark.className = "inlinemark";
 
-                // Create a new mark that will show at the top of the inline editor
-                // with the correct query color to remind the user of what they're changing.
-                var mark = document.createElement("div");
-                mark.className = "inlinemark";
-                
-                // Add mark to the inline editor holder div.
-                eh.appendChild(mark);
+            // Add mark to the inline editor holder div.
+            eh.appendChild(mark);
 
-                // Create the pixel width text that is displayed on the mark.
-                var wd = document.createElement("div");
-                wd.className = "wd";
-                wd.appendChild(document.createTextNode(cq.width + "px"));
-                mark.appendChild(wd);
+            // Create the pixel width text that is displayed on the mark.
+            var wd = document.createElement("div");
+            wd.className = "wd";
+            wd.appendChild(document.createTextNode(cq.width + "px"));
+            mark.appendChild(wd);
 
-                // Add the selector select box. It is positioned absolutely.
-                mark.appendChild(selectSelector);
+            // Add the selector select box. It is positioned absolutely.
+            mark.appendChild(selectSelector);
 
-                // Get a reference to the codemirror instance of the inline editor.
-                inlineCm = inlineEditor.editor._codeMirror;
+            // Get a reference to the codemirror instance of the inline editor.
+            inlineCm = this.editor._codeMirror;
 
-                // Loops through the existingEdits array and highlights the appropriate lines
-                // in the inline editor.
-                var existingEdits = editorContents.existingEdits;
-                for(var i=0, len=existingEdits.length; i<len; i++) {
-                    inlineCm.removeLineClass(existingEdits[i].line, "background");
-                    inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
-                }
-
-                // Sets cursor to the end of line 2 in the inline editor.
-                inlineEditor.editor.setCursorPos(1, 0);
-
-                // Listen for changes in the inline editor.
-                inlineCm.on("change", inlineChange);
-
-                // Style the inline mark to match the color of the current query.
-                mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+            // Loops through the existingEdits array and highlights the appropriate lines
+            // in the inline editor.
+            var existingEdits = editorContents.existingEdits;
+            for(var i=0, len=existingEdits.length; i<len; i++) {
+                inlineCm.removeLineClass(existingEdits[i].line, "background");
+                inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
             }
-            
-            // Called when the inline editor is closed.
-            inlineEditor.onClosed = function() {
 
-                // Call parent function first.
-                ResponseInlineEdit.prototype.parentClass.onAdded.apply(this, arguments);
+            // Sets cursor to the end of line 2 in the inline editor.
+            this.editor.setCursorPos(1, 0);
 
-                // Set a bunch of stuff so we know the inline editor is no longer showing.
-                // NOTE: commented this out for now as it was causing a race condition with 
-                //       the onAdded event (issue #18)
-/*
-                selected = null;
-                inlineSelector = null;
-                highlight.style.display = 'none';
-                selectSelector.options.length = 0;
-                $(selectSelector).remove();
-*/
-            } 
+            // Listen for changes in the inline editor.
+            inlineCm.on("change", inlineChange);
 
-            // I had to mod the EditorManager module so it always chooses me.
-            result.resolve(inlineEditor);
-        
-        //});
+            // Style the inline mark to match the color of the current query.
+            mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+        }
+
+        // Called when the inline editor is closed.
+        inlineEditor.onClosed = function() {
+
+            // Call parent function first.
+            ResponseInlineEdit.prototype.parentClass.onAdded.apply(this, arguments);
+        }
+
+        // I had to mod the EditorManager module so it always chooses me.
+        result.resolve(inlineEditor);
 
         return result.promise();
 
@@ -1429,7 +1529,19 @@ define(function (require, exports, module) {
         }
     }
     
-    function refreshCodeEditor(cq, res) {
+    /**
+     *  refreshes the contents of the inline widget, showing the css rules of the
+     *  current css selector (from dropdown)
+     *
+     *  @params cq              : the current media query that has been selected from slider
+     *  @params res             : the css rules that were retrieved from the selected element in the
+     *                            main editor
+     *  @params currentSelector : the current css selector. If not supplied it will default to
+     *                            global inlineSelector variable
+     */
+    function refreshCodeEditor(cq, res, currentSelector) {
+
+        currentSelector = currentSelector || inlineSelector;
         
         // Array to hold information about whether a rule has already been set by this or another query.
         var existingEdits = [];
@@ -1438,11 +1550,11 @@ define(function (require, exports, module) {
         var lineNumber = 0;
         
         // Here we begin writing the string that we will use to populate the inline editor.
-        var str = inlineSelector + " {\n";
+        var str = currentSelector + " {\n";
 
         // Go through all of the returned CSS rules and write to the output string.
-        if (res.rules[inlineSelector] !== null) {
-            for(var prop in res.rules[inlineSelector]) {
+        if (res.rules[currentSelector] !== null) {
+            for(var prop in res.rules[currentSelector]) {
 
                 var pvalue = undefined;
                 lineNumber++;
@@ -1457,12 +1569,12 @@ define(function (require, exports, module) {
                     // query and has already set a value for this property, then the current
                     // query will inherit that value.
                     if(q != cq && parseInt(q.width) > parseInt(cq.width) && 
-                        q.selectors[inlineSelector]) {
+                        q.selectors[currentSelector]) {
 
                         // Check if it has the property set and if so, add it to the existingEdits
                         // array so we can highlight it appropriately. Also stores the value.
-                        if(q.selectors[inlineSelector].rules[prop]) {
-                           pvalue = q.selectors[inlineSelector].rules[prop];
+                        if(q.selectors[currentSelector].rules[prop]) {
+                           pvalue = q.selectors[currentSelector].rules[prop];
                            existingEdits.push({query:q, line:lineNumber});
                            pvalue = pvalue.replace(/;/, '');
                            break;
@@ -1472,10 +1584,10 @@ define(function (require, exports, module) {
                     // Check if the currently selected query has this property already set.
                     // If so then we add it to the existingEdits array for highlighting purposes.
                     // It also stores the value 'pvalue' so we can use that in the output.
-                    else if(cq == q && q.selectors[inlineSelector]) {
+                    else if(cq == q && q.selectors[currentSelector]) {
 
-                        if(q.selectors[inlineSelector].rules[prop]) {
-                           pvalue = q.selectors[inlineSelector].rules[prop];
+                        if(q.selectors[currentSelector].rules[prop]) {
+                           pvalue = q.selectors[currentSelector].rules[prop];
                            existingEdits.push({query:q, line:lineNumber});
                            pvalue = pvalue.replace(/;/, '');
                            break;
@@ -1486,7 +1598,7 @@ define(function (require, exports, module) {
 
                 // If this property hasn't been set by anyone, we use the original value returned.
                 if(pvalue == undefined)
-                    pvalue = res.rules[inlineSelector][prop];
+                    pvalue = res.rules[currentSelector][prop];
 
                 // Finally we add the CSS rule to the output string.
                 str += "\t" + prop + ": " + pvalue.trim() + ";\n";
@@ -1504,7 +1616,9 @@ define(function (require, exports, module) {
     
     /** 
      *  Called when there is a text change in the inline editor.
-     *  @params: the first is the codemirror instance, the second is the change object.
+     *
+     *  @params instance    : the codemirror instance,
+     *  @params change      : the change object.
      */
     function inlineChange(instance, change) {
 
@@ -1534,46 +1648,58 @@ define(function (require, exports, module) {
      *  a new query is created or if one of the colored query marks has been clicked.
      *  NOTE: There is quite a bit of duplicated code here from the inlineEditorProvider function.
      */
-    function updateInlineWidget() {
+    function updateInlineWidgets() {
+
+        // get the inline widgets for the currently open document
+        var hostEditor = EditorManager.getCurrentFullEditor();
+        var inlineWidgets = hostEditor.getInlineWidgets();
 
         // Update the highlight.
         positionHighlight(inlineElement);
 
         var cq = currentQuery;
-        var i = 0;
 
-        // update the background colour of the inline mark
-        var mark = document.querySelector(".inlinemark");
-        mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
-        
-        var wd = document.querySelector(".inlinemark > .wd");
-        wd.innerHTML = cq.width + "px";
+        for (var j = 0; j < inlineWidgets.length; j++) {
 
-        // Set the appropriate color for the newly selected query.
+            var inlineWidgetHtml = inlineWidgets[j].$htmlContent[0];
+            var inlineCodeMirror = inlineWidgets[j].editor._codeMirror;
 
-        var count = 0;
-        var existingEdits = [];
+            // update the background colour of the inline mark
+            var mark = inlineWidgetHtml.querySelector(".inlinemark");
+            if (mark) {
+                mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
 
-        // Refresh rules for current query and loop through.
-        cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, inlineElement);
+                var wd = inlineWidgetHtml.querySelector(".inlinemark > .wd");
+                wd.innerHTML = cq.width + "px";
+            }
+            
+            var count = 0;
+            var existingEdits = [];
 
-        // refresh the selector drop down
-        var selectSelector = inlineEditor.$htmlContent[0].querySelector("select");
-        refreshSelectorSelectbox(selectSelector, cssResults);
+            // Refresh rules for current query and loop through.
+            cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, inlineWidgets[j].editorNode);
 
-        // Build the editor contents. 
-        // Note: For some reason count is 0 when refreshed but 4 when editor is created
-        var editorContents = refreshCodeEditor(cq, cssResults);
+            // refresh the selector drop down
+            //BR: issue57
+            //var selectSelector = inlineEditor.$htmlContent[0].querySelector("select");
+            var selectSelector = inlineWidgetHtml.querySelector("select");
+            refreshSelectorSelectbox(selectSelector, cssResults);
+            var currentSelector = selectSelector.value;
 
-        // Set the text in the inline editor to our new string.
-        inlineCm.setValue(editorContents.contents);
+            // Build the editor contents.
+            // Note: For some reason count is 0 when refreshed but 4 when editor is created
+            var editorContents = refreshCodeEditor(cq, cssResults, currentSelector);
 
-        // Loop through the existingEdits array and highlight lines appropriately.
-        var existingEdits = editorContents.existingEdits;
+            // Set the text in the inline editor to our new string.
+            inlineCodeMirror.setValue(editorContents.contents);
 
-        for(var i=0, len=existingEdits.length; i<len; i++) {
-            inlineCm.removeLineClass(existingEdits[i].line, "background");
-            inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
+            // Loop through the existingEdits array and highlight lines appropriately.
+            var existingEdits = editorContents.existingEdits;
+
+            for(var i=0, len=existingEdits.length; i<len; i++) {
+                inlineCodeMirror.removeLineClass(existingEdits[i].line, "background");
+                inlineCodeMirror.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
+            }
         }
     }
 
@@ -1618,6 +1744,77 @@ define(function (require, exports, module) {
         }
     }
 
+    function updateCurrentFile(e, newFile, newPaneId, oldFile, oldPaneId) {
+
+        try {
+            var currentDoc = DocumentManager.getCurrentDocument();
+            if (document.querySelector('#response') && workingMode === 'local' && currentDoc != null && currentDoc.language.getId() === "html") {
+                // open the doc reload bar so user can decide if the preview pane should be reloaded
+                docReloadBar.open();
+            }
+        } catch (err) {
+            console.error("unexpected error occurred trying to handle currentFileChange event", err);
+        }
+    }
+    
+    function closeResponseMode() {
+
+        // close docReloadBar if it is still open
+        docReloadBar.close();
+
+        // ensure inspect mode is off so handlers are removed 
+        // but don't update inspect mode menu item
+        toggleInspectMode(false);
+
+        // remove the #response view
+        var element = document.getElementById("response");
+        element.parentNode.removeChild(element);
+
+        // Manually fire the window resize event to position everything correctly.
+        handleWindowResize(null);
+        response = null;
+
+        // refresh layout
+        WorkspaceManager.recomputeLayout(true);
+
+        // update toolbar icon and menu state to indicate we are leaving responsive mode
+        var iconLink = document.getElementById('response-icon');
+        iconLink.style.backgroundPosition = '0 0';
+        document.body.classList.remove('responsive-mode');
+
+        var command = CommandManager.get(CMD_RESPONSEMODE_ID);
+        command.setChecked(false);
+    }
+    
+    function buildMenuSystem() {
+        
+        // Build commands and menu system
+        var customMenu = Menus.addMenu(Strings.MENU_MAIN, MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
+
+        CommandManager.register(Strings.SUBMENU_RESPSONSEMODE, CMD_RESPONSEMODE_ID, Response);
+        customMenu.addMenuItem(CMD_RESPONSEMODE_ID, "Shift-Alt-R");
+
+        // Toggle inspect mode.
+        CommandManager.register(Strings.SUBMENU_INSPECTMODE, CMD_INSPECTMODE_ID, handleInspectToggle);
+        customMenu.addMenuItem(CMD_INSPECTMODE_ID, "Shift-Alt-I");
+
+        customMenu.addMenuDivider();
+
+        // add menu items to indicate if horizontal or vertical layout should be used for the preview
+        // pane
+        var horzLayoutCmd = CommandManager.register(Strings.SUBMENU_HORZLAYOUT, CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
+        customMenu.addMenuItem(CMD_HORZLAYOUT_ID, "Shift-Alt-H");
+
+        var vertLayoutCmd = CommandManager.register(Strings.SUBMENU_VERTLAYOUT, CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
+        customMenu.addMenuItem(CMD_VERTLAYOUT_ID, "Shift-Alt-V");
+
+        customMenu.addMenuDivider();
+
+        // Add menu item to indicate if live preview url setting should be used for preview pane
+        var vertLayoutCmd = CommandManager.register(Strings.SUBMENU_PREVIEWURL, CMD_PREVIEWURL_ID, handleLivePreviewToggle);
+        customMenu.addMenuItem(CMD_PREVIEWURL_ID, "Shift-Alt-U");
+    }
+    
     /** 
      *  Called when brackets has opened and is ready.
      */
@@ -1632,6 +1829,8 @@ define(function (require, exports, module) {
 
         document.querySelector('#main-toolbar .buttons').appendChild(icon);
         icon.addEventListener('click', Response, false);
+
+        docReloadBar = new DocReloadBar();
     });
 
     modulePath = FileUtils.getNativeModuleDirectoryPath(module);
@@ -1658,27 +1857,23 @@ define(function (require, exports, module) {
         }
     });
 
-    
-    // Build commands and menu system
-    var customMenu = Menus.addMenu(Strings.MENU_MAIN, MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
-    
-    CommandManager.register(Strings.SUBMENU_RESPSONSEMODE, CMD_RESPONSEMODE_ID, Response);
-    customMenu.addMenuItem(CMD_RESPONSEMODE_ID, "Shift-Alt-R");
+    prefs.definePreference("useLivePreviewUrl", "boolean", false).on("change", function () {
 
-    // Toggle inspect mode.
-    CommandManager.register(Strings.SUBMENU_INSPECTMODE, CMD_INSPECTMODE_ID, handleInspectToggle);
-    customMenu.addMenuItem(CMD_INSPECTMODE_ID, "Shift-Alt-I");
+        var command = CommandManager.get(CMD_PREVIEWURL_ID);
 
-    customMenu.addMenuDivider();
-    
-    // Toggle inspect mode.
-    var horzLayoutCmd = CommandManager.register(Strings.SUBMENU_HORZLAYOUT, CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
-    customMenu.addMenuItem(CMD_HORZLAYOUT_ID, "Shift-Alt-H");
+        // update the live preview url menu state
+        if (prefs.get("useLivePreviewUrl")) {
+            command.setChecked(true);
+        } else {
+            command.setChecked(false);
+        }
+    });
 
-    // Toggle inspect mode.
-    var vertLayoutCmd = CommandManager.register(Strings.SUBMENU_VERTLAYOUT, CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
-    customMenu.addMenuItem(CMD_VERTLAYOUT_ID, "Shift-Alt-V");
-    
+    buildMenuSystem();
+
+    MainViewManager.on("currentFileChange", $.proxy(updateCurrentFile));
+    ProjectManager.on("beforeProjectClose", $.proxy(closeResponseMode));
+
     // Register as an inline provider.
     EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);
 });
