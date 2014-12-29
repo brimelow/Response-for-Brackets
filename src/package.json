@@ -3,7 +3,7 @@
     "name": "response-for-brackets",
     "description": "Original Responsive design tool for Brackets from Lee Brimelow",
     "keywords": ["responsive", "media", "query", "css"],
-    "version": "0.0.5",
+    "version": "0.0.6",
     "author": "Ben Rooney",
     "homepage": "https://github.com/brimelow/Response-for-Brackets",
     "repository": {
