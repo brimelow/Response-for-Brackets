@@ -597,7 +597,11 @@ define(function (require, exports, module) {
     function setupEventHandlers() {
 
         slider.addEventListener('change', handleSliderChange, false);
-        frame.contentWindow.addEventListener('load', handleFrameLoaded, false);
+        
+        // using jquery load event handling as this will trigger when iframe is reloaded
+        // instead of only on the first time it is loaded.
+        $(frame).on("load", handleFrameLoaded);
+        
         frame.addEventListener('mouseout', handleFrameMouseOut, false);
         addButt.addEventListener('click', handleAddQuery, false);
         window.addEventListener('resize', handleWindowResize, false);
@@ -779,6 +783,8 @@ define(function (require, exports, module) {
 
         if(e) e.stopImmediatePropagation();
 
+        console.log("frame loaded event fired");
+        
         // Store a reference to the iframe document.
         frameDOM = document.getElementById("frame").contentWindow.document;
         
@@ -835,28 +841,14 @@ define(function (require, exports, module) {
     }
 
     /**
-     * Called when user clicks on refresh button. reloading the iframe wasn't
-     * triggering the onload event (handleFrameLoaded) so instead we are removing 
-     * iframe and recreating it.
-     * 
-     * note: there should probably be a better way to do this so the onload
-     * event (handleFrameLoaded) is triggered
+     * Called when user clicks on refresh button. simply reloads the current page
+     * in the preview pane
      */
     function handleRefreshClick(e) {
         
         if (e) e.stopImmediatePropagation();
-        
-        // remove the #response view
-        var element = document.getElementById("response");
-        element.parentNode.removeChild(element);
 
-        // reload the iframe
-        Response();
-        
-        //frame.contentWindow.addEventListener('load', handleFrameLoaded, false);
-        //frame.contentWindow.location.reload(true);
-        //handleFrameLoaded();
-        //frame.src += '?c=' + Math.random();
+        frame.contentWindow.document.location.reload(true);
     }
     
     /** 
@@ -1742,11 +1734,11 @@ define(function (require, exports, module) {
 
     function updateCurrentFile(e, newFile, newPaneId, oldFile, oldPaneId) {
         
+//        var currentDoc = DocumentManager.getCurrentDocument();
+//        if (currentDoc != null && currentDoc.language.getId() === "html") {
+
         try {
             if (document.querySelector('#response')) {
-                console.log("currentFileChange event while in response mode", e);
-                console.log("currentFileChange event [newFile: " + newFile + "][newPaneId: " + newPaneId + "][oldFile: " + oldFile + "][oldPaneId: " + oldPaneId + "]");
-
                 // open the doc reload bar so user can decide if the preview pane should be reloaded
                 docReloadBar.open();
             }

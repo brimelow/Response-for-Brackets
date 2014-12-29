@@ -32,6 +32,7 @@ define(function (require, exports, module) {
     "use strict";
 
     var ModalBar           = brackets.getModule("widgets/ModalBar").ModalBar,
+        DocumentManager    = brackets.getModule("document/DocumentManager"),
         Strings            = require("strings");
 /*    
     var _                  = require("thirdparty/lodash"),
@@ -74,7 +75,15 @@ define(function (require, exports, module) {
             var $root = this._modalBar.getRoot();
             $root
                 .on("click", "#docreload-ok", function (e) {
-                    console.log("ok clicked");
+                    // get the current document and update frame src attribute
+                    var currentDoc = DocumentManager.getCurrentDocument();
+                    var previewPaneUrl = "file://" + currentDoc.file.fullPath;
+
+                    var frame = document.getElementById('frame');
+                    frame.contentWindow.document.location.href = previewPaneUrl;
+                    //frame.src = previewPaneUrl;
+                
+                    bar.close();
                 })
                 .on("click", "#docreload-cancel", function (e) {
                     bar.close();
