@@ -190,6 +190,9 @@ define(function (require, exports, module) {
     // The splitter that allows resizing of the split view.
     var splitter;
     
+    // indicates whether we are currently working with livePreviewUrl or local files
+    var workingMode;
+    
     /*================  Begin function definitions  ================*/  
 
     /** 
@@ -293,11 +296,14 @@ define(function (require, exports, module) {
             
             var previewPaneUrl;
             
+            workingMode = null;
+            
             // check if we should be using the live preview url
             var command = CommandManager.get(CMD_PREVIEWURL_ID);
             if (command.getChecked()) {
                 if (ProjectManager.getBaseUrl()) {
                     previewPaneUrl = ProjectManager.getBaseUrl();
+                    workingMode = 'livePreviewUrl';
                 } else {
                     console.info("Live Preview Base URL not set under File > Project Settings. Need to let user know. defaulting to HTML file if it is open");
                 }
@@ -312,6 +318,7 @@ define(function (require, exports, module) {
                 // has chosen to open with Live Preview Base URL in the menu
                 if (currentDoc != null && currentDoc.language.getId() === "html") {
                     previewPaneUrl = "file://" + currentDoc.file.fullPath;
+                    workingMode = 'local';
                 } else {
                     console.info("Unable to switch to Responsive mode as the current document is not HTML");
                 }
@@ -1733,12 +1740,10 @@ define(function (require, exports, module) {
     }
 
     function updateCurrentFile(e, newFile, newPaneId, oldFile, oldPaneId) {
-        
-//        var currentDoc = DocumentManager.getCurrentDocument();
-//        if (currentDoc != null && currentDoc.language.getId() === "html") {
 
         try {
-            if (document.querySelector('#response')) {
+            var currentDoc = DocumentManager.getCurrentDocument();
+            if (document.querySelector('#response') && workingMode === 'local' && currentDoc != null && currentDoc.language.getId() === "html") {
                 // open the doc reload bar so user can decide if the preview pane should be reloaded
                 docReloadBar.open();
             }
