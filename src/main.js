@@ -27,180 +27,177 @@ define(function (require, exports, module) {
 
     /*====================  Define constants  =====================*/
 
-    var EXT_PREFIX = "responsive";
-    var MENU_RESPONSE_ID = EXT_PREFIX + ".mainmenu";
-    var CMD_RESPONSEMODE_ID = EXT_PREFIX + ".cmd.launch";
-    var CMD_INSPECTMODE_ID = EXT_PREFIX + ".cmd.inspect";
-    var CMD_HORZLAYOUT_ID = EXT_PREFIX + ".cmd.horizontal";
-    var CMD_VERTLAYOUT_ID = EXT_PREFIX + ".cmd.vertical";
-    var CMD_PREVIEWURL_ID = EXT_PREFIX + ".cmd.livepreview";
-    
+    var EXT_PREFIX              = "responsive",
+        MENU_RESPONSE_ID        = EXT_PREFIX + ".mainmenu",
+        CMD_RESPONSEMODE_ID     = EXT_PREFIX + ".cmd.launch",
+        CMD_INSPECTMODE_ID      = EXT_PREFIX + ".cmd.inspect",
+        CMD_HORZLAYOUT_ID       = EXT_PREFIX + ".cmd.horizontal",
+        CMD_VERTLAYOUT_ID       = EXT_PREFIX + ".cmd.vertical",
+        CMD_PREVIEWURL_ID       = EXT_PREFIX + ".cmd.livepreview",
+
+        // The 'constant' for vertical or horizontal mode.
+        VERTICAL = 0,
+        HORIZONTAL = 1,
+
+        // Array of color objects for media query bar gradients.
+        COLORS = [{
+            t: "#91b3fb",
+            b: "#5f88d0"
+        }, {
+            t: "#cdb0fd",
+            b: "#b48ee4"
+        }, {
+            t: "#c2ec5c",
+            b: "#a7ca50"
+        }, {
+            t: "#fdcd6b",
+            b: "#dfaf51"
+        }, {
+            t: "#74ede4",
+            b: "#59cfc3"
+        }],
+
     /*================ Load needed brackets modules ================*/
 
-    var CommandManager = brackets.getModule("command/CommandManager");
-    var Commands = brackets.getModule("command/Commands");
-    var Menus = brackets.getModule("command/Menus");
-    var DocumentManager = brackets.getModule("document/DocumentManager");
-    var MainViewManager = brackets.getModule("view/MainViewManager");
-    var WorkspaceManager = brackets.getModule("view/WorkspaceManager");
-    var NativeFileSystem = brackets.getModule("file/NativeFileSystem").NativeFileSystem;
-    var FileUtils = brackets.getModule("file/FileUtils");
-    var FileSystem = brackets.getModule("filesystem/FileSystem");
-    var ProjectManager = brackets.getModule("project/ProjectManager");
-    var EditorManager = brackets.getModule("editor/EditorManager");
-    var ExtensionUtils = brackets.getModule("utils/ExtensionUtils");
-    var AppInit = brackets.getModule("utils/AppInit");
-    var CSSUtils = brackets.getModule("language/CSSUtils");
-    var HTMLUtils = brackets.getModule("language/HTMLUtils");
-    var PreferencesManager = brackets.getModule("preferences/PreferencesManager");
+        CommandManager          = brackets.getModule("command/CommandManager"),
+        Commands                = brackets.getModule("command/Commands"),
+        Menus                   = brackets.getModule("command/Menus"),
+        DocumentManager         = brackets.getModule("document/DocumentManager"),
+        MainViewManager         = brackets.getModule("view/MainViewManager"),
+        WorkspaceManager        = brackets.getModule("view/WorkspaceManager"),
+        NativeFileSystem        = brackets.getModule("file/NativeFileSystem").NativeFileSystem,
+        FileUtils               = brackets.getModule("file/FileUtils"),
+        FileSystem              = brackets.getModule("filesystem/FileSystem"),
+        ProjectManager          = brackets.getModule("project/ProjectManager"),
+        EditorManager           = brackets.getModule("editor/EditorManager"),
+        ExtensionUtils          = brackets.getModule("utils/ExtensionUtils"),
+        AppInit                 = brackets.getModule("utils/AppInit"),
+        CSSUtils                = brackets.getModule("language/CSSUtils"),
+        HTMLUtils               = brackets.getModule("language/HTMLUtils"),
+        PreferencesManager      = brackets.getModule("preferences/PreferencesManager"),
     
-    var ModalBar = brackets.getModule("widgets/ModalBar").ModalBar;
-    
-    /*================  Load my custom modules  ================*/
+    /*================  Load custom modules  ================*/
 
-    // This is a much lighter-weight version of the MultiRangeInlineTextEditor.
-    // Ideally I could would be able to use the InlineTextEditor we can't yet.
-    var ResponseInlineEdit = require("ResponseInlineEdit").ResponseInlineEdit;
+        // This is a much lighter-weight version of the MultiRangeInlineTextEditor.
+        // Ideally I could would be able to use the InlineTextEditor we can't yet.
+        ResponseInlineEdit      = require("ResponseInlineEdit").ResponseInlineEdit,
 
-    var DocReloadBar = require("widgets/DocReloadBar").DocReloadBar;
-    
-    // This much lighter-weight version of the Resizer utility
-    var Splitter = require("Splitter").Splitter;
+        // Used to ask users if they want to refresh preview pane when switching
+        // between HTML documents
+        DocReloadBar            = require("widgets/DocReloadBar").DocReloadBar,
 
-    // Set of DOM and CSS utility methods.
-    var ResponseUtils = require("ResponseUtils");
-    
-    // represents a media query and its custom selectors/rules
-    var Query = require("Query").Query;
+        // This much lighter-weight version of the Resizer utility
+        Splitter                = require("Splitter").Splitter,
 
-    // Load the nls string module for this plugin. 
-    var Strings = require("strings");
+        // Set of DOM and CSS utility methods.
+        ResponseUtils           = require("ResponseUtils"),
 
+        // represents a media query and its custom selectors/rules
+        Query                   = require("Query").Query,
+
+        // Load the nls string module for this plugin. 
+        Strings                 = require("strings"),
 
     /*================  Define module properties  ================*/
     
-    // Reference to the DocReloadBar
-    var docReloadBar;
+        // Reference to the DocReloadBar
+        docReloadBar,
 
-    // Reference to the codemirror instance of the inline editor.
-    var inlineCm;
+        // Reference to the codemirror instance of the inline editor.
+        inlineCm,
 
-    // Path to this extension.
-    var modulePath;
+        // Path to this extension.
+        modulePath,
 
-    // Path to the current open project.
-    var projectRoot;
+        // Path to the current open project.
+        projectRoot,
 
-    // Document for the generated media-queries.css file.
-    var mediaQueryDoc;
+        // Document for the generated media-queries.css file.
+        mediaQueryDoc,
+
+        // I write to this temp document to show in the inline editor.
+        tempCSSDoc,
+
+        // Element whose CSS rules are being show in the inline editor.
+        inlineElement,
+
+        // The range element ruler which you drag to change width.
+        slider,
+
+        // Iframe containing the live HTML preview.
+        frame,
+
+        // The track indicator that display the current width of the slider
+        trackLabel,
+
+        // The track where the color media query bars are shown.
+        track,
+
+        // The .main-view div in Brackets core.
+        mainView,
+
+        // Main container for the response tools and iFrame.
+        response,
+
+        // Codemirror instance for the current full editor.
+        cm,
+
+        // Editor in current full editor.
+        mainEditor,
+
+        // + button for adding a new media query.
+        addButt,
+
+        // The current layout mode.
+        mode = VERTICAL,
+
+        // Document object of iframe.
+        frameDOM,
+
+        // Holds all of the created media query objects.
+        queries = {},
+
+        // Array for sorting the queries.
+        sort = [],
+
+        // The currently selected media query.
+        currentQuery,
+
+        // The inspect mode toggle button.
+        inspectButton,
+
+        // Css selector for the element in the inline editor.
+        inlineSelector,
+
+        // Div that provides the dark overlay in inspect mode.
+        highlight,
+
+        // Is the code currently animating.
+        isAnimating = false,
+
+        // Results returned from ResponseUtils.getAuthorCSSRules().
+        cssResults,
+
+        // A style block we will inject into the iframe.
+        style,
+
+        // The selected line of code in the main editor.
+        selected,
+
+        // The splitter that allows resizing of the split view.
+        splitter,
+
+        // indicates whether we are currently working with livePreviewUrl or local files
+        workingMode;
     
-    // I write to this temp document to show in the inline editor.
-    var tempCSSDoc;
-
-    // Element whose CSS rules are being show in the inline editor.
-    var inlineElement;
-
-    // The range element ruler which you drag to change width.
-    var slider;
-
-    // Iframe containing the live HTML preview.
-    var frame;
-
-    // The track indicator that display the current width of the slider
-    var trackLabel;
-    
-    // The track where the color media query bars are shown.
-    var track;
-
-    // The .main-view div in Brackets core.
-    var mainView;
-
-    // Main container for the response tools and iFrame.
-    var response;
-
-    // Codemirror instance for the current full editor.
-    var cm;
-
-    // Editor in current full editor.
-    var mainEditor;
-
-    // + button for adding a new media query.
-    var addButt;
-
-    // The 'constant' for vertical mode.
-    var VERTICAL = 0;
-
-    // The 'constant' for horizontal mode.
-    var HORIZONTAL = 1;
-
-    // The current layout mode.
-    var mode = VERTICAL;
-
-    // Document object of iframe.
-    var frameDOM;
-
-    // Holds all of the created media query objects.
-    var queries = {};
-
-    // Array for sorting the queries.
-    var sort = [];
-
-    // The currently selected media query.
-    var currentQuery;
-
-    // Array of color objects for media query bar gradients.
-    var colors = [{
-        t: "#91b3fb",
-        b: "#5f88d0"
-    }, {
-        t: "#cdb0fd",
-        b: "#b48ee4"
-    }, {
-        t: "#c2ec5c",
-        b: "#a7ca50"
-    }, {
-        t: "#fdcd6b",
-        b: "#dfaf51"
-    }, {
-        t: "#74ede4",
-        b: "#59cfc3"
-    }];
-    
-    // The inspect mode toggle button.
-    var inspectButton;
-    
-    // Css selector for the element in the inline editor.
-    var inlineSelector;
-    
-    // Div that provides the dark overlay in inspect mode.
-    var highlight;
-
-    // Is the code currently animating.
-    var isAnimating = false;
-    
-    // Results returned from ResponseUtils.getAuthorCSSRules().
-    var cssResults;
-
-    // A style block we will inject into the iframe.
-    var style;
-
-    // The selected line of code in the main editor.
-    var selected;
-    
-    // The splitter that allows resizing of the split view.
-    var splitter;
-    
-    // indicates whether we are currently working with livePreviewUrl or local files
-    var workingMode;
-    
-    /*================  Begin function definitions  ================*/  
+    /*================  Begin function definitions  ================*/
 
     /** 
      *  Main entry point of extension that is called when responsive mode is launched.
      */
     function Response(e) {
 
-        if (e) e.stopImmediatePropagation();
+        if (e) { e.stopImmediatePropagation(); }
         
         var iconLink = document.getElementById('response-icon');
 
@@ -945,7 +942,7 @@ define(function (require, exports, module) {
 
                 // If this is a new query, assign it the next color available.
                 if (query.color == undefined) {
-                    query.color = colors[sort.length - 1];
+                    query.color = COLORS[sort.length - 1];
                     query.colorIndex = sort.length - 1;
                 }
                 
