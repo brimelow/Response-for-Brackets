@@ -20,6 +20,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+/*jslint vars: true, plusplus: true, devel: true, nomen: true, regexp: true, indent: 4, maxerr: 50 */
+/*global define, brackets, $, TweenMax */
+
 /*
  * IMPORTANT NOTE: this was meant to be a lightweight version of the Resizer utility
  * but I never really got a chance to work on it much. The main difference is that I
@@ -40,14 +43,14 @@ define(function (require, exports, module) {
      * We call this static method to create a new splitter for either layout mode.
      * @param: [1] element to resize, [2] "horz" or "vert", [3] min element size
      */
-    Splitter.makeResizable = function(el, moad, min) {
+    Splitter.makeResizable = function (el, moad, min) {
 
         // Set some vars
-        var minSize = min;
-        var lastSize = 0;
-        var mode = moad;
-        var element = el;
-        var collapsed = false;
+        var minSize = min,
+            lastSize = 0,
+            mode = moad,
+            element = el,
+            collapsed = false;
 
         // Create the actual splitter div and insert as the first child of element
         var splitter = document.createElement("div");
@@ -55,21 +58,19 @@ define(function (require, exports, module) {
         element.insertBefore(splitter, element.firstChild);
 
         // You can call this function manually trigger a resize
-        Splitter.updateElement = function(size) {
+        Splitter.updateElement = function (size) {
             resizeElement(size);
-        }
+        };
       
         // This where the actual resizing happens to the element
         // @param: [1] new size for the element
-        function resizeElement(elementSize) {   
+        function resizeElement(elementSize) {
 
             // Are we in horizontal mode?        
-            if(/horz/.test(mode)) {
+            if (/horz/.test(mode)) {
                 element.style.width = elementSize + "px";
-            }
-
-            // Nope so I guess were in vertical mode
-            else {
+            } else {
+                // Nope so I guess were in vertical mode
                 element.style.height = elementSize + "px";
             }
 
@@ -84,21 +85,20 @@ define(function (require, exports, module) {
             var size;
 
             // If it's collapsed, uncollapse it back to its previous size
-            if(collapsed) {
+            if (collapsed) {
                 resizeElement(lastSize);
                 collapsed = false;
-            }
-
-            // Here we collapse the panel and store its current size for when
-            // we uncollapse. The -15 keeps the actual splitter div visible
-            else {
-                if(/vert/.test(mode)) {
-                    lastSize = parseInt(element.style.height);
+                
+            } else {
+                // Here we collapse the panel and store its current size for when
+                // we uncollapse. The -15 keeps the actual splitter div visible
+                if (/vert/.test(mode)) {
+                    lastSize = parseInt(element.style.height, 10);
                     size = window.innerHeight - 15;
                     element.style.height = size + "px";
-                }
-                else {
-                    lastSize = parseInt(element.style.width);
+
+                } else {
+                    lastSize = parseInt(element.style.width, 10);
                     size = window.innerWidth - 15;
                     element.style.width = size + "px";
                 }
@@ -109,7 +109,7 @@ define(function (require, exports, module) {
         }
         
         // Listen for a mousedown on the spitter
-        splitter.addEventListener("mousedown", function(e) {
+        splitter.addEventListener("mousedown", function (e) {
             
             // Calculate the current values of the mouse and the size of the
             // element based on which mode we are currently in
@@ -123,12 +123,12 @@ define(function (require, exports, module) {
             // The resizeShield is a div that covers the entire application with 
             // a transparent hit area to get consistent mouse move events
             var resizeShield = document.createElement("div");
-            resizeShield.className = "resizing-container " + mode + "-resizing"; 
+            resizeShield.className = "resizing-container " + mode + "-resizing";
 
             document.body.appendChild(resizeShield);
             
             // Listen for mouse move events on the resizeShield
-            resizeShield.addEventListener("mousemove", function(e) {
+            resizeShield.addEventListener("mousemove", function (e) {
 
                 // No mouse down? Goodbye.
                 if (!isMouseDown) {
@@ -136,10 +136,9 @@ define(function (require, exports, module) {
                 }
 
                 // Calculate the new size based on the current display mode
-                if(/vert/.test(mode)) {
+                if (/vert/.test(mode)) {
                     newSize = Math.max(startSize - 1 * (startPosition - e.clientY), minSize);
-                }
-                else {
+                } else {
                     newSize = Math.max(startSize - 1 * (startPosition - e.clientX), minSize);
                 }
 
@@ -156,19 +155,19 @@ define(function (require, exports, module) {
                     }
                     
                     // Resize the element with the new value  
-                    resizeElement(newSize);                           
+                    resizeElement(newSize);
                     $(element).trigger("panelResizeUpdate", newSize);
                 }
 
                 // Make sure the editor is resized properly
-                EditorManager.resizeEditor(); 
+                EditorManager.resizeEditor();
             });
             
             // You can double-click on the splitter to collapse it. Here we
             // are listneing for a mouse down on the resizeShield. On line
             // 170 we create a setTimeout of 300ms before destroying the shield.
             // This gives you enough time to mouse down on it and here we are.
-            resizeShield.addEventListener("mousedown", function(e) {
+            resizeShield.addEventListener("mousedown", function (e) {
                 
                 // Toggle the panel
                 toggle();
@@ -182,7 +181,7 @@ define(function (require, exports, module) {
             // Here we listen for a mouseup on the main document element. If
             // that happens we then create the timeout allowing you to click
             // on the resizeShield simulating a double click
-            document.addEventListener("mouseup", function(e) {
+            document.addEventListener("mouseup", function (e) {
                 if (isMouseDown) {
                     
                     isMouseDown = false;
@@ -190,8 +189,9 @@ define(function (require, exports, module) {
                     window.setTimeout(function () {
                         resizeShield.removeEventListener("mousemove");
                         resizeShield.removeEventListener("mousedown");
-                        if(resizeShield.parentNode)
+                        if (resizeShield.parentNode) {
                             document.body.removeChild(resizeShield);
+                        }
                     }, 300);
 
                 }
@@ -200,7 +200,7 @@ define(function (require, exports, module) {
             e.preventDefault();
         });
 		
-    }
+    };
     
     // Make it public
     exports.Splitter = Splitter;
