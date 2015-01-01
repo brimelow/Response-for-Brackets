@@ -166,10 +166,7 @@ define(function (require, exports, module) {
 
         // The inspect mode toggle button.
         inspectButton,
-/*
-        // Css selector for the element in the inline editor.
-        inlineSelector,
-*/
+
         // Div that provides the dark overlay in inspect mode.
         highlight,
 
@@ -1277,14 +1274,7 @@ define(function (require, exports, module) {
         var newSelector = e.target.value,
             i,
             len;
-/* BR
-        if (inlineSelector === newSelector) {
-            return;
-        }
 
-        // Change the selector to the new value chosen.
-        inlineSelector = newSelector;
-*/
         var inlineWidget = EditorManager.getFocusedInlineWidget();
         inlineWidget.currentSelector = newSelector;
         
@@ -1387,7 +1377,7 @@ define(function (require, exports, module) {
         }
         
         // If there isn't a media query, show the message that a query has not been selected
-        if (currentQuery === undefined) {
+        if (!currentQuery) {
             if (selected) {
                 cm.removeLineClass(selected.line, "background");
             }
