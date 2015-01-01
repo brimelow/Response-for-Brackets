@@ -58,41 +58,28 @@ define(function (require, exports, module) {
     ResponseInlineEdit.prototype = Object.create(InlineTextEditor.prototype);
     ResponseInlineEdit.prototype.constructor = ResponseInlineEdit;
     ResponseInlineEdit.prototype.parentClass = InlineTextEditor.prototype;
-/*
-    ResponseInlineEdit.prototype.editorDiv = null;
-*/
+
     ResponseInlineEdit.prototype.$inlineMark = null;
     ResponseInlineEdit.prototype.$wd = null;
     ResponseInlineEdit.prototype.$selectorSelect = null;
     
+    ResponseInlineEdit.prototype.currentSelector = null;
+    
     /**
      * I changed the arguments sent to load to make it more compatible with the extension.
-     * @param: [1] main editor, [2] CSS selector for this quick edit, [3] start line number
+     * @param: [1] main editor, [2] start line number
      *          the temp CSS file, [4] display up to this end line, [5] the tempCSSDoc 
      **/
-    ResponseInlineEdit.prototype.load = function (hostEditor, selector, start, end, str) {
+    ResponseInlineEdit.prototype.load = function (hostEditor, start, end, str) {
         ResponseInlineEdit.prototype.parentClass.load.apply(this, arguments);
-
-        this.$header
         
         // Create the header for the inline widget.
         this.$inlineMark = $("<div/>").addClass("inlinemark").appendTo(this.$header);
         this.$wd = $("<div/>").addClass("wd").appendTo(this.$inlineMark);
         this.$selectorSelect = $("<select/>").appendTo(this.$header);
     
-        
         this.doc = new DocumentModule.Document((new InMemoryFile('temp-response.css', FileSystem)), (new Date()), str);
 
-/*        
-        // Create the container div for the inline editor
-        this.editorDiv = window.document.createElement("div");
-        this.editorDiv.classList.add("inlineEditorHolder");
-        
-        // Prevent mousewheel oddities that can unfocus the editor
-        this.editorDiv.addEventListener("mousewheel", function (e) {
-            e.stopPropagation();
-        });
-*/
         // The magic line that creates and displays the inline editor
         this.setInlineContent(this.doc, start, end);
         this.editor.focus();
@@ -100,10 +87,6 @@ define(function (require, exports, module) {
 
         // Size the inline editor to its contents
         this.sizeInlineWidgetToContents();
-/*
-        // Append the editor div to the main div created in the super class
-        this.$htmlContent.append(this.editorDiv);
-*/        
     };
     
     // Called when the editor is added to the DOM we override this in main.js
@@ -115,9 +98,6 @@ define(function (require, exports, module) {
     ResponseInlineEdit.prototype.onClosed = function () {
         ResponseInlineEdit.prototype.parentClass.onClosed.apply(this, arguments);
         this.doc.releaseRef();
-        /*
-        this.editorDiv.removeEventListener("mousewheel");
-        */
     };
 
     // Function that sizes the inline editor based on the size of its contents
@@ -135,12 +115,54 @@ define(function (require, exports, module) {
         }
     };
 
-    ResponseInlineEdit.prototype.setMediaQueryInfo = function (cq) {
+    /**
+     * Updates the presentation of the inline editor, setting the background colour of the inline 
+     * mark and the width label based on the passed in query object
+     *
+     * @param cq: the current query mark that is selected/active
+     */
+    ResponseInlineEdit.prototype.refreshMediaQueryInfo = function (cq) {
         
         // Style the inline mark to match the color of the current query.
         this.$inlineMark[0].style.backgroundImage = "url('file://" + modulePath + "/../images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
         this.$wd[0].innerText = cq.width + "px";
-    }
+    };
+    
+    /**
+     * Called to refresh the contents of the selector drop down in the inline editor
+     *
+     * @param res: the css rules for the selected html dom element
+     * @param inlineSelector: the currently selected css selector that is being editted
+     */
+    ResponseInlineEdit.prototype.refreshSelectorDropdown = function (res, inlineSelector) {
+        
+        var i = 0;
+
+        // Choose the first selector if a selector is not already selected or
+        // if the current one is no longer available.
+        if (!inlineSelector || res.selectors.indexOf(inlineSelector) === -1) {
+            inlineSelector = res.selectors[0];
+        }
+
+        // clear all options from the select box first
+        this.$selectorSelect.empty();
+
+        // Loop through the returned CSS selectors and populate the select box.
+        while (i < res.selectors.length) {
+            var s = this.$selectorSelect[0].appendChild(document.createElement('option'));
+            s.text = s.value = res.selectors[i];
+
+            // We will select the first selector in the array as the are sorted based on specificity.
+            if (res.selectors[i] === inlineSelector) {
+                s.selected = true;
+                this.$selectorSelect[0].selectedIndex = i;
+                this.currentSelector = s.value;
+            }
+
+            i++;
+        }
+    };
+    
     
     // Make it public
     exports.ResponseInlineEdit = ResponseInlineEdit;

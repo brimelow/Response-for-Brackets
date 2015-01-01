@@ -166,10 +166,10 @@ define(function (require, exports, module) {
 
         // The inspect mode toggle button.
         inspectButton,
-
+/*
         // Css selector for the element in the inline editor.
         inlineSelector,
-
+*/
         // Div that provides the dark overlay in inspect mode.
         highlight,
 
@@ -360,7 +360,7 @@ define(function (require, exports, module) {
             
             // break the css file into media queries. assumption is that the output for 
             // each media query starts with "@media only screen and (max-width:###px) {"
-            var mediaQueryRegex = /@media only screen and \(max-width:[0-9]+px\) {\s*([\.#\w:\(\)\-]+\s*{\s*[\w\s:%;-]*}\s*)*}/g;
+            var mediaQueryRegex = /@media only screen and \(max-width:[0-9]+px\) {\s*([\.#\w:\(\)\-]+\s*{\s*[\w\s:%;\(\)\-,]*}\s*)*}/g;
             var mediaQueries = mediaQueryDoc.getText().match(mediaQueryRegex);
 
             //reset master query list 
@@ -398,7 +398,7 @@ define(function (require, exports, module) {
             if (selectors !== null && selectors.length > 0) {
                 for (i = 0; i < selectors.length; i++) {
                     var escapedSelector = selectors[i].selector.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
-                    var ruleListRegex = new RegExp(escapedSelector + "\\s+{([\\s\\w\\d:;%\-]*)}", "g");
+                    var ruleListRegex = new RegExp(escapedSelector + "\\s+{([\\s\\w\\d:;,%\-\(\)]*)}", "g");
                     
                     var matches = ruleListRegex.exec(mediaQuery);
                     if (matches !== null) {
@@ -1277,14 +1277,17 @@ define(function (require, exports, module) {
         var newSelector = e.target.value,
             i,
             len;
-
+/* BR
         if (inlineSelector === newSelector) {
             return;
         }
 
         // Change the selector to the new value chosen.
         inlineSelector = newSelector;
-
+*/
+        var inlineWidget = EditorManager.getFocusedInlineWidget();
+        inlineWidget.currentSelector = newSelector;
+        
         // Build the editor contents. 
         // Note: For some reason count is 0 when refreshed but 4 when editor is created
         var editorContents = refreshCodeEditor(currentQuery, cssResults, newSelector);
@@ -1417,12 +1420,6 @@ define(function (require, exports, module) {
         // Call my utility method that finds all of the CSS rules that are
         // currently set for this element. See the comments in ResponseUtils.js.
         cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, el);
-
-        // Create a select box to contain the list of possible selectors for 
-        // the current element
-        var selectSelector = document.createElement("select");
-        selectSelector.addEventListener('change', handleSelectorChange, false);
-        refreshSelectorSelectbox(selectSelector, cssResults);
         
         var count = 4,
             i,
@@ -1432,7 +1429,7 @@ define(function (require, exports, module) {
         // build the editor contents
         // The line count starts at 4 because of the selector, whitespace, etc.  
         // Note: For some reason count is 0 when refreshed but 4 when editor is created
-        var editorContents = refreshCodeEditor(currentQuery, cssResults, selectSelector.value);
+        var editorContents = refreshCodeEditor(currentQuery, cssResults);
 
         // Create a new inline editor. This is my stripped-down version of the
         // MultiRangeInlineEditor module.
@@ -1440,30 +1437,11 @@ define(function (require, exports, module) {
         inlineEditor.editorNode = inlineElement;
 
         // Load the editor with the CSS we generated.
-        inlineEditor.load(hostEditor, inlineSelector, 0, count + 2, editorContents.contents);
+        inlineEditor.load(hostEditor, 0, count + 2, editorContents.contents);
 
         // Called when the editor is added to the DOM.
         inlineEditor.onAdded = function () {
-/*
-            var eh = this.$htmlContent[0].querySelector(".inline-editor-header");
 
-            // Create a new mark that will show at the top of the inline editor
-            // with the correct query color to remind the user of what they're changing.
-            var mark = document.createElement("div");
-            mark.className = "inlinemark";
-
-            // Add mark to the inline editor holder div.
-            eh.appendChild(mark);
-
-            // Create the pixel width text that is displayed on the mark.
-            var wd = document.createElement("div");
-            wd.className = "wd";
-            wd.appendChild(document.createTextNode(cq.width + "px"));
-            mark.appendChild(wd);
-
-            // Add the selector select box. It is positioned absolutely.
-            eh.appendChild(selectSelector);
-*/
             // Get a reference to the codemirror instance of the inline editor.
             inlineCm = this.editor._codeMirror;
 
@@ -1480,12 +1458,9 @@ define(function (require, exports, module) {
 
             // Listen for changes in the inline editor.
             inlineCm.on("change", inlineChange);
-/*
-            // Style the inline mark to match the color of the current query.
-            this.$inlineMark[0].style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
-            this.$wd.innerText = cq.width = "px";
-*/            
-            this.setMediaQueryInfo(cq);
+
+            this.refreshMediaQueryInfo(cq);
+            this.refreshSelectorDropdown(cssResults);
         };
 
         // Called when the inline editor is closed.
@@ -1502,39 +1477,6 @@ define(function (require, exports, module) {
     }
 
     /**
-     * Called to refresh the contents of the selector drop down in the inline editor
-     * @params: the first is a reference to the selector dom element and the second is 
-     *          the css rules for the selected html dom element
-     */
-    function refreshSelectorSelectbox(selectSelector, res) {
-        
-        var i = 0;
-
-        // Choose the first selector if a selector is not already selected or
-        // if the current one is no longer available.
-        if (!inlineSelector || res.selectors.indexOf(inlineSelector) === -1) {
-            inlineSelector = res.selectors[0];
-        }
-
-        // clear all options from the select box first
-        $(selectSelector).empty();
-        
-        // Loop through the returned CSS selectors and populate the select box.
-        while (i < res.selectors.length) {
-            var s = selectSelector.appendChild(document.createElement('option'));
-            s.text = s.value = res.selectors[i];
-
-            // We will select the first selector in the array as the are sorted based on specificity.
-            if (res.selectors[i] === inlineSelector) {
-                s.selected = true;
-                selectSelector.selectedIndex = i;
-            }
-
-            i++;
-        }
-    }
-    
-    /**
      *  refreshes the contents of the inline widget, showing the css rules of the
      *  current css selector (from dropdown)
      *
@@ -1542,11 +1484,11 @@ define(function (require, exports, module) {
      *  @params res             : the css rules that were retrieved from the selected element in the
      *                            main editor
      *  @params currentSelector : the current css selector. If not supplied it will default to
-     *                            global inlineSelector variable
+     *                            first css selector for the current element
      */
     function refreshCodeEditor(cq, res, currentSelector) {
 
-        currentSelector = currentSelector || inlineSelector;
+        currentSelector = currentSelector || res.selectors[0];
         
         // Array to hold information about whether a rule has already been set by this or another query.
         var existingEdits = [],
@@ -1565,7 +1507,7 @@ define(function (require, exports, module) {
         if (res.rules[currentSelector] !== null) {
             for (prop in res.rules[currentSelector]) {
 
-                var pvalue;
+                var pvalue = null;
                 lineNumber++;
 
                 // Here we loop through all of the defined media queries to see if this rule
@@ -1604,7 +1546,7 @@ define(function (require, exports, module) {
                 }
 
                 // If this property hasn't been set by anyone, we use the original value returned.
-                if (pvalue === undefined) {
+                if (!pvalue) {
                     pvalue = res.rules[currentSelector][prop];
                 }
 
@@ -1634,7 +1576,8 @@ define(function (require, exports, module) {
         if (change.text.length < 2 && change.from.line !== 0) {
 
             // Add the changed rule to the current query object.
-            currentQuery.addRule(inlineSelector, inlineCm.getLine(change.from.line));
+            var inlineWidget = EditorManager.getFocusedInlineWidget();
+            currentQuery.addRule(inlineWidget.currentSelector, inlineCm.getLine(change.from.line));
 
             // If a previous query had this prop set, remove its background highlight.
             inlineCm.removeLineClass(change.from.line, "background");
@@ -1648,7 +1591,6 @@ define(function (require, exports, module) {
 
         // Adjust the highlight according to the new CSS value.
         positionHighlight(inlineElement);
-
     }
 
     /** 
@@ -1676,27 +1618,17 @@ define(function (require, exports, module) {
             var inlineCodeMirror = inlineWidgets[j].editor._codeMirror;
 
             // update the background colour of the inline mark
-            inlineWidgets[j].setMediaQueryInfo(cq);
-            /*
-            inlineWidgets[j].$inlineMark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
-            inlineWidgets[j].$wd.innerHTML = cq.width + "px";
-            */
+            inlineWidgets[j].refreshMediaQueryInfo(cq);
             
             var existingEdits = [];
 
             // Refresh rules for current query and loop through.
             cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, inlineWidgets[j].editorNode);
-
-            // refresh the selector drop down
-            //BR: issue57
-            //var selectSelector = inlineEditor.$htmlContent[0].querySelector("select");
-            var selectSelector = inlineWidgetHtml.querySelector("select");
-            refreshSelectorSelectbox(selectSelector, cssResults);
-            var currentSelector = selectSelector.value;
+            inlineWidgets[j].refreshSelectorDropdown(cssResults);
 
             // Build the editor contents.
             // Note: For some reason count is 0 when refreshed but 4 when editor is created
-            var editorContents = refreshCodeEditor(cq, cssResults, currentSelector);
+            var editorContents = refreshCodeEditor(cq, cssResults);
 
             // Set the text in the inline editor to our new string.
             inlineCodeMirror.setValue(editorContents.contents);
@@ -1775,6 +1707,9 @@ define(function (require, exports, module) {
         // but don't update inspect mode menu item
         toggleInspectMode(false);
 
+        // deselect the current query
+        currentQuery = null;
+        
         // remove the #response view
         var element = document.getElementById("response");
         if (element) {
