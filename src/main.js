@@ -1444,8 +1444,8 @@ define(function (require, exports, module) {
 
         // Called when the editor is added to the DOM.
         inlineEditor.onAdded = function () {
-
-            var eh = this.$htmlContent[0].querySelector(".inlineEditorHolder");
+/*
+            var eh = this.$htmlContent[0].querySelector(".inline-editor-header");
 
             // Create a new mark that will show at the top of the inline editor
             // with the correct query color to remind the user of what they're changing.
@@ -1462,8 +1462,8 @@ define(function (require, exports, module) {
             mark.appendChild(wd);
 
             // Add the selector select box. It is positioned absolutely.
-            mark.appendChild(selectSelector);
-
+            eh.appendChild(selectSelector);
+*/
             // Get a reference to the codemirror instance of the inline editor.
             inlineCm = this.editor._codeMirror;
 
@@ -1480,9 +1480,12 @@ define(function (require, exports, module) {
 
             // Listen for changes in the inline editor.
             inlineCm.on("change", inlineChange);
-
+/*
             // Style the inline mark to match the color of the current query.
-            mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+            this.$inlineMark[0].style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+            this.$wd.innerText = cq.width = "px";
+*/            
+            this.setMediaQueryInfo(cq);
         };
 
         // Called when the inline editor is closed.
@@ -1673,13 +1676,11 @@ define(function (require, exports, module) {
             var inlineCodeMirror = inlineWidgets[j].editor._codeMirror;
 
             // update the background colour of the inline mark
-            var mark = inlineWidgetHtml.querySelector(".inlinemark");
-            if (mark) {
-                mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
-
-                var wd = inlineWidgetHtml.querySelector(".inlinemark > .wd");
-                wd.innerHTML = cq.width + "px";
-            }
+            inlineWidgets[j].setMediaQueryInfo(cq);
+            /*
+            inlineWidgets[j].$inlineMark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+            inlineWidgets[j].$wd.innerHTML = cq.width + "px";
+            */
             
             var existingEdits = [];
 

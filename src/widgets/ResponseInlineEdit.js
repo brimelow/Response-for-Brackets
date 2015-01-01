@@ -34,12 +34,15 @@ define(function (require, exports, module) {
     "use strict";
     
     // This is essentially a sub-class on the InlineTextEditor
-    var InlineTextEditor = brackets.getModule("editor/InlineTextEditor").InlineTextEditor;
-    var DocumentModule  = brackets.getModule("document/Document");
-    var DocumentManager  = brackets.getModule("document/DocumentManager");
-    var InMemoryFile  = brackets.getModule("document/InMemoryFile");
-    var FileSystem  = brackets.getModule("filesystem/FileSystem");
-    
+    var InlineTextEditor            = brackets.getModule("editor/InlineTextEditor").InlineTextEditor,
+        DocumentModule              = brackets.getModule("document/Document"),
+        DocumentManager             = brackets.getModule("document/DocumentManager"),
+        InMemoryFile                = brackets.getModule("document/InMemoryFile"),
+        FileSystem                  = brackets.getModule("filesystem/FileSystem"),
+        FileUtils                   = brackets.getModule("file/FileUtils"),
+
+        modulePath                  = FileUtils.getNativeModuleDirectoryPath(module);
+
     function ResponseInlineEdit() {
         InlineTextEditor.call(this);
         //this.doc;
@@ -55,8 +58,13 @@ define(function (require, exports, module) {
     ResponseInlineEdit.prototype = Object.create(InlineTextEditor.prototype);
     ResponseInlineEdit.prototype.constructor = ResponseInlineEdit;
     ResponseInlineEdit.prototype.parentClass = InlineTextEditor.prototype;
+/*
     ResponseInlineEdit.prototype.editorDiv = null;
-
+*/
+    ResponseInlineEdit.prototype.$inlineMark = null;
+    ResponseInlineEdit.prototype.$wd = null;
+    ResponseInlineEdit.prototype.$selectorSelect = null;
+    
     /**
      * I changed the arguments sent to load to make it more compatible with the extension.
      * @param: [1] main editor, [2] CSS selector for this quick edit, [3] start line number
@@ -65,8 +73,17 @@ define(function (require, exports, module) {
     ResponseInlineEdit.prototype.load = function (hostEditor, selector, start, end, str) {
         ResponseInlineEdit.prototype.parentClass.load.apply(this, arguments);
 
+        this.$header
+        
+        // Create the header for the inline widget.
+        this.$inlineMark = $("<div/>").addClass("inlinemark").appendTo(this.$header);
+        this.$wd = $("<div/>").addClass("wd").appendTo(this.$inlineMark);
+        this.$selectorSelect = $("<select/>").appendTo(this.$header);
+    
+        
         this.doc = new DocumentModule.Document((new InMemoryFile('temp-response.css', FileSystem)), (new Date()), str);
 
+/*        
         // Create the container div for the inline editor
         this.editorDiv = window.document.createElement("div");
         this.editorDiv.classList.add("inlineEditorHolder");
@@ -75,7 +92,7 @@ define(function (require, exports, module) {
         this.editorDiv.addEventListener("mousewheel", function (e) {
             e.stopPropagation();
         });
-
+*/
         // The magic line that creates and displays the inline editor
         this.setInlineContent(this.doc, start, end);
         this.editor.focus();
@@ -83,9 +100,10 @@ define(function (require, exports, module) {
 
         // Size the inline editor to its contents
         this.sizeInlineWidgetToContents();
-
+/*
         // Append the editor div to the main div created in the super class
         this.$htmlContent.append(this.editorDiv);
+*/        
     };
     
     // Called when the editor is added to the DOM we override this in main.js
@@ -97,13 +115,15 @@ define(function (require, exports, module) {
     ResponseInlineEdit.prototype.onClosed = function () {
         ResponseInlineEdit.prototype.parentClass.onClosed.apply(this, arguments);
         this.doc.releaseRef();
+        /*
         this.editorDiv.removeEventListener("mousewheel");
+        */
     };
 
     // Function that sizes the inline editor based on the size of its contents
     ResponseInlineEdit.prototype.sizeInlineWidgetToContents = function () {
         ResponseInlineEdit.prototype.parentClass.sizeInlineWidgetToContents.call(this, true);
-        this.hostEditor.setInlineWidgetHeight(this, this.$editorHolder.height(), false);
+        this.hostEditor.setInlineWidgetHeight(this, this.$editorHolder.height() + this.$header.height(), false);
     };
     
     // This refreshes the contents of the editor and also resizes it
@@ -115,6 +135,13 @@ define(function (require, exports, module) {
         }
     };
 
+    ResponseInlineEdit.prototype.setMediaQueryInfo = function (cq) {
+        
+        // Style the inline mark to match the color of the current query.
+        this.$inlineMark[0].style.backgroundImage = "url('file://" + modulePath + "/../images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
+        this.$wd[0].innerText = cq.width + "px";
+    }
+    
     // Make it public
     exports.ResponseInlineEdit = ResponseInlineEdit;
 });
