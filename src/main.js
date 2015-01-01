@@ -20,7 +20,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
-/*jslint vars: true, plusplus: true, devel: true, nomen: true, regexp: true, indent: 4, maxerr: 50 */
+/*jslint vars: true, plusplus: true, devel: true, nomen: true, regexp: true, bitwise:true, indent: 4, maxerr: 150 */
 /*global define, brackets, $, TweenMax */
 
 /* This is eseentially all of the responsive feature stuffed into a single file */
@@ -103,6 +103,9 @@ define(function (require, exports, module) {
     
         // Reference to the DocReloadBar
         docReloadBar,
+    
+        // Configure preferences for the extension
+        prefs = PreferencesManager.getExtensionPrefs(EXT_PREFIX),
 
         // Reference to the codemirror instance of the inline editor.
         inlineCm,
@@ -353,6 +356,8 @@ define(function (require, exports, module) {
         
         function _reloadMediaQueriesFromFile(mediaQueryDoc) {
 
+            var i;
+            
             // break the css file into media queries. assumption is that the output for 
             // each media query starts with "@media only screen and (max-width:###px) {"
             var mediaQueryRegex = /@media only screen and \(max-width:[0-9]+px\) {\s*([\.#\w:\(\)\-]+\s*{\s*[\w\s:%;-]*}\s*)*}/g;
@@ -363,7 +368,7 @@ define(function (require, exports, module) {
             sort = [];
 
             if (mediaQueries !== null && mediaQueries.length > 0) {
-                for (var i = 0; i < mediaQueries.length; i++) {
+                for (i = 0; i < mediaQueries.length; i++) {
                     
                     // get the width for the current media query
                     var matches = /max-width:([0-9]+)px/g.exec(mediaQueries[i]);
@@ -388,8 +393,10 @@ define(function (require, exports, module) {
          */
         function _addRulesToMediaQueries(queryMark, mediaQuery, selectors) {
             
+            var i, j;
+            
             if (selectors !== null && selectors.length > 0) {
-                for (var i = 0; i < selectors.length; i++) {
+                for (i = 0; i < selectors.length; i++) {
                     var escapedSelector = selectors[i].selector.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
                     var ruleListRegex = new RegExp(escapedSelector + "\\s+{([\\s\\w\\d:;%\-]*)}", "g");
                     
@@ -399,8 +406,8 @@ define(function (require, exports, module) {
                         // doing length - 1 here as the last item in the split array will be an empty string
                         // assumption is that the last char in rule list is a ;.
                         // NOTE: Is it possible for the last rule not to have a ; ???? need better logic if this valid
-                        for (var j = 0; j < ruleList.length - 1; j++) {
-                            queryMark.addRule(selectors[i].selector, ruleList[j].trim() + ";");   
+                        for (j = 0; j < ruleList.length - 1; j++) {
+                            queryMark.addRule(selectors[i].selector, ruleList[j].trim() + ";");
                         }
                     }
                 }
@@ -416,9 +423,11 @@ define(function (require, exports, module) {
          */
         function _closeOpenInlineEditors() {
 
+            var i, len;
+            
             try {
                 var openDocs = DocumentManager.getAllOpenDocuments();
-                for (var i = 0; i < openDocs.length; i++) {
+                for (i = 0; i < openDocs.length; i++) {
 
                     var editor = openDocs[i]._masterEditor;
 
@@ -427,7 +436,7 @@ define(function (require, exports, module) {
 
                         // when closing widgets, the array is being modified so need to 
                         // iterate by modifying the length value
-                        var len = inlineWidgets.length;
+                        len = inlineWidgets.length;
                         while (len--) {
                             EditorManager.closeInlineWidget(editor, inlineWidgets[len]);
                         }
@@ -449,19 +458,19 @@ define(function (require, exports, module) {
 
         // I wrote my own DOM insertion utility to avoid jQuery here. Insanely faster.
         // See the details of this function in the ResponseUtils.js module.
-        var domArray = [{tag:"div",attr:{id:"response", class:"quiet-scrollbars"}, parent:-1},
-            {tag:"div",attr:{id:"tools"}, parent:0},
-            {tag:"a",attr:{id:"inspectButton", href:"#"}, parent:1},
-            {tag:"div",attr:{id:"inspectText"}, text:"INSPECT", parent:1},
-            {tag:"a",attr:{id:"addButt", href:"#"}, parent:1},
-            {tag:"a",attr:{id:"horzButt", href:"#", title:Strings.SUBMENU_HORZLAYOUT}, parent:1},
-            {tag:"a",attr:{class:"menu-divider"}, parent:1},
-            {tag:"div",attr:{id:"layoutText"}, text:"LAYOUT", parent:1},
-            {tag:"a",attr:{id:"vertButt", href:"#", title:Strings.SUBMENU_VERTLAYOUT}, parent:1},
-            {tag:"a",attr:{id:"response-refresh", href:"#"}, parent:1},
-            {tag:"div",attr:{id:"track-label"}, parent:1},
-            {tag:"div",attr:{id:"track"}, parent:0},
-            {tag:"input",attr:{id:"slider",type:"range",min:"0"}, parent:0}];
+        var domArray = [{tag: "div", attr: {id: "response", class: "quiet-scrollbars"}, parent: -1},
+            {tag: "div", attr: {id: "tools"}, parent: 0},
+            {tag: "a", attr: {id: "inspectButton", href: "#"}, parent: 1},
+            {tag: "div", attr: {id: "inspectText"}, text: "INSPECT", parent: 1},
+            {tag: "a", attr: {id: "addButt", href: "#"}, parent: 1},
+            {tag: "a", attr: {id: "horzButt", href: "#", title: Strings.SUBMENU_HORZLAYOUT}, parent: 1},
+            {tag: "a", attr: {class: "menu-divider"}, parent: 1},
+            {tag: "div", attr: {id: "layoutText"}, text: "LAYOUT", parent: 1},
+            {tag: "a", attr: {id: "vertButt", href: "#", title: Strings.SUBMENU_VERTLAYOUT}, parent: 1},
+            {tag: "a", attr: {id: "response-refresh", href: "#"}, parent: 1},
+            {tag: "div", attr: {id: "track-label"}, parent: 1},
+            {tag: "div", attr: {id: "track"}, parent: 0},
+            {tag: "input", attr: {id: "slider", type: "range", min: "0"}, parent: 0}];
 
         // Call the utility function and get a document fragment back.
         var frag = ResponseUtils.createDOMFragment(domArray);
@@ -491,9 +500,8 @@ define(function (require, exports, module) {
         slider.value = slider.max = response.offsetWidth;
 
         // Here I add the live preview iframe wrapped in a div.
-        domArray = [{tag:"div",attr:{id:"fwrap"}, parent:-1},
-                    {tag:"iframe",attr:{id:"frame", class:"quiet-scrollbars", name:"frame",
-                    src:previewPaneUrl}, parent:0}];
+        domArray = [{tag: "div", attr: {id: "fwrap"}, parent: -1},
+                    {tag: "iframe", attr: {id: "frame", class: "quiet-scrollbars", name: "frame", src: previewPaneUrl}, parent: 0}];
 
         frag = ResponseUtils.createDOMFragment(domArray);
         response.appendChild(frag);
@@ -545,25 +553,27 @@ define(function (require, exports, module) {
             if (tags) {
                 for (j = 0; j < tags.length; j++) {
                     tag = tags[j].substr(1);
-                    if(cmDOM[tag] === undefined)
+                    if (cmDOM[tag] === undefined) {
                         cmDOM[tag] = [];
+                    }
                     cmDOM[tag].push(i);
                 }
-            }  
+            }
 
         }
 
         for (tag in cmDOM) {
+            if (cmDOM.hasOwnProperty(tag)) {
+                if (frDOM[tag] === undefined) {
+                    frDOM[tag] = [];
+                }
 
-            if(frDOM[tag] === undefined)
-                frDOM[tag] = [];
+                var elements = $(frameDOM.body).find(tag);
 
-            var elements = $(frameDOM.body).find(tag);
-
-            for (i = 0, len = elements.length; i<len; i++) {
-                frDOM[tag].push(elements[i]);
+                for (i = 0, len = elements.length; i < len; i++) {
+                    frDOM[tag].push(elements[i]);
+                }
             }
-
         }
 
         return {
@@ -676,9 +686,10 @@ define(function (require, exports, module) {
             mainView.style.cssText = null;
 
             // Remove the current panel splitter
-            if (splitter !== undefined) 
+            if (splitter !== undefined) {
                 response.removeChild(splitter);
-            
+            }
+
             // Create a new splitter for this mode
             Splitter.makeResizable(response, 'horz', 344, cm);
             splitter = document.querySelector('.horz-splitter');
@@ -716,8 +727,9 @@ define(function (require, exports, module) {
             mainView.style.cssText = null;
 
             // Remove the current panel splitter
-            if (splitter !== undefined) 
+            if (splitter !== undefined) {
                 response.removeChild(splitter);
+            }
 
             // Create a new splitter for this mode
             Splitter.makeResizable(response, 'vert', 100, cm);
@@ -728,7 +740,7 @@ define(function (require, exports, module) {
 
             // Change to a top/bottom layout
             response.style.height = (h * 0.6) + 'px';
-            mainView.style.height = (h - response.offsetHeight - 16) + 'px'; 
+            mainView.style.height = (h - response.offsetHeight - 16) + 'px';
             slider.max = slider.offsetWidth;
             slider.value = slider.max;
             frame.style.width = slider.value + "px";
@@ -749,7 +761,9 @@ define(function (require, exports, module) {
      */
     function handleLivePreviewToggle(e) {
         
-        if(e) e.stopImmediatePropagation();
+        if (e) {
+            e.stopImmediatePropagation();
+        }
 
         // update the inspect menu state
         var command = CommandManager.get(CMD_PREVIEWURL_ID);
@@ -761,7 +775,9 @@ define(function (require, exports, module) {
      */
     function handleFrameLoaded(e) {
 
-        if(e) e.stopImmediatePropagation();
+        if (e) {
+            e.stopImmediatePropagation();
+        }
 
         console.log("frame loaded event fired");
         
@@ -826,7 +842,9 @@ define(function (require, exports, module) {
      */
     function handleRefreshClick(e) {
         
-        if (e) e.stopImmediatePropagation();
+        if (e) {
+            e.stopImmediatePropagation();
+        }
 
         frame.contentWindow.document.location.reload(true);
     }
@@ -837,8 +855,9 @@ define(function (require, exports, module) {
     function handleFrameMouseOut() {
 
         // Hide the highlight if the inline editor isn't open. Just a UI tweak.
-        if (highlight)
+        if (highlight) {
             highlight.style.display = 'none';
+        }
     }
 
     /** 
@@ -862,6 +881,8 @@ define(function (require, exports, module) {
 
     function addQueryMark(w) {
 
+        var i, z;
+        
         // First check that there isn't already a query for this width.
         var q = queries[w];
         if (q === undefined) {
@@ -899,7 +920,7 @@ define(function (require, exports, module) {
             
             // This loop goes through all of the created media queries and 
             // essentially redraws all the marks with the correct color and size.        
-            for (var i = 0, z = 5000; i < sort.length; i++) {
+            for (i = 0, z = 5000; i < sort.length; i++) {
                 
                 var left = 0;
                 w = parseInt(queries[sort[i]].width, 10);
@@ -921,10 +942,10 @@ define(function (require, exports, module) {
                 left = (i < 1) ? 0 : sort[i - 1];
                 
                 // Now finally we can draw the mark by adding the arrows image and the gradient.
-                query.view.style.background = "url('file://" + modulePath + "/images/ruler_min.png') " + 
+                query.view.style.background = "url('file://" + modulePath + "/images/ruler_min.png') " +
                         left + "px 0px no-repeat, " +
-                        "-webkit-gradient(linear, left top, left bottom, from(" + 
-                        queries[sort[i]].color.t + "), to(" + 
+                        "-webkit-gradient(linear, left top, left bottom, from(" +
+                        queries[sort[i]].color.t + "), to(" +
                         queries[sort[i]].color.b + "))";
             }
         }
@@ -938,7 +959,7 @@ define(function (require, exports, module) {
     function handleQueryClicked(e) {
 
         // parse the width from the id. 9 is the length of queryMark prefix in id
-        var w = parseInt(e.target.id.substr(9));
+        var w = parseInt(e.target.id.substr(9), 10);
         var q = queries[w];
 
         // Set the clicked query as the current query.
@@ -952,7 +973,7 @@ define(function (require, exports, module) {
         trackLabel.textContent = slider.value + 'px';
 
         // In horizontal mode the code editor also snaps to the query width to give more space.      
-        if(mode == HORIZONTAL) {
+        if (mode === HORIZONTAL) {
             Splitter.updateElement(w);
         }
 
@@ -968,7 +989,9 @@ define(function (require, exports, module) {
      */
     function handleWindowResize(e) {
 
-        if(e) e.stopImmediatePropagation();
+        if (e) {
+            e.stopImmediatePropagation();
+        }
 
         var w = window.innerWidth;
         var h = window.innerHeight;
@@ -979,7 +1002,7 @@ define(function (require, exports, module) {
 
         // This gets called if we are in horizontal mode. Since the event can
         // be fired excessively, I use a bitwise operator to eek out some perf.
-        if(mode & 1) {
+        if (mode & 1) {
             slider.max = slider.value = responseWidth;
             frame.style.width = responseWidth + 'px';
             mainView.style.left = (responseWidth + 15) + 'px';
@@ -1005,13 +1028,13 @@ define(function (require, exports, module) {
     function handlePanelResize(e, size) {
   
         // Only refresh codemirror every other call (perf).    
-        if(size & 1) {
+        if (size & 1) {
             cm.refresh();
         }
         
         // Adjust things properly if in horizontal mode.
         if (mode & 1) {
-            mainView.style.left = (parseInt(size) + 15) + 'px';
+            mainView.style.left = (parseInt(size, 10) + 15) + 'px';
             slider.value = slider.max = size;
             frame.style.width = slider.value + "px";
 
@@ -1019,7 +1042,7 @@ define(function (require, exports, module) {
             trackLabel.textContent = slider.value + 'px';
 
             return;
-        } 
+        }
 
         // Were in vertical mode so adjust things accordingly.
         mainView.style.height = (window.innerHeight - size - 16) + 'px';
@@ -1031,7 +1054,9 @@ define(function (require, exports, module) {
      */
     function handleInspectToggle(e) {
 
-        if(e) e.stopImmediatePropagation();
+        if (e) {
+            e.stopImmediatePropagation();
+        }
 
         // update the inspect menu state
         var command = CommandManager.get(CMD_INSPECTMODE_ID);
@@ -1053,7 +1078,9 @@ define(function (require, exports, module) {
 
                 // if menu state is now checked, means it was just turned on. 
                 inspectBtn.classList.add("inspectButtonOn");
-                if (highlight) highlight.style.display = 'block';
+                if (highlight) {
+                    highlight.style.display = 'block';
+                }
                 selected = null;
                 frameDOM.body.addEventListener('mouseover', handleInspectHover, false);
                 cm.display.wrapper.addEventListener('click', handleCodeClick, false);
@@ -1062,16 +1089,18 @@ define(function (require, exports, module) {
 
                 // If menu state is no longer checked, then it was just turned off
                 inspectBtn.classList.remove("inspectButtonOn");
-                if(selected) {
+                if (selected) {
                     cm.removeLineClass(selected.line, "background");
                 }
-                if (highlight) highlight.style.display = 'none';
+                if (highlight) {
+                    highlight.style.display = 'none';
+                }
                 cm.display.wrapper.removeEventListener('click', handleCodeClick);
                 frameDOM.body.removeEventListener('mouseover', handleInspectHover);
                 return;
                 
             }
-        }        
+        }
     }
 
     /** 
@@ -1082,29 +1111,28 @@ define(function (require, exports, module) {
         e.stopImmediatePropagation();
 
         // Ignore if the inline editor is open.
-        if(isAnimating)
+        if (isAnimating) {
             return;
+        }
 
         // Get current cursor location.
-        var cur = cm.getCursor();
-
-        var line = cur.line;
+        var cur = cm.getCursor(),
+            line = cur.line;
 
         // Get the HTML tag name that the cursor is currently on.
         var tag = cm.getTokenAt(cur).state.htmlState.tagName;
-        //var tagInfo = HTMLUtils.getTagInfo()
         
         var ind;
 
         // If there is already a selected line with a highlight, remove the highlight.
-        if(selected) {
+        if (selected) {
             cm.removeLineClass(selected.line, "background");
         }
 
         var domCache = buildDOMCache();
 
         // Check to see if the editor even contains any tags of this type.
-        if(domCache.codeDom[tag]) {
+        if (domCache.codeDom[tag]) {
             
             // Find out index position of the tag amongst all of the existing tags of this type.   
             ind = domCache.codeDom[tag].indexOf(line);
@@ -1115,7 +1143,7 @@ define(function (require, exports, module) {
             var el = domCache.frameDom[tag][ind];
 
             // Set the selected line object using the line number and DOM element.
-            selected = {el:el, line:line};
+            selected = {el: el, line: line};
             
             // If we found an element and the inline editor isn't open, then proceed.
             if (el) {
@@ -1124,13 +1152,12 @@ define(function (require, exports, module) {
                 isAnimating = true;
 
                 // Here we take the color of the current query and use it highlight the code line.
-                if(currentQuery) {
-                    var cl = "l"+currentQuery.colorIndex.toString();
+                if (currentQuery) {
+                    var cl = "l" + currentQuery.colorIndex.toString();
                     cm.addLineClass(line, "background", cl);
-                }
-
-                // If there is no current query, just make the highlight the blue color.
-                else {
+                    
+                } else {
+                    // If there is no current query, just make the highlight the blue color.
                     cm.addLineClass(line, "background", "l0");
                 }
 
@@ -1138,10 +1165,10 @@ define(function (require, exports, module) {
                 // TweenMax library. This just animates the scrollTop property of the body.
                 TweenMax.to(frameDOM.body, 0.8, {
                     scrollTop: (el.offsetTop - frame.offsetHeight * 0.5) + el.offsetHeight * 0.5,
-                        ease: 'Expo.easeOut', 
-                        onComplete: function(){
-                            isAnimating = false;
-                        }
+                    ease: 'Expo.easeOut',
+                    onComplete: function () {
+                        isAnimating = false;
+                    }
                 });
 
                 // Adjust the highlight to show the selected element.
@@ -1172,13 +1199,14 @@ define(function (require, exports, module) {
         e.preventDefault();
 
         // If inline editor is open, say goodbye.
-        if(!inspectButton.classList.contains("inspectButtonOn"))
+        if (!inspectButton.classList.contains("inspectButtonOn")) {
             return;
+        }
 
         var target = e.target;
 
         // If there is already a selected line of code, remove the background highlight.
-        if(selected) {
+        if (selected) {
             cm.removeLineClass(selected.line, "background");
         }
 
@@ -1191,40 +1219,41 @@ define(function (require, exports, module) {
         // We'll use the codemirror scroller element to animate our code into view.
         var scroller = cm.display.scroller;
         window.scroller = scroller;
-        var editorHeight = (scroller.offsetHeight > 0) ? scroller.offsetHeight : parseInt(scroller.style.height);
+        var editorHeight = (scroller.offsetHeight > 0) ? scroller.offsetHeight : parseInt(scroller.style.height, 10);
         
         // Find out the correct line number from the cache.
         var line = domCache.codeDom[tag][ind];
         
         // Set this as the new selected line.
-        selected = {el:target, line:line};
+        selected = {el: target, line: line};
         
         // If there is a current query, use its color to highlight the code line.      
-        if(currentQuery) {
-            var cl = "l"+currentQuery.colorIndex.toString();
+        if (currentQuery) {
+            var cl = "l" + currentQuery.colorIndex.toString();
             cm.addLineClass(line, "background", cl);
-        }
-
-        // If there's not, just use the blue color.
-        else {
+            
+        } else {
+            // If there's not, just use the blue color.
             cm.addLineClass(line, "background", "l0");
         }
         
         // Calculate the correct scrollTop value that will make the line be in the center.
-        var documentCurPos = cm.charCoords({line:line, ch:0}, "local").bottom;
+        var documentCurPos = cm.charCoords({line: line, ch: 0}, "local").bottom;
         var pos = documentCurPos - editorHeight * 0.5;
 
-        var info = cm.getScrollInfo();       
+        var info = cm.getScrollInfo();
         pos = Math.min(Math.max(pos, 0), (info.height - info.clientHeight));
         
         // Use TweenMax to animate our code to the correct position. When the animation is
         // done we position the cursor on the that line inside the correct tag.
-        TweenMax.to(scroller, 0.5, {scrollTop: pos, roundProps:'scrollTop', ease: 'Expo.easeOut', onComplete:
-            function() {
+        TweenMax.to(scroller, 0.5, {
+            scrollTop: pos,
+            roundProps: 'scrollTop',
+            ease: 'Expo.easeOut',
+            onComplete: function () {
                 cm.setCursor(line, cm.getLine(line).indexOf('<') + 1);
             }
         });
-
     }
 
     /** 
@@ -1245,10 +1274,14 @@ define(function (require, exports, module) {
      */
     function handleSelectorChange(e) {
         
-        var newSelector = e.target.value;
+        var newSelector = e.target.value,
+            i,
+            len;
 
-        if (inlineSelector === newSelector) return;
-        
+        if (inlineSelector === newSelector) {
+            return;
+        }
+
         // Change the selector to the new value chosen.
         inlineSelector = newSelector;
 
@@ -1261,7 +1294,7 @@ define(function (require, exports, module) {
 
         // Loop through the existingEdits array and highlight lines appropriately.
         var existingEdits = editorContents.existingEdits;
-        for(var i=0, len=existingEdits.length; i<len; i++) {
+        for (i = 0, len = existingEdits.length; i < len; i++) {
             inlineCm.removeLineClass(existingEdits[i].line, "background");
             inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
         }
@@ -1275,8 +1308,9 @@ define(function (require, exports, module) {
     function positionHighlight(el) {
         
         // If the element passed is bunk or were not in inspect mode, just leave. 
-        if(!el || !inspectButton.classList.contains("inspectButtonOn"))
+        if (!el || !inspectButton.classList.contains("inspectButtonOn")) {
             return;
+        }
 
         var x = 0;
         var y = 0;
@@ -1286,7 +1320,7 @@ define(function (require, exports, module) {
 
         // This loop walks up the DOM tree and calculates the correct left
         // and top properties taking into account the element's ancestors.
-        while(tempEl) {
+        while (tempEl) {
             x += tempEl.offsetLeft;
             y += tempEl.offsetTop;
             tempEl = tempEl.offsetParent;
@@ -1309,7 +1343,29 @@ define(function (require, exports, module) {
      *  is the main or host editor and the second is the cursor position.
      */
     function inlineEditorProvider(hostEditor, pos) {
-        
+
+        // uses the tagInfo from the editor to create adom element in the frame document
+        // that needs to be parsed for editing. we don't look up the element as we need
+        // more control in what is not included when getting the css rules associated to the
+        // element
+        function _getFrameElement(frameDom, tagInfo) {
+
+            var element = frameDom.createElement(tagInfo.tagName);
+
+            if (tagInfo.position.tokenType === HTMLUtils.ATTR_NAME || tagInfo.position.tokenType === HTMLUtils.ATTR_VALUE) {
+                if (tagInfo.attr.name === "class") {
+                    // Class selector
+                    element.className = tagInfo.attr.value.trim();
+
+                } else if (tagInfo.attr.name === "id") {
+                    // ID selector
+                    element.id = tagInfo.attr.value.trim();
+                }
+            }
+
+            return element;
+        }
+
         // Only provide a CSS editor when cursor is in HTML content
         if (hostEditor.getLanguageForSelection().getId() !== "html") {
             return null;
@@ -1328,10 +1384,10 @@ define(function (require, exports, module) {
         }
         
         // If there isn't a media query, show the message that a query has not been selected
-        if(currentQuery === undefined) {
-            if(selected)
+        if (currentQuery === undefined) {
+            if (selected) {
                 cm.removeLineClass(selected.line, "background");
-            
+            }
             hostEditor.displayErrorMessageAtCursor("There have not been any media queries defined.");
             return $.Deferred().promise();
         }
@@ -1341,8 +1397,9 @@ define(function (require, exports, module) {
         var result = new $.Deferred();
                 
         // If there is a selected line of code in the editor, remove the highlight.
-        if(selected)
+        if (selected) {
             cm.removeLineClass(selected.line, "background");
+        }
 
         // get the tag information for the currently cursor position in the HTML
         // document. If could not be determined then return so message is displayed to user
@@ -1367,9 +1424,10 @@ define(function (require, exports, module) {
         selectSelector.addEventListener('change', handleSelectorChange, false);
         refreshSelectorSelectbox(selectSelector, cssResults);
         
-        var count = 4;
-
-        var cq = currentQuery;
+        var count = 4,
+            i,
+            len,
+            cq = currentQuery;
 
         // build the editor contents
         // The line count starts at 4 because of the selector, whitespace, etc.  
@@ -1382,10 +1440,10 @@ define(function (require, exports, module) {
         inlineEditor.editorNode = inlineElement;
 
         // Load the editor with the CSS we generated.
-        inlineEditor.load(hostEditor, inlineSelector, 0, count+2, editorContents.contents);
+        inlineEditor.load(hostEditor, inlineSelector, 0, count + 2, editorContents.contents);
 
         // Called when the editor is added to the DOM.
-        inlineEditor.onAdded = function() {
+        inlineEditor.onAdded = function () {
 
             var eh = this.$htmlContent[0].querySelector(".inlineEditorHolder");
 
@@ -1412,7 +1470,7 @@ define(function (require, exports, module) {
             // Loops through the existingEdits array and highlights the appropriate lines
             // in the inline editor.
             var existingEdits = editorContents.existingEdits;
-            for(var i=0, len=existingEdits.length; i<len; i++) {
+            for (i = 0, len = existingEdits.length; i < len; i++) {
                 inlineCm.removeLineClass(existingEdits[i].line, "background");
                 inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
             }
@@ -1428,7 +1486,7 @@ define(function (require, exports, module) {
         };
 
         // Called when the inline editor is closed.
-        inlineEditor.onClosed = function() {
+        inlineEditor.onClosed = function () {
 
             // Call parent function first.
             ResponseInlineEdit.prototype.parentClass.onAdded.apply(this, arguments);
@@ -1438,28 +1496,6 @@ define(function (require, exports, module) {
         result.resolve(inlineEditor);
 
         return result.promise();
-
-        // uses the tagInfo from the editor to create adom element in the frame document
-        // that needs to be parsed for editing. we don't look up the element as we need
-        // more control in what is not included when getting the css rules associated to the
-        // element
-        function _getFrameElement(frameDom, tagInfo) {
-
-            var element = frameDom.createElement(tagInfo.tagName);
-
-            if (tagInfo.position.tokenType === HTMLUtils.ATTR_NAME || tagInfo.position.tokenType === HTMLUtils.ATTR_VALUE) {
-                if (tagInfo.attr.name === "class") {
-                    // Class selector
-                    element.className = tagInfo.attr.value.trim();
-
-                } else if (tagInfo.attr.name === "id") {
-                    // ID selector
-                    element.id = tagInfo.attr.value.trim();
-                }
-            }
-
-            return element;
-        }
     }
 
     /**
@@ -1473,14 +1509,15 @@ define(function (require, exports, module) {
 
         // Choose the first selector if a selector is not already selected or
         // if the current one is no longer available.
-        if (!inlineSelector || res.selectors.indexOf(inlineSelector) == -1)
+        if (!inlineSelector || res.selectors.indexOf(inlineSelector) === -1) {
             inlineSelector = res.selectors[0];
-        
+        }
+
         // clear all options from the select box first
         $(selectSelector).empty();
         
         // Loop through the returned CSS selectors and populate the select box.
-        while(i < res.selectors.length) {
+        while (i < res.selectors.length) {
             var s = selectSelector.appendChild(document.createElement('option'));
             s.text = s.value = res.selectors[i];
 
@@ -1509,61 +1546,64 @@ define(function (require, exports, module) {
         currentSelector = currentSelector || inlineSelector;
         
         // Array to hold information about whether a rule has already been set by this or another query.
-        var existingEdits = [];
-        
-        // indicates the current line number. setting for 1 as the first line (0) is the selector
-        var lineNumber = 0;
-        
-        // Here we begin writing the string that we will use to populate the inline editor.
-        var str = currentSelector + " {\n";
+        var existingEdits = [],
+
+            // indicates the current line number. setting for 1 as the first line (0) is the selector
+            lineNumber = 0,
+            
+            // used in iterator for properties
+            prop,
+            sel,
+
+            // Here we begin writing the string that we will use to populate the inline editor.
+            str = currentSelector + " {\n";
 
         // Go through all of the returned CSS rules and write to the output string.
         if (res.rules[currentSelector] !== null) {
-            for(var prop in res.rules[currentSelector]) {
+            for (prop in res.rules[currentSelector]) {
 
                 var pvalue;
                 lineNumber++;
 
                 // Here we loop through all of the defined media queries to see if this rule
                 // has already been set by one of them. This is used to show inheritance.
-                for(var sel in queries) {
+                for (sel in queries) {
 
                     var q = queries[sel];
 
                     // If the media query (q) has a width greater than the currently selected
                     // query and has already set a value for this property, then the current
                     // query will inherit that value.
-                    if(q != cq && parseInt(q.width) > parseInt(cq.width) && 
-                        q.selectors[currentSelector]) {
+                    if (q !== cq && parseInt(q.width, 10) > parseInt(cq.width, 10) &&
+                            q.selectors[currentSelector]) {
 
                         // Check if it has the property set and if so, add it to the existingEdits
                         // array so we can highlight it appropriately. Also stores the value.
-                        if(q.selectors[currentSelector].rules[prop]) {
-                           pvalue = q.selectors[currentSelector].rules[prop];
-                           existingEdits.push({query:q, line:lineNumber});
-                           pvalue = pvalue.replace(/;/, '');
-                           break;
+                        if (q.selectors[currentSelector].rules[prop]) {
+                            pvalue = q.selectors[currentSelector].rules[prop];
+                            existingEdits.push({query: q, line: lineNumber});
+                            pvalue = pvalue.replace(/;/, '');
+                            break;
                         }
-                    } 
 
-                    // Check if the currently selected query has this property already set.
-                    // If so then we add it to the existingEdits array for highlighting purposes.
-                    // It also stores the value 'pvalue' so we can use that in the output.
-                    else if(cq == q && q.selectors[currentSelector]) {
+                    } else if (cq === q && q.selectors[currentSelector]) {
+                        // Check if the currently selected query has this property already set.
+                        // If so then we add it to the existingEdits array for highlighting purposes.
+                        // It also stores the value 'pvalue' so we can use that in the output.
 
-                        if(q.selectors[currentSelector].rules[prop]) {
-                           pvalue = q.selectors[currentSelector].rules[prop];
-                           existingEdits.push({query:q, line:lineNumber});
-                           pvalue = pvalue.replace(/;/, '');
-                           break;
-
+                        if (q.selectors[currentSelector].rules[prop]) {
+                            pvalue = q.selectors[currentSelector].rules[prop];
+                            existingEdits.push({query: q, line: lineNumber});
+                            pvalue = pvalue.replace(/;/, '');
+                            break;
                         }
-                    }               
+                    }
                 }
 
                 // If this property hasn't been set by anyone, we use the original value returned.
-                if(pvalue === undefined)
+                if (pvalue === undefined) {
                     pvalue = res.rules[currentSelector][prop];
+                }
 
                 // Finally we add the CSS rule to the output string.
                 str += "\t" + prop + ": " + pvalue.trim() + ";\n";
@@ -1588,7 +1628,7 @@ define(function (require, exports, module) {
     function inlineChange(instance, change) {
 
         // Make sure that the change is even worth looking at.
-        if(change.text.length < 2 && change.from.line !== 0) {
+        if (change.text.length < 2 && change.from.line !== 0) {
 
             // Add the changed rule to the current query object.
             currentQuery.addRule(inlineSelector, inlineCm.getLine(change.from.line));
@@ -1622,9 +1662,12 @@ define(function (require, exports, module) {
         // Update the highlight.
         positionHighlight(inlineElement);
 
-        var cq = currentQuery;
+        var cq = currentQuery,
+            i,
+            j,
+            len;
 
-        for (var j = 0; j < inlineWidgets.length; j++) {
+        for (j = 0; j < inlineWidgets.length; j++) {
 
             var inlineWidgetHtml = inlineWidgets[j].$htmlContent[0];
             var inlineCodeMirror = inlineWidgets[j].editor._codeMirror;
@@ -1660,7 +1703,7 @@ define(function (require, exports, module) {
             // Loop through the existingEdits array and highlight lines appropriately.
             existingEdits = editorContents.existingEdits;
 
-            for(var i=0, len=existingEdits.length; i<len; i++) {
+            for (i = 0, len = existingEdits.length; i < len; i++) {
                 inlineCodeMirror.removeLineClass(existingEdits[i].line, "background");
                 inlineCodeMirror.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
             }
@@ -1674,12 +1717,14 @@ define(function (require, exports, module) {
     function refreshMediaQueries(writeToFile) {
         
         // Defining some vars we'll need.
-        var s = "";
-        var i = sort.length;
-        var qSort;
+        var s = "",
+            i = sort.length,
+            qSort,
+            sel,
+            k;
 
         // Loop through the queries and write them to the output string.
-        while(i--) {
+        while (i--) {
 
             // We need to sort the queries so the larger widths are written first
             // in order for inheritance to work properly.
@@ -1688,22 +1733,22 @@ define(function (require, exports, module) {
             s += '@media only screen and (max-width:';
             s += qSort.width;
             s += 'px) {\n\n';
-            for (var sel in qSort.selectors) {
+            for (sel in qSort.selectors) {
                 s += '\t' + sel + ' {\n';
-                for (var k in qSort.selectors[sel].rules) {
+                for (k in qSort.selectors[sel].rules) {
                     s += '\t\t' + k + ": " + qSort.selectors[sel].rules[k] + '\n';
                 }
                 s += '\t}\n\n';
             }
             s += '}\n';
-        }       
+        }
         
         // Set the style block in the iframe using the output string. 
         style.textContent = s;
         
         // Write the new text to the media-queries.css file.
         if (writeToFile === undefined || writeToFile) {
-            FileUtils.writeText(mediaQueryDoc.file, s);   
+            FileUtils.writeText(mediaQueryDoc.file, s);
         }
     }
 
@@ -1790,7 +1835,7 @@ define(function (require, exports, module) {
         icon.id = "response-icon";
 
         var iconURL = require.toUrl('./images/toolbar-icon.png');
-        icon.style.cssText = "content: ''; background: url('"+iconURL+"') 0 0 no-repeat;";
+        icon.style.cssText = "content: ''; background: url('" + iconURL + "') 0 0 no-repeat;";
 
         document.querySelector('#main-toolbar .buttons').appendChild(icon);
         icon.addEventListener('click', Response, false);
@@ -1807,9 +1852,6 @@ define(function (require, exports, module) {
 
     // Load in the main CSS for the responsive UI.
     ExtensionUtils.addLinkedStyleSheet(modulePath + "/css/respond.css");
-    
-    // Configure preferences for the extension
-    var prefs = PreferencesManager.getExtensionPrefs(EXT_PREFIX);
     
     prefs.definePreference("mediaQueryFile", "string", "css/media-queries.css");
     prefs.definePreference("preferredLayout", "string", "vertical").on("change", function () {
