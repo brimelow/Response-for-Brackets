@@ -57,7 +57,9 @@ define(function (require, exports, module) {
 
             // Goes through and sets any attributes for this element.
             for (a in el.attr) {
-                element.setAttribute(a, el.attr[a]);
+                if (el.attr.hasOwnProperty(a)) {
+                    element.setAttribute(a, el.attr[a]);
+                }
             }
 
             // If there is text, create and add a text node.

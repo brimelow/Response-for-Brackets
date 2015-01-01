@@ -52,7 +52,7 @@ define(function (require, exports, module) {
         addRule: function (selector, rule) {
 		
             // If the selector doesn't exist in this query, add it.
-            if (this.selectors[selector] === null) {
+            if (!this.selectors[selector]) {
                 this.selectors[selector] = { rules: {} }; //new Selector();
             }
 
