@@ -1731,14 +1731,16 @@ define(function (require, exports, module) {
 
         // remove the #response view
         var element = document.getElementById("response");
-        element.parentNode.removeChild(element);
+        if (element) {
+            element.parentNode.removeChild(element);
 
-        // Manually fire the window resize event to position everything correctly.
-        handleWindowResize(null);
-        response = null;
+            // Manually fire the window resize event to position everything correctly.
+            handleWindowResize(null);
+            response = null;
 
-        // refresh layout
-        WorkspaceManager.recomputeLayout(true);
+            // refresh layout
+            WorkspaceManager.recomputeLayout(true);
+        }
 
         // update toolbar icon and menu state to indicate we are leaving responsive mode
         var iconLink = document.getElementById('response-icon');
