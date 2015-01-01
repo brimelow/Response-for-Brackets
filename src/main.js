@@ -1605,7 +1605,6 @@ define(function (require, exports, module) {
 
         for (j = 0; j < inlineWidgets.length; j++) {
 
-            var inlineWidgetHtml = inlineWidgets[j].$htmlContent[0];
             var inlineCodeMirror = inlineWidgets[j].editor._codeMirror;
 
             // update the background colour of the inline mark
