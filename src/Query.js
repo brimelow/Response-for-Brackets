@@ -20,6 +20,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+/*jslint vars: true, plusplus: true, devel: true, nomen: true, regexp: true, indent: 4, maxerr: 50 */
+/*global define, brackets, $, TweenMax */
+
 /**
  * Query.js class
  * Built this way before I got into doing Brackets and RequireJS
@@ -45,20 +49,22 @@ define(function (require, exports, module) {
 	// Function that you call when you want add a new CSS rule
 	// for a particular selector to the media query.
 	Query.prototype = {
-        addRule: function(selector, rule) {
+        addRule: function (selector, rule) {
 		
             // If the selector doesn't exist in this query, add it.
-            if(this.selectors[selector] == null)
+            if (this.selectors[selector] === null) {
                 this.selectors[selector] = { rules: {} }; //new Selector();
+            }
 
             // Separate the CSS property and the value.
             var style = rule.trim().split(':');
 
             // Add the rule to the selector.	
-            if(style[1] != undefined)
+            if (style[1] !== undefined) {
                 this.selectors[selector].rules[style[0].trim()] = style[1].trim();
+            }
         }
-    }
+    };
 
     Query.prototype.constructor = Query;
     exports.Query = Query;
