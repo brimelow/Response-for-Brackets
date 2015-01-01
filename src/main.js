@@ -81,14 +81,14 @@ define(function (require, exports, module) {
 
         // This is a much lighter-weight version of the MultiRangeInlineTextEditor.
         // Ideally I could would be able to use the InlineTextEditor we can't yet.
-        ResponseInlineEdit      = require("ResponseInlineEdit").ResponseInlineEdit,
+        ResponseInlineEdit      = require("widgets/ResponseInlineEdit").ResponseInlineEdit,
 
         // Used to ask users if they want to refresh preview pane when switching
         // between HTML documents
         DocReloadBar            = require("widgets/DocReloadBar").DocReloadBar,
 
         // This much lighter-weight version of the Resizer utility
-        Splitter                = require("Splitter").Splitter,
+        Splitter                = require("widgets/Splitter").Splitter,
 
         // Set of DOM and CSS utility methods.
         ResponseUtils           = require("ResponseUtils"),
