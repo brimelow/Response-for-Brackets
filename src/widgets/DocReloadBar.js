@@ -21,7 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, regexp: true, indent: 4, maxerr: 50 */
-/*global define, $, Mustache */
+/*global define, brackets, $, Mustache */
 
 /*
  * UI for the Document Reload bar which is responsible to ask the user if they
@@ -33,31 +33,14 @@ define(function (require, exports, module) {
 
     var ModalBar           = brackets.getModule("widgets/ModalBar").ModalBar,
         DocumentManager    = brackets.getModule("document/DocumentManager"),
-        Strings            = require("strings");
-/*    
-    var _                  = require("thirdparty/lodash"),
-        EventDispatcher    = require("utils/EventDispatcher"),
-        Commands           = require("command/Commands"),
-        KeyBindingManager  = require("command/KeyBindingManager"),
-        KeyEvent           = require("utils/KeyEvent"),
-        ModalBar           = require("widgets/ModalBar").ModalBar,
-        PreferencesManager = require("preferences/PreferencesManager"),
-        MainViewManager    = require("view/MainViewManager"),
-        ViewUtils          = require("utils/ViewUtils");
-*/
+        Strings            = require("strings"),
     
-    /**
-     * @private
-     * The template we use for all Find bars.
-     * @type {string}
-     */
-    var _htmlTemplate = require("text!htmlContent/docreload-bar.html");
-    
-    /** 
-     * @private
-     * @type {?ModalBar} Modal bar containing this find bar's UI
-     */
-    DocReloadBar.prototype._modalBar = null;
+        /**
+         * @private
+         * The template we use for all Find bars.
+         * @type {string}
+         */
+        _htmlTemplate = require("text!htmlContent/docreload-bar.html");
     
     /**
      * @constructor
@@ -65,6 +48,12 @@ define(function (require, exports, module) {
     function DocReloadBar() {
         
     }
+
+    /** 
+     * @private
+     * @type {?ModalBar} Modal bar containing this find bar's UI
+     */
+    DocReloadBar.prototype._modalBar = null;
 
     DocReloadBar.prototype.open = function () {
         var bar = this;
@@ -76,10 +65,10 @@ define(function (require, exports, module) {
             $root
                 .on("click", "#docreload-ok", function (e) {
                     // get the current document and update frame src attribute
-                    var currentDoc = DocumentManager.getCurrentDocument();
-                    var previewPaneUrl = "file://" + currentDoc.file.fullPath;
-
-                    var frame = document.getElementById('frame');
+                    var currentDoc = DocumentManager.getCurrentDocument(),
+                        previewPaneUrl = "file://" + currentDoc.file.fullPath,
+                        frame = document.getElementById('frame');
+                
                     frame.contentWindow.document.location.href = previewPaneUrl;
                     //frame.src = previewPaneUrl;
                 
@@ -89,16 +78,16 @@ define(function (require, exports, module) {
                     bar.close();
                 });
         }
-    }
+    };
 
-    DocReloadBar.prototype.close = function(e) {
+    DocReloadBar.prototype.close = function (e) {
 
-        if (e) e.stopImmediatePropagation();
+        if (e) { e.stopImmediatePropagation(); }
         if (this._modalBar) {
             this._modalBar.close();
             this._modalBar = null;
         }
-    }
+    };
     
     exports.DocReloadBar = DocReloadBar;
 });
