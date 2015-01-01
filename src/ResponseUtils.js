@@ -20,6 +20,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+/*jslint vars: true, plusplus: true, devel: true, nomen: true, regexp: true, indent: 4, maxerr: 50 */
+/*global define, brackets, $, TweenMax */
+
 /**
  * ResponseUtils.js Module
  * Contains a set of DOM and CSS helper functions that the extension uses.
@@ -40,33 +44,36 @@ define(function (require, exports, module) {
      * Pass -1 as parent to attach directly to document fragment.
      */
     function createDOMFragment(domArray) {
+        
+        var elements = [],
+            a;
+
         var frag = document.createDocumentFragment();
-        var elements = [];
 
         // Loops through the DOM objects and creates them.
-        while(domArray.length) {
+        while (domArray.length) {
             var el = domArray.shift();
             var element = document.createElement(el.tag);
 
             // Goes through and sets any attributes for this element.
-            for(var a in el.attr) {
+            for (a in el.attr) {
                 element.setAttribute(a, el.attr[a]);
             }
 
             // If there is text, create and add a text node.
-            if(el.text) {
+            if (el.text) {
                 element.appendChild(document.createTextNode(el.text));
             }
 
             elements.push(element);
             
-            // Append container element to the fragment.
-            if(el.parent == -1)
+            if (el.parent === -1) {
+                // Append container element to the fragment.
                 frag.appendChild(element);
-
-            // Otherwise append it to its correct parent.
-            else
+            } else {
+                // Otherwise append it to its correct parent.
                 elements[el.parent].appendChild(element);
+            }
         }
 
         // Return the document fragment.
@@ -109,22 +116,22 @@ define(function (require, exports, module) {
         // Parse out the rules from the text.
         var rules = css.match(/(?:[^;\(]*(?:\([^\)]*?\))?[^;\(]*)*;?/g);
 
-        var i = rules.length-1;
+        var i = rules.length - 1;
         var lines = [];
 
         // Loop through the rules and get the property names and values.
-        while(i--) {
+        while (i--) {
             var match = rules[i].match(/\s*([^:\s]*)\s*:\s*(.*?)\s*(?:! (important))?;?$/);
             
-            if(match) {
+            if (match) {
 
                 // Checks if the match has 3 elements.
-                if(match[2]) {
+                if (match[2]) {
 
                     // Push result in to the lines array.
                     lines.push(match);
                 }
-            }      
+            }
         }
 
         // Return the lines array.
@@ -138,10 +145,12 @@ define(function (require, exports, module) {
      */
     function getAuthorCSSBySelector(doc, sel) {
         
+        var i, j, len;
+        
         // Get the DOM element matching this selector.
         var el = doc.querySelector(sel);
 
-        if(el) {
+        if (el) {
 
             // Use the native getMatchedCSSRules function to get
             // all of the matching CSS rules for this element.
@@ -154,13 +163,13 @@ define(function (require, exports, module) {
             res.selectors.push(sel);
 
             // Check if we have any results.
-            if(rules.length > 0) {
+            if (rules.length > 0) {
 
                 // Loop through each of the returned rules.
-                for(var i=rules.length-1; i>-1; i--) {
+                for (i = rules.length - 1; i > -1; i--) {
 
                     // If this rule's selector matches the one we want, then continue.
-                    if(rules[i].selectorText == sel) {
+                    if (rules[i].selectorText === sel) {
 
                         // Take the cssText property and use out helper function to parse it.
                         var lines = parseCSSRules(rules[i].style.cssText);
@@ -169,10 +178,10 @@ define(function (require, exports, module) {
                         var declaration = rules[i].style;
 
                         // Loop through each of the returned CSS lines.
-                        for(var j=0, len=lines.length; j<len; j++) {
+                        for (j = 0, len = lines.length; j < len; j++) {
                             
                             // If the current line has a property value. 
-                            if(lines[j][1]) {
+                            if (lines[j][1]) {
 
                                 // See if we can shorten things by checking if there is a 
                                 // shorthand version of this rule (i.e. margin:20px vs margin-top:20px etc.)
@@ -187,7 +196,7 @@ define(function (require, exports, module) {
 
                                 else {*/
                                     // Store the property name and value returned to us.
-                                    res.rules[lines[j][1]] = lines[j][2];
+                                res.rules[lines[j][1]] = lines[j][2];
                                 //}
 
                             }
@@ -208,15 +217,17 @@ define(function (require, exports, module) {
      */
     function getAuthorCSSRules(doc, el) {
         
+        var i, j, len;
+        
         // Use the native method for finding matching CSS rules.
         var rules = doc.defaultView.getMatchedCSSRules(el, '', false);
 
         // Create a new return object.
         var res = new CSSResponse();
 
-        if(rules != null && rules.length > 0) {
+        if (rules !== null && rules.length > 0) {
             // Loop thorugh the returned CSS rule objects.
-            for(var i=rules.length-1; i>-1; i--) {
+            for (i = rules.length - 1; i > -1; i--) {
 
                 // Use the helper function above to parse out all the rules
                 // from the cssText string.
@@ -225,10 +236,10 @@ define(function (require, exports, module) {
 
                 // Loop through the retuned lines of CSS.
                 var rulelist = {};
-                for(var j=0, len=lines.length; j<len; j++) {
+                for (j = 0, len = lines.length; j < len; j++) {
                     
                     // There is a property name proceed;  
-                    if(lines[j][1]) {
+                    if (lines[j][1]) {
                         
                         // See if we can shorten things by checking if there is a 
                         // shorthand version of this rule (i.e. margin:20px vs margin-top:20px etc.)
@@ -244,7 +255,7 @@ define(function (require, exports, module) {
                         else {
 
                             // No shortand available so just use the returned value.*/
-                            rulelist[lines[j][1]] = lines[j][2];
+                        rulelist[lines[j][1]] = lines[j][2];
                         //}
 
                     }
@@ -254,7 +265,7 @@ define(function (require, exports, module) {
                 
                 // If the return object doesn't have this selector set yet, add it 
                 // to the selectors array.
-                if (res.selectors.indexOf(selector) == -1) {
+                if (res.selectors.indexOf(selector) === -1) {
                     res.selectors.push(selector);
                     res.rules[selector] = rulelist;
                 } else {
@@ -270,15 +281,15 @@ define(function (require, exports, module) {
                 res.rules['#' + el.id] = null;
             }
 
-            for (var i = 0; i < el.classList.length; i++) {
+            for (i = 0; i < el.classList.length; i++) {
                 res.selectors.push('.' + el.classList[i]);
                 res.rules['.' + el.classList[i]] = null;
             }
             
             // and id or class has not been defined...adding the tag name instead
-            if (res.selectors.length == 0) {
+            if (res.selectors.length === 0) {
                 res.selectors.push(el.tagName.toLowerCase());
-                res.rules[el.tagName.toLowerCase()] = null;                
+                res.rules[el.tagName.toLowerCase()] = null;
             }
         }
 
