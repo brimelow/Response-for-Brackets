@@ -20,6 +20,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+/*jslint vars: true, plusplus: true, devel: true, nomen: true, regexp: true, indent: 4, maxerr: 50 */
+/*global define, brackets, $, TweenMax */
+
 /* This is eseentially all of the responsive feature stuffed into a single file */
 
 define(function (require, exports, module) {
@@ -60,12 +63,10 @@ define(function (require, exports, module) {
     /*================ Load needed brackets modules ================*/
 
         CommandManager          = brackets.getModule("command/CommandManager"),
-        Commands                = brackets.getModule("command/Commands"),
         Menus                   = brackets.getModule("command/Menus"),
         DocumentManager         = brackets.getModule("document/DocumentManager"),
         MainViewManager         = brackets.getModule("view/MainViewManager"),
         WorkspaceManager        = brackets.getModule("view/WorkspaceManager"),
-        NativeFileSystem        = brackets.getModule("file/NativeFileSystem").NativeFileSystem,
         FileUtils               = brackets.getModule("file/FileUtils"),
         FileSystem              = brackets.getModule("filesystem/FileSystem"),
         ProjectManager          = brackets.getModule("project/ProjectManager"),
@@ -114,9 +115,6 @@ define(function (require, exports, module) {
 
         // Document for the generated media-queries.css file.
         mediaQueryDoc,
-
-        // I write to this temp document to show in the inline editor.
-        tempCSSDoc,
 
         // Element whose CSS rules are being show in the inline editor.
         inlineElement,
@@ -208,35 +206,7 @@ define(function (require, exports, module) {
             _closeOpenInlineEditors();
 
             closeResponseMode();
-/*            
-            // close docReloadBar if it is still open
-            docReloadBar.close();
 
-            // close any open inline editors
-            _closeOpenInlineEditors();
-
-            // ensure inspect mode is off so handlers are removed 
-            // but don't update inspect mode menu item
-            toggleInspectMode(false);
-            
-            // remove the #response view
-            var element = document.getElementById("response");
-            element.parentNode.removeChild(element);
-
-            // Manually fire the window resize event to position everything correctly.
-            handleWindowResize(null);
-            response = null;
-            
-            // refresh layout
-            WorkspaceManager.recomputeLayout(true);
-
-            // update toolbar icon and menu state to indicate we are leaving responsive mode
-            iconLink.style.backgroundPosition = '0 0';
-            document.body.classList.remove('responsive-mode');
-            
-            var command = CommandManager.get(CMD_RESPONSEMODE_ID);
-            command.setChecked(false);
-*/            
             return;
 
         } else {
@@ -258,7 +228,7 @@ define(function (require, exports, module) {
             
             // Check if the media-queries css file exists. If it doesn't, then create a
             // new file. If it does, then reload and refresh UI
-            FileSystem.resolve(mediaQueryFilePath, function(result, file, fileSystemStats) {
+            FileSystem.resolve(mediaQueryFilePath, function (result, file, fileSystemStats) {
                 console.log("resolved path to media query file");
                 
                 // create an empty file as one doesn't exist yet                
@@ -270,21 +240,23 @@ define(function (require, exports, module) {
                     // create the parent dir if it doesn't yet exist. currently only supports a single node
                     console.log("creating parent dir if it doesn't exist");
                     var parentDir = FileSystem.getDirectoryForPath(mediaQueryFile.parentPath);
-                    parentDir.exists(function(error, exists) {
-                        if (!exists) parentDir.create(); 
+                    parentDir.exists(function (error, exists) {
+                        if (!exists) {
+                            parentDir.create();
+                        }
                     });
                 
                     console.log("writing to media query file to force create");
-                    mediaQueryFile.write('', function(error, stats) {
+                    mediaQueryFile.write('', function (error, stats) {
                         console.log("error: " + error + "; stats: " + stats);
                         if (error === null) {
-                            _getMediaQueryDocument(previewPaneUrl, mediaQueryFilePath);
+                            _getMediaQueryDocument(previewPaneUrl);
                         }
                     });
                     console.log("write completed");
                 
                 } else {
-                    _getMediaQueryDocument(previewPaneUrl, mediaQueryFilePath);
+                    _getMediaQueryDocument(previewPaneUrl);
                 }
                 
                 
@@ -318,7 +290,7 @@ define(function (require, exports, module) {
                 // Only switch to responsive mode if the current document is HTML or 
                 // a Live Preview Base URL has been defined under File > Project Settings and user
                 // has chosen to open with Live Preview Base URL in the menu
-                if (currentDoc != null && currentDoc.language.getId() === "html") {
+                if (currentDoc !== null && currentDoc.language.getId() === "html") {
                     previewPaneUrl = "file://" + currentDoc.file.fullPath;
                     workingMode = 'local';
                 } else {
@@ -347,11 +319,11 @@ define(function (require, exports, module) {
             return previewPaneUrl;
         }
         
-        function _getMediaQueryDocument(previewPaneUrl, filePath) {
+        function _getMediaQueryDocument(previewPaneUrl) {
             
             console.log("getting document for media query");
             DocumentManager.getDocumentForPath(projectRoot + prefs.get("mediaQueryFile"))
-                .done(function(doc) {
+                .done(function (doc) {
                     console.log("retrieved document");
 
                     // close any open inline editors
@@ -359,7 +331,7 @@ define(function (require, exports, module) {
 
                     // Save reference to the new files document.
                     mediaQueryDoc = doc;
-                    MainViewManager.addToWorkingSet( MainViewManager.ACTIVE_PANE, doc.file);
+                    MainViewManager.addToWorkingSet(MainViewManager.ACTIVE_PANE, doc.file);
 
                     // now we are ready to create the response UI
                     createResponseUI(previewPaneUrl);
@@ -374,8 +346,8 @@ define(function (require, exports, module) {
                     var command = CommandManager.get(CMD_RESPONSEMODE_ID);
                     command.setChecked(true);
                 })
-                .fail(function(error) {
-                    console.log("error: " + error)
+                .fail(function (error) {
+                    console.log("error: " + error);
                 });
         }
         
@@ -390,7 +362,7 @@ define(function (require, exports, module) {
             queries = {};
             sort = [];
 
-            if (mediaQueries != null && mediaQueries.length > 0) {
+            if (mediaQueries !== null && mediaQueries.length > 0) {
                 for (var i = 0; i < mediaQueries.length; i++) {
                     
                     // get the width for the current media query
@@ -404,7 +376,7 @@ define(function (require, exports, module) {
                     var selectors = CSSUtils.extractAllSelectors(mediaQueries[i], mediaQueryDoc.getLanguage().getMode());
                     
                     // add the rules associated to each selector to the queryMark
-                    _addRulesToMediaQueries(queryMark, mediaQueries[i], selectors)
+                    _addRulesToMediaQueries(queryMark, mediaQueries[i], selectors);
                 }
             }
         }
@@ -416,13 +388,13 @@ define(function (require, exports, module) {
          */
         function _addRulesToMediaQueries(queryMark, mediaQuery, selectors) {
             
-            if (selectors != null && selectors.length > 0) {
+            if (selectors !== null && selectors.length > 0) {
                 for (var i = 0; i < selectors.length; i++) {
                     var escapedSelector = selectors[i].selector.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
                     var ruleListRegex = new RegExp(escapedSelector + "\\s+{([\\s\\w\\d:;%\-]*)}", "g");
                     
                     var matches = ruleListRegex.exec(mediaQuery);
-                    if (matches != null) {
+                    if (matches !== null) {
                         var ruleList = matches[1].split(';');
                         // doing length - 1 here as the last item in the split array will be an empty string
                         // assumption is that the last char in rule list is a ;.
@@ -450,7 +422,7 @@ define(function (require, exports, module) {
 
                     var editor = openDocs[i]._masterEditor;
 
-                    if (editor != null) {
+                    if (editor !== null) {
                         var inlineWidgets = editor.getInlineWidgets();
 
                         // when closing widgets, the array is being modified so need to 
@@ -565,15 +537,15 @@ define(function (require, exports, module) {
     function buildDOMCache() {
 
         var lines = cm.getValue().split(/\n/);
-        var frDOM = [], cmDOM = [];
+        var frDOM = [], cmDOM = [], tag, i, j, len;
 
-        for(var i=0; i<lines.length; i++) {
+        for (i = 0; i < lines.length; i++) {
             var tags = lines[i].match(/(?:<)(\w+)(?=\s|>)/g);
             
-            if(tags) {
-                for(var j=0; j<tags.length; j++) {
-                    var tag = tags[j].substr(1);
-                    if(cmDOM[tag] == undefined)
+            if (tags) {
+                for (j = 0; j < tags.length; j++) {
+                    tag = tags[j].substr(1);
+                    if(cmDOM[tag] === undefined)
                         cmDOM[tag] = [];
                     cmDOM[tag].push(i);
                 }
@@ -581,15 +553,15 @@ define(function (require, exports, module) {
 
         }
 
-        for(var tag in cmDOM) {
+        for (tag in cmDOM) {
 
-            if(frDOM[tag] == undefined)
+            if(frDOM[tag] === undefined)
                 frDOM[tag] = [];
 
             var elements = $(frameDOM.body).find(tag);
 
-            for(var i=0, len=elements.length; i<len; i++) {
-                frDOM[tag].push(elements[i])
+            for (i = 0, len = elements.length; i<len; i++) {
+                frDOM[tag].push(elements[i]);
             }
 
         }
@@ -597,7 +569,7 @@ define(function (require, exports, module) {
         return {
             frameDom: frDOM,
             codeDom: cmDOM
-        }
+        };
     }
 
     /** 
@@ -704,7 +676,7 @@ define(function (require, exports, module) {
             mainView.style.cssText = null;
 
             // Remove the current panel splitter
-            if (splitter != undefined) 
+            if (splitter !== undefined) 
                 response.removeChild(splitter);
             
             // Create a new splitter for this mode
@@ -744,7 +716,7 @@ define(function (require, exports, module) {
             mainView.style.cssText = null;
 
             // Remove the current panel splitter
-            if (splitter != undefined) 
+            if (splitter !== undefined) 
                 response.removeChild(splitter);
 
             // Create a new splitter for this mode
@@ -752,7 +724,6 @@ define(function (require, exports, module) {
 
             splitter = document.querySelector('.vert-splitter');
 
-            var w = window.innerWidth;
             var h = window.innerHeight;
 
             // Change to a top/bottom layout
@@ -863,7 +834,7 @@ define(function (require, exports, module) {
     /** 
      *  Called when user mouses off the iframe.
      */
-    function handleFrameMouseOut(e) {
+    function handleFrameMouseOut() {
 
         // Hide the highlight if the inline editor isn't open. Just a UI tweak.
         if (highlight)
@@ -873,7 +844,7 @@ define(function (require, exports, module) {
     /** 
      *  Called when the user clicks on the + button to add a new query.
      */
-    function handleAddQuery(e) {
+    function handleAddQuery() {
         
         var w = slider.value;
         
@@ -893,17 +864,17 @@ define(function (require, exports, module) {
 
         // First check that there isn't already a query for this width.
         var q = queries[w];
-        if (q == undefined) {
+        if (q === undefined) {
 
             // Create a new Query object and add to master list
-            var q = new Query(w);
+            q = new Query(w);
             queries[w] = q;
 
             // Add the current width to the sort array.
             // Sort so the smallest number is first.
             sort.push(w);
-            sort.sort(function(a, b) {
-                return a - b
+            sort.sort(function (a, b) {
+                return a - b;
             });
         }
         
@@ -931,7 +902,7 @@ define(function (require, exports, module) {
             for (var i = 0, z = 5000; i < sort.length; i++) {
                 
                 var left = 0;
-                var w = parseInt(queries[sort[i]].width);
+                w = parseInt(queries[sort[i]].width, 10);
                 
                 var query = queries[sort[i]];
 
@@ -941,7 +912,7 @@ define(function (require, exports, module) {
                 query.view.style.zIndex = z--;
 
                 // If this is a new query, assign it the next color available.
-                if (query.color == undefined) {
+                if (query.color === undefined) {
                     query.color = COLORS[sort.length - 1];
                     query.colorIndex = sort.length - 1;
                 }
@@ -1241,7 +1212,6 @@ define(function (require, exports, module) {
         
         // Calculate the correct scrollTop value that will make the line be in the center.
         var documentCurPos = cm.charCoords({line:line, ch:0}, "local").bottom;
-        var screenCurPos = cm.charCoords({line:line, ch:0}, "page").bottom;
         var pos = documentCurPos - editorHeight * 0.5;
 
         var info = cm.getScrollInfo();       
@@ -1358,7 +1328,7 @@ define(function (require, exports, module) {
         }
         
         // If there isn't a media query, show the message that a query has not been selected
-        if(currentQuery == undefined) {
+        if(currentQuery === undefined) {
             if(selected)
                 cm.removeLineClass(selected.line, "background");
             
@@ -1373,8 +1343,6 @@ define(function (require, exports, module) {
         // If there is a selected line of code in the editor, remove the highlight.
         if(selected)
             cm.removeLineClass(selected.line, "background");
-
-        var cursor = cm.getCursor();
 
         // get the tag information for the currently cursor position in the HTML
         // document. If could not be determined then return so message is displayed to user
@@ -1457,14 +1425,14 @@ define(function (require, exports, module) {
 
             // Style the inline mark to match the color of the current query.
             mark.style.backgroundImage = "url('file://" + modulePath + "/images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
-        }
+        };
 
         // Called when the inline editor is closed.
         inlineEditor.onClosed = function() {
 
             // Call parent function first.
             ResponseInlineEdit.prototype.parentClass.onAdded.apply(this, arguments);
-        }
+        };
 
         // I had to mod the EditorManager module so it always chooses me.
         result.resolve(inlineEditor);
@@ -1553,7 +1521,7 @@ define(function (require, exports, module) {
         if (res.rules[currentSelector] !== null) {
             for(var prop in res.rules[currentSelector]) {
 
-                var pvalue = undefined;
+                var pvalue;
                 lineNumber++;
 
                 // Here we loop through all of the defined media queries to see if this rule
@@ -1594,7 +1562,7 @@ define(function (require, exports, module) {
                 }
 
                 // If this property hasn't been set by anyone, we use the original value returned.
-                if(pvalue == undefined)
+                if(pvalue === undefined)
                     pvalue = res.rules[currentSelector][prop];
 
                 // Finally we add the CSS rule to the output string.
@@ -1620,7 +1588,7 @@ define(function (require, exports, module) {
     function inlineChange(instance, change) {
 
         // Make sure that the change is even worth looking at.
-        if(change.text.length < 2 && change.from.line != 0) {
+        if(change.text.length < 2 && change.from.line !== 0) {
 
             // Add the changed rule to the current query object.
             currentQuery.addRule(inlineSelector, inlineCm.getLine(change.from.line));
@@ -1670,7 +1638,6 @@ define(function (require, exports, module) {
                 wd.innerHTML = cq.width + "px";
             }
             
-            var count = 0;
             var existingEdits = [];
 
             // Refresh rules for current query and loop through.
@@ -1691,7 +1658,7 @@ define(function (require, exports, module) {
             inlineCodeMirror.setValue(editorContents.contents);
 
             // Loop through the existingEdits array and highlight lines appropriately.
-            var existingEdits = editorContents.existingEdits;
+            existingEdits = editorContents.existingEdits;
 
             for(var i=0, len=existingEdits.length; i<len; i++) {
                 inlineCodeMirror.removeLineClass(existingEdits[i].line, "background");
@@ -1708,7 +1675,6 @@ define(function (require, exports, module) {
         
         // Defining some vars we'll need.
         var s = "";
-        var isFirst = true;
         var i = sort.length;
         var qSort;
 
@@ -1745,7 +1711,7 @@ define(function (require, exports, module) {
 
         try {
             var currentDoc = DocumentManager.getCurrentDocument();
-            if (document.querySelector('#response') && workingMode === 'local' && currentDoc != null && currentDoc.language.getId() === "html") {
+            if (document.querySelector('#response') && workingMode === 'local' && currentDoc !== null && currentDoc.language.getId() === "html") {
                 // open the doc reload bar so user can decide if the preview pane should be reloaded
                 docReloadBar.open();
             }
@@ -1799,16 +1765,16 @@ define(function (require, exports, module) {
 
         // add menu items to indicate if horizontal or vertical layout should be used for the preview
         // pane
-        var horzLayoutCmd = CommandManager.register(Strings.SUBMENU_HORZLAYOUT, CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
+        CommandManager.register(Strings.SUBMENU_HORZLAYOUT, CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
         customMenu.addMenuItem(CMD_HORZLAYOUT_ID, "Shift-Alt-H");
 
-        var vertLayoutCmd = CommandManager.register(Strings.SUBMENU_VERTLAYOUT, CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
+        CommandManager.register(Strings.SUBMENU_VERTLAYOUT, CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
         customMenu.addMenuItem(CMD_VERTLAYOUT_ID, "Shift-Alt-V");
 
         customMenu.addMenuDivider();
 
         // Add menu item to indicate if live preview url setting should be used for preview pane
-        var vertLayoutCmd = CommandManager.register(Strings.SUBMENU_PREVIEWURL, CMD_PREVIEWURL_ID, handleLivePreviewToggle);
+        CommandManager.register(Strings.SUBMENU_PREVIEWURL, CMD_PREVIEWURL_ID, handleLivePreviewToggle);
         customMenu.addMenuItem(CMD_PREVIEWURL_ID, "Shift-Alt-U");
     }
     
@@ -1841,8 +1807,7 @@ define(function (require, exports, module) {
     ExtensionUtils.addLinkedStyleSheet(modulePath + "/css/respond.css");
     
     // Configure preferences for the extension
-    var prefs = PreferencesManager.getExtensionPrefs(EXT_PREFIX),
-        stateManager = PreferencesManager.stateManager.getPrefixedSystem(EXT_PREFIX);
+    var prefs = PreferencesManager.getExtensionPrefs(EXT_PREFIX);
     
     prefs.definePreference("mediaQueryFile", "string", "css/media-queries.css");
     prefs.definePreference("preferredLayout", "string", "vertical").on("change", function () {
