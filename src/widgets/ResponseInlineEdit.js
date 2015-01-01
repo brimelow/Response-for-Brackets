@@ -20,11 +20,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+
+/*jslint vars: true, plusplus: true, devel: true, nomen: true, regexp: true, indent: 4, maxerr: 50 */
+/*global define, brackets, $, TweenMax */
+
 /*
-/* IMPORTANT NOTE: this is essentially a bare-bones version of the MultiRangeInlineEditor.
-*  Most of the jQuery has been removed and it basically is just a light wrapper on the
-*  InlineTextEditor module, which is currently not completed.
-*/
+ * IMPORTANT NOTE: this is essentially a bare-bones version of the MultiRangeInlineEditor.
+ * Most of the jQuery has been removed and it basically is just a light wrapper on the
+ * InlineTextEditor module, which is currently not completed.
+ */
 
 define(function (require, exports, module) {
     "use strict";
@@ -38,7 +42,7 @@ define(function (require, exports, module) {
     
     function ResponseInlineEdit() {
         InlineTextEditor.call(this);
-        this.doc;
+        //this.doc;
         var self = this;
         $(DocumentManager).on("dirtyFlagChange", function (event, doc) {
             if (doc === self.doc) {
@@ -53,11 +57,11 @@ define(function (require, exports, module) {
     ResponseInlineEdit.prototype.parentClass = InlineTextEditor.prototype;
     ResponseInlineEdit.prototype.editorDiv = null;
 
-    /*
-    /* I changed the arguments sent to load to make it more compatible with the extension.
-    *  @param: [1] main editor, [2] CSS selector for this quick edit, [3] start line number
-    *          the temp CSS file, [4] display up to this end line, [5] the tempCSSDoc 
-    */
+    /**
+     * I changed the arguments sent to load to make it more compatible with the extension.
+     * @param: [1] main editor, [2] CSS selector for this quick edit, [3] start line number
+     *          the temp CSS file, [4] display up to this end line, [5] the tempCSSDoc 
+     **/
     ResponseInlineEdit.prototype.load = function (hostEditor, selector, start, end, str) {
         ResponseInlineEdit.prototype.parentClass.load.apply(this, arguments);
 
