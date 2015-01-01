@@ -1451,6 +1451,7 @@ define(function (require, exports, module) {
 
             this.refreshMediaQueryInfo(cq);
             this.refreshSelectorDropdown(cssResults);
+            this.$selectorSelect[0].addEventListener('change', handleSelectorChange, false);
         };
 
         // Called when the inline editor is closed.
