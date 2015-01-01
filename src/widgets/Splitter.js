@@ -33,7 +33,7 @@ THE SOFTWARE. */
 define(function (require, exports, module) {
     "use strict";
 
-    var EditorManager = brackets.getModule("editor/EditorManager");
+    var WorkspaceManager        = brackets.getModule("view/WorkspaceManager");
 
     function Splitter() {
 
@@ -137,9 +137,9 @@ define(function (require, exports, module) {
 
                 // Calculate the new size based on the current display mode
                 if (/vert/.test(mode)) {
-                    newSize = Math.max(startSize - 1 * (startPosition - e.clientY), minSize);
+                    newSize = Math.max(startSize - (startPosition - e.clientY), minSize);
                 } else {
-                    newSize = Math.max(startSize - 1 * (startPosition - e.clientX), minSize);
+                    newSize = Math.max(startSize - (startPosition - e.clientX), minSize);
                 }
 
                 $(element).trigger("panelResizeStart", newSize);
@@ -160,7 +160,7 @@ define(function (require, exports, module) {
                 }
 
                 // Make sure the editor is resized properly
-                EditorManager.resizeEditor();
+                WorkspaceManager.recomputeLayout();
             });
             
             // You can double-click on the splitter to collapse it. Here we
