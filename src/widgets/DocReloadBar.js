@@ -29,65 +29,65 @@ THE SOFTWARE. */
  * user switches between html elements
  */
 define(function (require, exports, module) {
-    "use strict";
+	"use strict";
 
-    var ModalBar           = brackets.getModule("widgets/ModalBar").ModalBar,
-        DocumentManager    = brackets.getModule("document/DocumentManager"),
-        Strings            = require("strings"),
-    
-        /**
-         * @private
-         * The template we use for all Find bars.
-         * @type {string}
-         */
-        _htmlTemplate = require("text!htmlContent/docreload-bar.html");
-    
-    /**
-     * @constructor
-     */
-    function DocReloadBar() {
-        
-    }
+	var ModalBar           = brackets.getModule("widgets/ModalBar").ModalBar,
+		DocumentManager    = brackets.getModule("document/DocumentManager"),
+		Strings            = require("strings"),
+	
+		/**
+		 * @private
+		 * The template we use for all Find bars.
+		 * @type {string}
+		 */
+		_htmlTemplate = require("text!htmlContent/docreload-bar.html");
+	
+	/**
+	 * @constructor
+	 */
+	function DocReloadBar() {
+		
+	}
 
-    /** 
-     * @private
-     * @type {?ModalBar} Modal bar containing this find bar's UI
-     */
-    DocReloadBar.prototype._modalBar = null;
+	/** 
+	 * @private
+	 * @type {?ModalBar} Modal bar containing this find bar's UI
+	 */
+	DocReloadBar.prototype._modalBar = null;
 
-    DocReloadBar.prototype.open = function () {
-        var bar = this;
-        
-        if (!this._modalBar) {
-            this._modalBar = new ModalBar(Mustache.render(_htmlTemplate, Strings), false);
-            
-            var $root = this._modalBar.getRoot();
-            $root
-                .on("click", "#docreload-ok", function (e) {
-                    // get the current document and update frame src attribute
-                    var currentDoc = DocumentManager.getCurrentDocument(),
-                        previewPaneUrl = "file://" + currentDoc.file.fullPath,
-                        frame = document.getElementById('frame');
-                
-                    frame.contentWindow.document.location.href = previewPaneUrl;
-                    //frame.src = previewPaneUrl;
-                
-                    bar.close();
-                })
-                .on("click", "#docreload-cancel", function (e) {
-                    bar.close();
-                });
-        }
-    };
+	DocReloadBar.prototype.open = function () {
+		var bar = this;
+		
+		if (!this._modalBar) {
+			this._modalBar = new ModalBar(Mustache.render(_htmlTemplate, Strings), false);
+			
+			var $root = this._modalBar.getRoot();
+			$root
+				.on("click", "#docreload-ok", function (e) {
+					// get the current document and update frame src attribute
+					var currentDoc = DocumentManager.getCurrentDocument(),
+						previewPaneUrl = "file://" + currentDoc.file.fullPath,
+						frame = document.getElementById('frame');
+				
+					frame.contentWindow.document.location.href = previewPaneUrl;
+					//frame.src = previewPaneUrl;
+				
+					bar.close();
+				})
+				.on("click", "#docreload-cancel", function (e) {
+					bar.close();
+				});
+		}
+	};
 
-    DocReloadBar.prototype.close = function (e) {
+	DocReloadBar.prototype.close = function (e) {
 
-        if (e) { e.stopImmediatePropagation(); }
-        if (this._modalBar) {
-            this._modalBar.close();
-            this._modalBar = null;
-        }
-    };
-    
-    exports.DocReloadBar = DocReloadBar;
+		if (e) { e.stopImmediatePropagation(); }
+		if (this._modalBar) {
+			this._modalBar.close();
+			this._modalBar = null;
+		}
+	};
+	
+	exports.DocReloadBar = DocReloadBar;
 });

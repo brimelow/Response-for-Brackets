@@ -32,57 +32,57 @@ THE SOFTWARE. */
  */
 
 define(function (require, exports, module) {
-    "use strict";
+	"use strict";
 
-    // Array of color objects for media query bar gradients.
-    var COLORS = [{
-            t: "#91b3fb",
-            b: "#5f88d0"
-        }, {
-            t: "#cdb0fd",
-            b: "#b48ee4"
-        }, {
-            t: "#c2ec5c",
-            b: "#a7ca50"
-        }, {
-            t: "#fdcd6b",
-            b: "#dfaf51"
-        }, {
-            t: "#74ede4",
-            b: "#59cfc3"
-        }];
+	// Array of color objects for media query bar gradients.
+	var COLORS = [{
+			t: "#91b3fb",
+			b: "#5f88d0"
+		}, {
+			t: "#cdb0fd",
+			b: "#b48ee4"
+		}, {
+			t: "#c2ec5c",
+			b: "#a7ca50"
+		}, {
+			t: "#fdcd6b",
+			b: "#dfaf51"
+		}, {
+			t: "#74ede4",
+			b: "#59cfc3"
+		}];
 
 	// A Query object represents a single media query and all of its data.
 	function Query(width, colorIndex) {
 
 		// Setup up a bunch of properties.
-        this.color = COLORS[colorIndex];
-        this.colorIndex = colorIndex;
+		this.color = COLORS[colorIndex];
+		this.colorIndex = colorIndex;
 		this.width = width;
 		this.selectors = {};
 		this.left = 0;
 	}
-    
+	
 	// Function that you call when you want add a new CSS rule
 	// for a particular selector to the media query.
 	Query.prototype = {
-        addRule: function (selector, rule) {
+		addRule: function (selector, rule) {
 		
-            // If the selector doesn't exist in this query, add it.
-            if (!this.selectors[selector]) {
-                this.selectors[selector] = { rules: {} }; //new Selector();
-            }
+			// If the selector doesn't exist in this query, add it.
+			if (!this.selectors[selector]) {
+				this.selectors[selector] = { rules: {} }; //new Selector();
+			}
 
-            // Separate the CSS property and the value.
-            var style = rule.trim().split(':');
+			// Separate the CSS property and the value.
+			var style = rule.trim().split(':');
 
-            // Add the rule to the selector.	
-            if (style[1] !== undefined) {
-                this.selectors[selector].rules[style[0].trim()] = style[1].trim();
-            }
-        }
-    };
+			// Add the rule to the selector.	
+			if (style[1] !== undefined) {
+				this.selectors[selector].rules[style[0].trim()] = style[1].trim();
+			}
+		}
+	};
 
-    Query.prototype.constructor = Query;
-    exports.Query = Query;
+	Query.prototype.constructor = Query;
+	exports.Query = Query;
 });

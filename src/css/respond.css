@@ -7,23 +7,23 @@
 
 
 .query0 {
- 	background: url(../images/ruler_min.png) 0px 0px no-repeat, -webkit-gradient(linear, left top, left bottom, from(#91b3fb), to(#5f88d0));
+	background: url(../images/ruler_min.png) 0px 0px no-repeat, -webkit-gradient(linear, left top, left bottom, from(#91b3fb), to(#5f88d0));
  }
 
 .query1{
- 	background: url(../images/ruler_min.png) 0px 0px no-repeat, -webkit-gradient(linear, left top, left bottom, from(#cdb0fd), to(#b48ee4));
+	background: url(../images/ruler_min.png) 0px 0px no-repeat, -webkit-gradient(linear, left top, left bottom, from(#cdb0fd), to(#b48ee4));
  }
 
 .query2{
- 	background: url(../images/ruler_min.png) 0px 0px no-repeat, -webkit-gradient(linear, left top, left bottom, from(#c2ec5c), to(#a7ca50));
+	background: url(../images/ruler_min.png) 0px 0px no-repeat, -webkit-gradient(linear, left top, left bottom, from(#c2ec5c), to(#a7ca50));
  }
 
 .query3 {
- 	background: url(../images/ruler_min.png) 0px 0px no-repeat, -webkit-gradient(linear, left top, left bottom, from(#fdcd6b), to(#dfaf51));
+	background: url(../images/ruler_min.png) 0px 0px no-repeat, -webkit-gradient(linear, left top, left bottom, from(#fdcd6b), to(#dfaf51));
  }
 
 .query4 {
- 	background: url(../images/ruler_min.png) 0px 0px no-repeat, -webkit-gradient(linear, left top, left bottom, from(#74ede4), to(#59cfc3));
+	background: url(../images/ruler_min.png) 0px 0px no-repeat, -webkit-gradient(linear, left top, left bottom, from(#74ede4), to(#59cfc3));
  }
 
 
@@ -132,7 +132,7 @@
 }
 
 .responsive-mode.response-horz .main-view {
-    position: absolute;
+	position: absolute;
 	right: 0;
 	top: 0;
 	width: auto;
