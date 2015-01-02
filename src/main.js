@@ -123,12 +123,6 @@ define(function (require, exports, module) {
 		// Main container for the response tools and iFrame.
 		response,
 
-		// Codemirror instance for the current full editor.
-		cm,
-
-		// Editor in current full editor.
-		mainEditor,
-
 		// + button for adding a new media query.
 		addButt,
 
@@ -194,8 +188,6 @@ define(function (require, exports, module) {
 			}
 
 			projectRoot = ProjectManager.getProjectRoot().fullPath;
-			mainEditor = EditorManager.getCurrentFullEditor();
-			cm = mainEditor._codeMirror;
 			mainView = document.querySelector('.main-view');
 			
 			var mediaQueryFilePath = projectRoot + prefs.get("mediaQueryFile");
@@ -367,6 +359,8 @@ define(function (require, exports, module) {
 		var doc = document;
 		doc.body.backgroundColor = "#303030";
 
+		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
+
 		// I wrote my own DOM insertion utility to avoid jQuery here. Insanely faster.
 		// See the details of this function in the ResponseUtils.js module.
 		var domArray = [{tag: "div", attr: {id: "response", class: "quiet-scrollbars"}, parent: -1},
@@ -455,6 +449,8 @@ define(function (require, exports, module) {
 	 */
 	function buildDOMCache() {
 
+		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
+		
 		var lines = cm.getValue().split(/\n/);
 		var frDOM = [], cmDOM = [], tag, i, j, len;
 
@@ -602,6 +598,7 @@ define(function (require, exports, module) {
 			}
 
 			// Create a new splitter for this mode
+			var cm = EditorManager.getCurrentFullEditor()._codeMirror;
 			Splitter.makeResizable(response, 'horz', 344, cm);
 			splitter = document.querySelector('.horz-splitter');
 			splitter.style.right = '-16px';
@@ -643,6 +640,7 @@ define(function (require, exports, module) {
 			}
 
 			// Create a new splitter for this mode
+			var cm = EditorManager.getCurrentFullEditor()._codeMirror;
 			Splitter.makeResizable(response, 'vert', 100, cm);
 
 			splitter = document.querySelector('.vert-splitter');
@@ -694,6 +692,9 @@ define(function (require, exports, module) {
 		
 		// Store a reference to the iframe document.
 		frameDOM = document.getElementById("frame").contentWindow.document;
+		
+		// Rebuild DOM cache
+		buildDOMCache();
 		
 		if (!frameDOM.body.firstElementChild) {
 			
@@ -861,6 +862,7 @@ define(function (require, exports, module) {
 		}
 
 		// Refresh codemirror
+		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
 		cm.refresh();
 
 		// update the inline editor with the newly selected query.
@@ -912,6 +914,7 @@ define(function (require, exports, module) {
   
 		// Only refresh codemirror every other call (perf).    
 		if (size & 1) {
+			var cm = EditorManager.getCurrentFullEditor()._codeMirror;
 			cm.refresh();
 		}
 		
@@ -953,6 +956,9 @@ define(function (require, exports, module) {
 		// update the state of the inspect button
 		var inspectBtn = document.getElementById("inspectButton");
 		if (inspectBtn) {
+			
+			// get code mirror from main editor
+			var cm = EditorManager.getCurrentFullEditor()._codeMirror;
 			
 			// change the button visuals and remove any highlighted code lines
 			// and the highlight div.
@@ -997,6 +1003,9 @@ define(function (require, exports, module) {
 		if (isAnimating) {
 			return;
 		}
+
+		// get code mirror from main editor
+		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
 
 		// Get current cursor location.
 		var cur = cm.getCursor(),
@@ -1086,6 +1095,9 @@ define(function (require, exports, module) {
 		if (!inspectButton.classList.contains("inspectButtonOn")) {
 			return;
 		}
+
+		// get code mirror from main editor
+		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
 
 		var target = e.target;
 
@@ -1264,6 +1276,9 @@ define(function (require, exports, module) {
 			return null;
 		}
 		
+		// get code mirror from main editor
+		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
+
 		// If there isn't a media query, show the message that a query has not been selected
 		if (!QueryManager.getCurrentQueryMark()) {
 			if (selected) {
@@ -1459,6 +1474,8 @@ define(function (require, exports, module) {
 			
 			// Add the changed rule to the current query object.
 			var inlineWidget = EditorManager.getFocusedInlineWidget();
+			var inlineCM = inlineWidget.editor._codeMirror;
+
 			currentQuery.addRule(inlineWidget.currentSelector, inlineCm.getLine(change.from.line));
 
 			// If a previous query had this prop set, remove its background highlight.
