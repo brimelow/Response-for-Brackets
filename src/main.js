@@ -90,9 +90,6 @@ define(function (require, exports, module) {
 		// Configure preferences for the extension
 		prefs = PreferencesManager.getExtensionPrefs(EXT_PREFIX),
 
-		// Reference to the codemirror instance of the inline editor.
-		inlineCm,
-
 		// Path to this extension.
 		modulePath,
 
@@ -1183,6 +1180,7 @@ define(function (require, exports, module) {
 		var editorContents = refreshCodeEditor(QueryManager.getCurrentQueryMark(), cssResults, newSelector);
 
 		// Set the text in the inline editor to our new string.
+		var inlineCm = inlineWidget.editor._codeMirror;
 		inlineCm.setValue(editorContents.contents);
 
 		// Loop through the existingEdits array and highlight lines appropriately.
@@ -1336,7 +1334,7 @@ define(function (require, exports, module) {
 		inlineEditor.onAdded = function () {
 
 			// Get a reference to the codemirror instance of the inline editor.
-			inlineCm = this.editor._codeMirror;
+			var inlineCm = this.editor._codeMirror;
 
 			// Loops through the existingEdits array and highlights the appropriate lines
 			// in the inline editor.
@@ -1471,18 +1469,16 @@ define(function (require, exports, module) {
 		if (change.text.length < 2 && change.from.line !== 0) {
 
 			var currentQuery = QueryManager.getCurrentQueryMark();
-			
-			// Add the changed rule to the current query object.
 			var inlineWidget = EditorManager.getFocusedInlineWidget();
-			var inlineCM = inlineWidget.editor._codeMirror;
 
-			currentQuery.addRule(inlineWidget.currentSelector, inlineCm.getLine(change.from.line));
+			// Add the changed rule to the current query object.
+			currentQuery.addRule(inlineWidget.currentSelector, instance.getLine(change.from.line));
 
 			// If a previous query had this prop set, remove its background highlight.
-			inlineCm.removeLineClass(change.from.line, "background");
+			instance.removeLineClass(change.from.line, "background");
 
 			// Add the new line highlight with the color of the current query.
-			inlineCm.addLineClass(change.from.line, "background", "pq" + currentQuery.colorIndex);
+			instance.addLineClass(change.from.line, "background", "pq" + currentQuery.colorIndex);
 
 			// Write out the changes to the style block and the media queries CSS file.
 			refreshIFrameMediaQueries();
