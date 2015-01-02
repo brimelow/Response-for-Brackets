@@ -70,7 +70,6 @@ define(function (require, exports, module) {
 						frame = document.getElementById('frame');
 				
 					frame.contentWindow.document.location.href = previewPaneUrl;
-					//frame.src = previewPaneUrl;
 				
 					bar.close();
 				})
