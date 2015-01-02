@@ -47,23 +47,6 @@
 	-webkit-font-smoothing: subpixel-antialiased;
 }
 
-/*
-.response-dialog .modal-header {
-	border-bottom: 1px solid hsla(0, 0%, 0%, 0.15);
-	background: hsl(0, 0%, 95%);
-}
-
-.response-dialog.modal-header.modal-body  {
-	width: 460px !important;
-	-webkit-font-smoothing: subpixel-antialiased;
-	color: rgba(0,0,0,0.8);
-}
-
-.response-dialog h1 {
-	font-size: 22px;
-}
-*/
-
 #highlight {
 	position: absolute;
 	background-color: rgba(0,0,0,0.5);
@@ -75,8 +58,8 @@
 
 
 #left, #right, #top, #bottom {
-    background-color: rgba(0,0,0,0.5);
-    position: fixed;
+	background-color: rgba(0,0,0,0.5);
+	position: fixed;
 }
 
 .related-container {
@@ -124,40 +107,28 @@
 }
 
 #presetsText {
-    position: absolute;
-    color: white;
-    text-shadow: 2px 2px 0px hsla(0, 0%, 0%, 0.3);
-    top: 12px;
-    left: 16px;
-    font-size: 13px;
+	position: absolute;
+	color: white;
+	text-shadow: 2px 2px 0px hsla(0, 0%, 0%, 0.3);
+	top: 12px;
+	left: 16px;
+	font-size: 13px;
 }
-
 
 .overlay{
-    opacity:0.5;
-    background-color:#000;
-    position:fixed;
-    width:100%;
-    height:100%;
-    top:0px;
-    left:0px;
-    z-index:1000;
+	opacity:0.5;
+	background-color:#000;
+	position:fixed;
+	width:100%;
+	height:100%;
+	top:0px;
+	left:0px;
+	z-index:1000;
 }
-/*
-#projects {
-	margin-top: -6px;
-}
-*/
 
 .responsive-mode .main-view {
 	position: relative;
 	margin-top: 17px;
-/*  
-	width: 100%;
-	left: 0px;
-	overflow-x: hidden;
-	overflow-y: scroll;
-*/
 }
 
 .responsive-mode.response-horz .main-view {
@@ -170,25 +141,8 @@
 
 .responsive-mode.response-horz #response {
 	height: 100%;
+	z-index: 20; /* so it is above modal-bar when modal-bar closes/opens */
 }
-
-/* 
-.responsive-mode .main-view .content {
-	position: relative;
-	padding: 0;
-	top: 0;
-	left: 0;
-	right: 0;
-}
-*/    
-
-/*
-.responsive-mode #editor-holder, .responsive-mode .content {
-	width: 100% !important;
-	height: 100% !important;
-}
-*/
-
 
 .l0 {
 	background-color: hsla(221, 93%, 78%, 0.52) !important;
@@ -244,57 +198,25 @@
 	border-right-color: rgb(0, 0, 0);
 	background: -webkit-linear-gradient(left, rgb(51, 54, 56) 0%, rgb(60, 63, 66) 100%);
 	position: absolute;
-    height: 100%;
-    z-index: 50000;
-    cursor: col-resize;
-}
-/*
-.panel {
-	background: hsl(204, 4%, 26%) !important;
-}
-
-#working-set-heaader {
-	background: hsl(204, 4%, 20%);
-}
-*/
-.vert-splitter {
-border: 1px solid hsla(0, 0%, 0%, 0.4);
-border-left: none;
-box-shadow: hsla(0, 0%, 0%, 0.17) 0px -2px 3px 2px;
-opacity: 1;
-bottom: -17px;
-height: 17px;
-background: url(../images/grabber.png) center center no-repeat, -webkit-linear-gradient(top, hsl(204, 4%, 33%) 0%, hsl(210, 4%, 28%) 100%);
-position: absolute;
-width: 100%;
-z-index: 18;
-cursor: row-resize;
-}
-/*
-html {
-	margin: 0;
 	height: 100%;
-}
-*/
-/*
-body.responsive-mode {
-	background-color: hsl(190, 3%, 21%) !important;
-}
-*/
-/*
-.responsive-mode ::-webkit-scrollbar { 
-    display: none !important; 
+	z-index: 50000;
+	cursor: col-resize;
 }
 
-.responsive-mode .CodeMirror-vscrollbar, .responsive-mode .CodeMirror-hscrollbar {
-	display: none !important;
+.vert-splitter {
+	border: 1px solid hsla(0, 0%, 0%, 0.4);
+	border-left: none;
+	box-shadow: hsla(0, 0%, 0%, 0.17) 0px -2px 3px 2px;
+	opacity: 1;
+	bottom: -17px;
+	height: 17px;
+	background: url(../images/grabber.png) center center no-repeat, -webkit-linear-gradient(top, hsl(204, 4%, 33%) 0%, hsl(210, 4%, 28%) 100%);
+	position: absolute;
+	width: 100%;
+	z-index: 18;
+	cursor: row-resize;
 }
-*/
-/*
-.responsive-mode #status-bar {
-	display: none !important;
-}
-*/
+
 
 #response {
 	background-color: hsl(190, 3%, 21%);
@@ -357,7 +279,7 @@ body.responsive-mode {
 	padding: 0;
 }
 #slider:focus {
-    outline: none;
+	outline: none;
 }
 
 #rightCover {
@@ -368,27 +290,27 @@ body.responsive-mode {
 }
 
 input[type='range'] {
-    -webkit-appearance: none;
-    background-color: #303030;
-    background-image: url('../images/sliderBG.png'),
-    					url('../images/ruler.png');
+	-webkit-appearance: none;
+	background-color: #303030;
+	background-image: url('../images/sliderBG.png'),
+						url('../images/ruler.png');
 	background-repeat: repeat-x;
-    height: 15px;
-    position: absolute;
-    z-index: 999;
-    background-position: left 1px, left top;
-    border: none;
+	height: 15px;
+	position: absolute;
+	z-index: 999;
+	background-position: left 1px, left top;
+	border: none;
 }
 
 input[type='range']::-webkit-slider-thumb {
 	background-image:url('../images/thumb.png');
 	background-repeat: no-repeat;
-    -webkit-appearance: none;
-    position: relative;
-    background-position: center center;
-    top: -10px;
-    width: 12px;
-    height: 16px;
+	-webkit-appearance: none;
+	position: relative;
+	background-position: center center;
+	top: -10px;
+	width: 12px;
+	height: 16px;
 }
 
 #tools {
@@ -434,13 +356,12 @@ input[type='range']::-webkit-slider-thumb {
 }
 
 #track-label {
-    position: absolute;
-    top: 7px;    
-    right: 55px;
-    text-align: right;
-    color: #fff;
+	position: absolute;
+	top: 7px;    
+	right: 55px;
+	text-align: right;
+	color: #fff;
 }
-
 
 #vertButt {
 	position: absolute;
@@ -551,25 +472,6 @@ input[type='range']::-webkit-slider-thumb {
 	top: 10px;
 	left: 175px;
 }
-/*
-.responsive-mode .CodeMirror-linewidget {
-	overflow: hidden !important;
-	margin: 5px 0 !important;
-	padding-top: 9px !important;
-}
-
-.responsive-mode .CodeMirror-scroll {
-	margin-right: 0 !important;
-}
-
-.responsive-mode .CodeMirror-vscrollbar > div {
-	display: none !important;
-}
-
-.responsive-mode .main-view .CodeMirror-wrap {
-	height: 100% !important;
-}
-*/
 .caret {
 	display: none !important;
 }
@@ -621,14 +523,14 @@ input[type='range']::-webkit-slider-thumb {
 }
 
 .responsive-mode .inline-widget .close {
-    top: 25px;
-    z-index: 1000;
+	top: 25px;
+	z-index: 1000;
 }
 
 .responsive-mode .inline-editor-header {
-    position: relative;
-    width: 100%;
-    padding: 0;
+	position: relative;
+	width: 100%;
+	padding: 0;
 }
 
 .inline-widget .inline-editor-header .filename {
@@ -685,14 +587,14 @@ input[type='range']::-webkit-slider-thumb {
 .wd {
 	font-family: "Helvetica Neue";
 	color: white;
-    font-size: 11px;
-    margin-top: -2px;
+	font-size: 11px;
+	margin-top: -2px;
 	margin-right: 7px;
 	font-weight: bold;
-    text-align: right;
-    cursor: default;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.9);
-    pointer-events: none;
+	text-align: right;
+	cursor: default;
+	text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.9);
+	pointer-events: none;
 }
 
 .resizing-container {
@@ -701,5 +603,5 @@ input[type='range']::-webkit-slider-thumb {
 }
 
 #docreload-ok {
-    margin-left: 10px;
+	margin-left: 10px;
 }
