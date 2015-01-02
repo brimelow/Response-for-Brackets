@@ -42,6 +42,7 @@ define(function (require, exports, module) {
         VERTICAL = 0,
         HORIZONTAL = 1,
 
+/* BR: remove as now in QueryManager */
         // Array of color objects for media query bar gradients.
         COLORS = [{
             t: "#91b3fb",
@@ -94,7 +95,8 @@ define(function (require, exports, module) {
         ResponseUtils           = require("ResponseUtils"),
 
         // represents a media query and its custom selectors/rules
-        Query                   = require("Query").Query,
+        Query                   = require("query/Query").Query,
+        QueryManager            = require("query/QueryManager"),
 
         // Load the nls string module for this plugin. 
         Strings                 = require("strings"),
@@ -154,15 +156,6 @@ define(function (require, exports, module) {
 
         // Document object of iframe.
         frameDOM,
-
-        // Holds all of the created media query objects.
-        queries = {},
-
-        // Array for sorting the queries.
-        sort = [],
-
-        // The currently selected media query.
-        currentQuery,
 
         // The inspect mode toggle button.
         inspectButton,
@@ -333,11 +326,11 @@ define(function (require, exports, module) {
                     mediaQueryDoc = doc;
                     MainViewManager.addToWorkingSet(MainViewManager.ACTIVE_PANE, doc.file);
 
+                    // refresh media queries from file if they exist
+                    QueryManager.parseMediaQueries(doc.getText(), doc.getLanguage().getMode());
+                
                     // now we are ready to create the response UI
                     createResponseUI(previewPaneUrl);
-
-                    // refresh media queries from file if they exist
-                    _reloadMediaQueriesFromFile(doc);
 
                     // update toolbar icon to indicate we are in responsive mode
                     iconLink.style.backgroundPosition = '0 -26px';
@@ -349,66 +342,6 @@ define(function (require, exports, module) {
                 .fail(function (error) {
                     console.log("error: " + error);
                 });
-        }
-        
-        function _reloadMediaQueriesFromFile(mediaQueryDoc) {
-
-            var i;
-            
-            // break the css file into media queries. assumption is that the output for 
-            // each media query starts with "@media only screen and (max-width:###px) {"
-            var mediaQueryRegex = /@media only screen and \(max-width:[0-9]+px\) {\s*([\.#\w:\(\)\-]+\s*{\s*[\w\s:%;\(\)\-,]*}\s*)*}/g;
-            var mediaQueries = mediaQueryDoc.getText().match(mediaQueryRegex);
-
-            //reset master query list 
-            queries = {};
-            sort = [];
-
-            if (mediaQueries !== null && mediaQueries.length > 0) {
-                for (i = 0; i < mediaQueries.length; i++) {
-                    
-                    // get the width for the current media query
-                    var matches = /max-width:([0-9]+)px/g.exec(mediaQueries[i]);
-                    var w = matches[1];
-                    
-                    // add a query  mark to the top of the preview window
-                    var queryMark = addQueryMark(w);
-
-                    // extract all the selectors from the current media query
-                    var selectors = CSSUtils.extractAllSelectors(mediaQueries[i], mediaQueryDoc.getLanguage().getMode());
-                    
-                    // add the rules associated to each selector to the queryMark
-                    _addRulesToMediaQueries(queryMark, mediaQueries[i], selectors);
-                }
-            }
-        }
-        
-        /*
-         * Iterates through the list of supplied selectors and updates the 
-         * queryMark with the selector and the list of rules associated to 
-         * the selector
-         */
-        function _addRulesToMediaQueries(queryMark, mediaQuery, selectors) {
-            
-            var i, j;
-            
-            if (selectors !== null && selectors.length > 0) {
-                for (i = 0; i < selectors.length; i++) {
-                    var escapedSelector = selectors[i].selector.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
-                    var ruleListRegex = new RegExp(escapedSelector + "\\s+{([\\s\\w\\d:;,%\-\(\)]*)}", "g");
-                    
-                    var matches = ruleListRegex.exec(mediaQuery);
-                    if (matches !== null) {
-                        var ruleList = matches[1].split(';');
-                        // doing length - 1 here as the last item in the split array will be an empty string
-                        // assumption is that the last char in rule list is a ;.
-                        // NOTE: Is it possible for the last rule not to have a ; ???? need better logic if this valid
-                        for (j = 0; j < ruleList.length - 1; j++) {
-                            queryMark.addRule(selectors[i].selector, ruleList[j].trim() + ";");
-                        }
-                    }
-                }
-            }
         }
 
         /**
@@ -830,7 +763,8 @@ define(function (require, exports, module) {
         }
         
         // inject frame with media queries as inline style element
-        refreshMediaQueries(false);
+        displayQueryMarkTracks();
+        refreshIFrameMediaQueries(false);
     }
 
     /**
@@ -866,88 +800,59 @@ define(function (require, exports, module) {
         
         // create the query mark at the top of the preview window
         // and set it as the current media query
-        currentQuery = addQueryMark(w);
+        var query = QueryManager.addQueryMark(w);
+        QueryManager.setCurrentQueryMark(query);
+        displayQueryMarkTracks();
 
         // update inline editor with the newly selected query.
         updateInlineWidgets();
 
         // Calling this function will write the new query to the style block 
         // in the iframe and also to the media-queries.css file.
-        refreshMediaQueries();
+        refreshIFrameMediaQueries();
     }
 
-    function addQueryMark(w) {
+    /**
+     * displays the media query tracks above the slider in the preview pane.
+     */
+    function displayQueryMarkTracks() {
 
-        var i, z;
+        var queries = QueryManager.getSortedQueryMarks(),
+            query,
+            mark,
+            markStyle,
+            i,
+            z = 5000;
         
-        // First check that there isn't already a query for this width.
-        var q = queries[w];
-        if (q === undefined) {
-
-            // Create a new Query object and add to master list
-            q = new Query(w);
-            queries[w] = q;
-
-            // Add the current width to the sort array.
-            // Sort so the smallest number is first.
-            sort.push(w);
-            sort.sort(function (a, b) {
-                return a - b;
-            });
-        }
-        
-        // if query mark div does not yet exist, create it and add
-        if (document.querySelector('#queryMark' + w) === null) {
+        for (i = 0; i < queries.length; i++) {
             
-            // Create a new colored mark div and add it to the track.
-            var mark = track.insertBefore(document.createElement('div'), track.firstChild);
-            mark.className = "mark";
-            mark.id = 'queryMark' + w;
-
-            // Create the label that displays the pixel width.
-            var label = mark.appendChild(document.createElement('div'));
-            label.className = "wd";
-            label.innerText = w + "px";
-
-            // Store a reference to the mark in the query object.
-            q.view = mark;
-
-            // Listen for clicks on the mark set this query as the current query.
-            mark.addEventListener("click", handleQueryClicked, false);
+            query = queries[i];
             
-            // This loop goes through all of the created media queries and 
-            // essentially redraws all the marks with the correct color and size.        
-            for (i = 0, z = 5000; i < sort.length; i++) {
+            // if query mark div does not yet exist, create it and add to track
+            mark = $('#queryMark' + query.width)
+            if (mark.length == 0) {
                 
-                var left = 0;
-                w = parseInt(queries[sort[i]].width, 10);
+                markStyle = {
+                    'width':query.width + 'px',
+                    'background': "url('file://" + modulePath + "/images/ruler_min.png') " +
+                        "0px 0px no-repeat, " +
+                        "-webkit-gradient(linear, left top, left bottom, from(" + query.color.t + "), to(" + query.color.b + "))"
+                };
                 
-                var query = queries[sort[i]];
-
-                query.view.style.width = w + "px";
-
-                // Smaller query widths get higher z-index values so they are visible.
-                query.view.style.zIndex = z--;
-
-                // If this is a new query, assign it the next color available.
-                if (query.color === undefined) {
-                    query.color = COLORS[sort.length - 1];
-                    query.colorIndex = sort.length - 1;
-                }
+                mark = $("<div/>")
+                            .attr('id', 'queryMark' + query.width)
+                            .addClass('mark')
+                            .css(markStyle)
+                            .appendTo(track);
+                $("<div/>").addClass("wd").text(query.width + 'px').appendTo(mark);
                 
-                // Calculate the correct left CSS property
-                left = (i < 1) ? 0 : sort[i - 1];
-                
-                // Now finally we can draw the mark by adding the arrows image and the gradient.
-                query.view.style.background = "url('file://" + modulePath + "/images/ruler_min.png') " +
-                        left + "px 0px no-repeat, " +
-                        "-webkit-gradient(linear, left top, left bottom, from(" +
-                        queries[sort[i]].color.t + "), to(" +
-                        queries[sort[i]].color.b + "))";
+                // add listener for when user clicks on an item1
+                mark.on('click', handleQueryClicked);
             }
+            
+            // update z-index on all elements so shorter widths have higher value (to make clickable)
+            mark.css('z-index', z--);
         }
-        
-        return q;
     }
     
     /** 
@@ -957,10 +862,10 @@ define(function (require, exports, module) {
 
         // parse the width from the id. 9 is the length of queryMark prefix in id
         var w = parseInt(e.target.id.substr(9), 10);
-        var q = queries[w];
+        var q = QueryManager.getQueryMark(w);
 
         // Set the clicked query as the current query.
-        currentQuery = q;
+        QueryManager.setCurrentQueryMark(q);
 
         // Snap the ruler and iframe to that query.
         slider.value = w;
@@ -1149,8 +1054,9 @@ define(function (require, exports, module) {
                 isAnimating = true;
 
                 // Here we take the color of the current query and use it highlight the code line.
-                if (currentQuery) {
-                    var cl = "l" + currentQuery.colorIndex.toString();
+                var cq = QueryManager.getCurrentQueryMark();
+                if (cq) {
+                    var cl = "l" + cq.colorIndex.toString();
                     cm.addLineClass(line, "background", cl);
                     
                 } else {
@@ -1224,9 +1130,10 @@ define(function (require, exports, module) {
         // Set this as the new selected line.
         selected = {el: target, line: line};
         
-        // If there is a current query, use its color to highlight the code line.      
-        if (currentQuery) {
-            var cl = "l" + currentQuery.colorIndex.toString();
+        // If there is a current query, use its color to highlight the code line.
+        var cq = QueryManager.getCurrentQueryMark();
+        if (cq) {
+            var cl = "l" + cq.colorIndex.toString();
             cm.addLineClass(line, "background", cl);
             
         } else {
@@ -1280,7 +1187,7 @@ define(function (require, exports, module) {
         
         // Build the editor contents. 
         // Note: For some reason count is 0 when refreshed but 4 when editor is created
-        var editorContents = refreshCodeEditor(currentQuery, cssResults, newSelector);
+        var editorContents = refreshCodeEditor(QueryManager.getCurrentQueryMark(), cssResults, newSelector);
 
         // Set the text in the inline editor to our new string.
         inlineCm.setValue(editorContents.contents);
@@ -1377,7 +1284,7 @@ define(function (require, exports, module) {
         }
         
         // If there isn't a media query, show the message that a query has not been selected
-        if (!currentQuery) {
+        if (!QueryManager.getCurrentQueryMark()) {
             if (selected) {
                 cm.removeLineClass(selected.line, "background");
             }
@@ -1414,12 +1321,12 @@ define(function (require, exports, module) {
         var count = 4,
             i,
             len,
-            cq = currentQuery;
+            cq = QueryManager.getCurrentQueryMark();
 
         // build the editor contents
         // The line count starts at 4 because of the selector, whitespace, etc.  
         // Note: For some reason count is 0 when refreshed but 4 when editor is created
-        var editorContents = refreshCodeEditor(currentQuery, cssResults);
+        var editorContents = refreshCodeEditor(cq, cssResults);
 
         // Create a new inline editor. This is my stripped-down version of the
         // MultiRangeInlineEditor module.
@@ -1489,7 +1396,7 @@ define(function (require, exports, module) {
             
             // used in iterator for properties
             prop,
-            sel,
+            index,
 
             // Here we begin writing the string that we will use to populate the inline editor.
             str = currentSelector + " {\n";
@@ -1503,9 +1410,10 @@ define(function (require, exports, module) {
 
                 // Here we loop through all of the defined media queries to see if this rule
                 // has already been set by one of them. This is used to show inheritance.
-                for (sel in queries) {
+                var queries = QueryManager.getSortedQueryMarks();
+                for (index in queries) {
 
-                    var q = queries[sel];
+                    var q = queries[index];
 
                     // If the media query (q) has a width greater than the currently selected
                     // query and has already set a value for this property, then the current
@@ -1566,6 +1474,8 @@ define(function (require, exports, module) {
         // Make sure that the change is even worth looking at.
         if (change.text.length < 2 && change.from.line !== 0) {
 
+            var currentQuery = QueryManager.getCurrentQueryMark();
+            
             // Add the changed rule to the current query object.
             var inlineWidget = EditorManager.getFocusedInlineWidget();
             currentQuery.addRule(inlineWidget.currentSelector, inlineCm.getLine(change.from.line));
@@ -1577,7 +1487,7 @@ define(function (require, exports, module) {
             inlineCm.addLineClass(change.from.line, "background", "pq" + currentQuery.colorIndex);
 
             // Write out the changes to the style block and the media queries CSS file.
-            refreshMediaQueries();
+            refreshIFrameMediaQueries();
         }
 
         // Adjust the highlight according to the new CSS value.
@@ -1598,7 +1508,7 @@ define(function (require, exports, module) {
         // Update the highlight.
         positionHighlight(inlineElement);
 
-        var cq = currentQuery,
+        var cq = QueryManager.getCurrentQueryMark(),
             i,
             j,
             len;
@@ -1637,29 +1547,30 @@ define(function (require, exports, module) {
      *  Function that goes through all of the media query data and writes it to the 
      *  style block in the iframe and also to the media-queries.css file.
      */
-    function refreshMediaQueries(writeToFile) {
+    function refreshIFrameMediaQueries(writeToFile) {
         
         // Defining some vars we'll need.
         var s = "",
-            i = sort.length,
-            qSort,
+            sortedQueries = QueryManager.getSortedQueryMarks(),
+            i = sortedQueries.length,
+            query,
             sel,
             k;
-
+        
         // Loop through the queries and write them to the output string.
         while (i--) {
 
             // We need to sort the queries so the larger widths are written first
             // in order for inheritance to work properly.
-            qSort = queries[sort[i]];
+            query = sortedQueries[i];
 
             s += '@media only screen and (max-width:';
-            s += qSort.width;
+            s += query.width;
             s += 'px) {\n\n';
-            for (sel in qSort.selectors) {
+            for (sel in query.selectors) {
                 s += '\t' + sel + ' {\n';
-                for (k in qSort.selectors[sel].rules) {
-                    s += '\t\t' + k + ": " + qSort.selectors[sel].rules[k] + '\n';
+                for (k in query.selectors[sel].rules) {
+                    s += '\t\t' + k + ": " + query.selectors[sel].rules[k] + '\n';
                 }
                 s += '\t}\n\n';
             }
@@ -1697,8 +1608,8 @@ define(function (require, exports, module) {
         // but don't update inspect mode menu item
         toggleInspectMode(false);
 
-        // deselect the current query
-        currentQuery = null;
+        // deselect the current query and queries
+        QueryManager.clearQueryMarks();
         
         // remove the #response view
         var element = document.getElementById("response");
@@ -1774,7 +1685,6 @@ define(function (require, exports, module) {
     // Is there a brackets function for loading non-module scripts?
     // I couldn't find one so I wrote a simple one.
     ResponseUtils.loadExternalScript(modulePath + "/js/TweenMax.min.js", document.head);
-    ResponseUtils.loadExternalScript(modulePath + "/Query.js", document.head);
 
     // Load in the main CSS for the responsive UI.
     ExtensionUtils.addLinkedStyleSheet(modulePath + "/css/respond.css");

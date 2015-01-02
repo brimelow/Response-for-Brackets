@@ -122,7 +122,7 @@ define(function (require, exports, module) {
      * @param cq: the current query mark that is selected/active
      */
     ResponseInlineEdit.prototype.refreshMediaQueryInfo = function (cq) {
-        
+
         // Style the inline mark to match the color of the current query.
         this.$inlineMark[0].style.backgroundImage = "url('file://" + modulePath + "/../images/ruler_min.png'), -webkit-gradient(linear, left top, left bottom, from(" + cq.color.t + "), to(" + cq.color.b + "))";
         this.$wd[0].innerText = cq.width + "px";

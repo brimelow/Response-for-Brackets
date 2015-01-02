@@ -33,16 +33,33 @@ THE SOFTWARE. */
 
 define(function (require, exports, module) {
     "use strict";
-    
+
+    // Array of color objects for media query bar gradients.
+    var COLORS = [{
+            t: "#91b3fb",
+            b: "#5f88d0"
+        }, {
+            t: "#cdb0fd",
+            b: "#b48ee4"
+        }, {
+            t: "#c2ec5c",
+            b: "#a7ca50"
+        }, {
+            t: "#fdcd6b",
+            b: "#dfaf51"
+        }, {
+            t: "#74ede4",
+            b: "#59cfc3"
+        }];
+
 	// A Query object represents a single media query and all of its data.
-	function Query(width) {
+	function Query(width, colorIndex) {
 
 		// Setup up a bunch of properties.
-		this.color;
-		this.colorIndex = 0;
+        this.color = COLORS[colorIndex];
+        this.colorIndex = colorIndex;
 		this.width = width;
 		this.selectors = {};
-		this.view = null;
 		this.left = 0;
 	}
     
