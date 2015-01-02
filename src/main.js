@@ -42,25 +42,6 @@ define(function (require, exports, module) {
 		VERTICAL = 0,
 		HORIZONTAL = 1,
 
-/* BR: remove as now in QueryManager */
-		// Array of color objects for media query bar gradients.
-		COLORS = [{
-			t: "#91b3fb",
-			b: "#5f88d0"
-		}, {
-			t: "#cdb0fd",
-			b: "#b48ee4"
-		}, {
-			t: "#c2ec5c",
-			b: "#a7ca50"
-		}, {
-			t: "#fdcd6b",
-			b: "#dfaf51"
-		}, {
-			t: "#74ede4",
-			b: "#59cfc3"
-		}],
-
 	/*================ Load needed brackets modules ================*/
 
 		CommandManager          = brackets.getModule("command/CommandManager"),
