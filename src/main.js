@@ -383,10 +383,6 @@ define(function (require, exports, module) {
 		var vertLayoutBtn = document.getElementById("vertButt");
 		vertLayoutBtn.addEventListener('click', handleVertLayoutToggle, false);
 
-		// add click handler for refresh button
-		var refreshBtn = document.getElementById("response-refresh");
-		refreshBtn.addEventListener('click', handleRefreshClick, false);
-
 		// Here I add the live preview iframe wrapped in a div.
 		var domArray = [{tag: "div", attr: {id: "fwrap"}, parent: -1},
 					{tag: "iframe", attr: {id: "frame", class: "quiet-scrollbars", name: "frame", src: previewPaneUrl}, parent: 0}];
@@ -663,19 +659,6 @@ define(function (require, exports, module) {
 		// inject frame with media queries as inline style element
 		toolbar.refreshQueryMarkTracks();		
 		refreshIFrameMediaQueries(false);
-	}
-
-	/**
-	 * Called when user clicks on refresh button. simply reloads the current page
-	 * in the preview pane
-	 */
-	function handleRefreshClick(e) {
-		
-		if (e) {
-			e.stopImmediatePropagation();
-		}
-
-		frame.contentWindow.document.location.reload(true);
 	}
 	
 	/** 

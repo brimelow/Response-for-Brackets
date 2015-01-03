@@ -64,6 +64,7 @@ define(function (require, exports, module) {
 		$slider = null,
 		$track = null,
 		$trackLabel = null,
+		$inspectBtn = null,
 
 		modulePath = FileUtils.getNativeModuleDirectoryPath(module);
 
@@ -75,6 +76,10 @@ define(function (require, exports, module) {
 	 * can listen to.
 	 */
 	function handleSliderChange(e) {
+
+		if (e) {
+			e.stopImmediatePropagation();
+		}
 
 		var newValue = e.target.value;
 		console.log("slider value changed [new value: " + newValue + "]");
@@ -90,6 +95,10 @@ define(function (require, exports, module) {
 	 */
 	function handleQueryTrackClicked(e) {
 		
+		if (e) {
+			e.stopImmediatePropagation();
+		}
+
 		// parse the width from the id. 9 is the length of queryMark prefix in id
 		var w = parseInt(e.target.id.substr(9), 10);
 		
@@ -112,6 +121,10 @@ define(function (require, exports, module) {
 	 */
 	function handleAddQueryTrackClicked(e) {
 		
+		if (e) {
+			e.stopImmediatePropagation();
+		}
+
 		var w = $slider.val();
 		
 		var query = QueryManager.getQueryMark(w);
@@ -122,7 +135,25 @@ define(function (require, exports, module) {
 			this.refreshQueryMarkTracks();
 		}
 	}
+	
+	/**
+	 * Called when user clicks on refresh button. simply reloads the current page
+	 * in the preview pane
+	 */
+	function handleRefreshBtnClick(e) {
+	
+		if (e) {
+			e.stopImmediatePropagation();
+		}
 
+		var iframeEl = $('#response iframe');
+		iframeEl[0].contentWindow.document.location.reload(true);
+	}
+/*
+	function handleInspectBtnClick(e) {
+		
+	}
+*/
 	/*================  prototype functionality  ================*/
 
 	/**
@@ -131,15 +162,19 @@ define(function (require, exports, module) {
 	function ResponseToolbar() {
 		
 		this.$toolbar = $(Mustache.render(_htmlTemplate, Strings));
+		
 		$slider = $('#slider', this.$toolbar).on('change', $.proxy(handleSliderChange, this));
 		$('#addButt', this.$toolbar).on('click', $.proxy(handleAddQueryTrackClicked, this));
+		$('#response-refresh', this.$toolbar).on('click', handleRefreshBtnClick);
 		
+		//$inspectBtn = $('#inspectButton', this.$toolbar).on('click', $.proxy(handleInspectBtnClick, this));
 		$track = $('#track', this.$toolbar);
 		$trackLabel = $('#track-label', this.$toolbar);
 		
 	}
 	
 	ResponseToolbar.prototype.$toolbar = null;
+	//ResponseToolbar.prototype.$inspectBtn = null;
 	
 	ResponseToolbar.prototype.setQueryWidth = function (width) {
 		
