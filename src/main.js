@@ -73,7 +73,7 @@ define(function (require, exports, module) {
 		Splitter                = require("widgets/Splitter").Splitter,
 
 		// Set of DOM and CSS utility methods.
-		ResponseUtils           = require("ResponseUtils"),
+		ResponseUtils           = require("utils/ResponseUtils"),
 
 		// represents a media query and its custom selectors/rules
 		Query                   = require("query/Query").Query,
