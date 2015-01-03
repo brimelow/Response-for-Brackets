@@ -40,6 +40,7 @@ define(function (require, exports, module) {
 	/*================ Load needed brackets modules ================*/
 		
 		CSSUtils                = brackets.getModule("language/CSSUtils"),
+		EventDispatcher			= brackets.getModule("utils/EventDispatcher"),
 
 	/*================  Load custom modules  ================*/
 
@@ -109,7 +110,13 @@ define(function (require, exports, module) {
 	 * being editted
 	 */
 	function setCurrentQueryMark(queryMark) {
+		
+		console.debug("QueryManager - setting current query mark [cq: " + queryMark + "]");
 		_currentQuery = queryMark;
+
+		if (_currentQuery) {
+			exports.trigger("currentQueryChanged", _currentQuery);
+		}
 	}
 
 	/**
@@ -123,15 +130,19 @@ define(function (require, exports, module) {
 	 * clears the query marks
 	 */
 	function clearQueryMarks() {
+		
+		console.debug("QueryManager - clearing query marks");
 		_queries = {};
 		_widthSort = [];
-		_currentQuery = null;
+		setCurrentQueryMark(null);
 	}
 
 	/**
 	 * parses the text from a media queries css files and stores Query objects
 	 */
 	function parseMediaQueries(mediaQueryText, languageMode) {
+
+		console.debug("QueryManager - parsing media queries from file");
 
 		var i;
 
@@ -192,6 +203,8 @@ define(function (require, exports, module) {
 		
 	}
 
+	EventDispatcher.makeEventDispatcher(exports);
+	
 	// Export the functions.
 	exports.parseMediaQueries = parseMediaQueries;
 	exports.addQueryMark = addQueryMark;

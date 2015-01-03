@@ -111,27 +111,15 @@ define(function (require, exports, module) {
 		// TODO: should be removed from global scope
 		// Element whose CSS rules are being show in the inline editor.
 		inlineElement,
-
-		// The range element ruler which you drag to change width.
-		slider,
-
+		
 		// Iframe containing the live HTML preview.
 		frame,
-
-		// The track indicator that display the current width of the slider
-		trackLabel,
-
-		// The track where the color media query bars are shown.
-		track,
 
 		// The .main-view div in Brackets core.
 		mainView,
 
 		// Main container for the response tools and iFrame.
 		response,
-
-		// + button for adding a new media query.
-		addButt,
 
 		// The current layout mode.
 		mode = VERTICAL,
@@ -388,10 +376,6 @@ define(function (require, exports, module) {
 		
 		// Get references to all the main UI elements that we need.
 		inspectButton = document.getElementById("inspectButton");
-		addButt = document.getElementById("addButt");
-		slider = document.getElementById("slider");
-		track = document.getElementById("track");
-		trackLabel = document.getElementById("track-label");
 
 		// add click handler for vertical/horizontal layout buttons
 		var horzLayoutBtn = document.getElementById("horzButt");
@@ -441,7 +425,6 @@ define(function (require, exports, module) {
 		$(frame).on("load", handleFrameLoaded);
 		
 		frame.addEventListener('mouseout', handleFrameMouseOut, false);
-		addButt.addEventListener('click', handleAddQuery, false);
 		window.addEventListener('resize', handleWindowResize, false);
 		$(response).on('panelResizeUpdate', handlePanelResize);
 		inspectButton.addEventListener('click', handleInspectToggle, false);
@@ -625,6 +608,7 @@ define(function (require, exports, module) {
 		// Store a reference to the iframe document.
 		frameDOM = document.getElementById("frame").contentWindow.document;
 		
+		// handle the case if we are using preview url and it does not load correctly
 		if (!frameDOM.body.firstElementChild) {
 			
 			// Configure the twipsy
@@ -674,7 +658,7 @@ define(function (require, exports, module) {
 		}
 		
 		// inject frame with media queries as inline style element
-		displayQueryMarkTracks();
+		toolbar.refreshQueryMarkTracks();		
 		refreshIFrameMediaQueries(false);
 	}
 
@@ -700,102 +684,6 @@ define(function (require, exports, module) {
 		if (highlight) {
 			highlight.style.display = 'none';
 		}
-	}
-
-	/** 
-	 *  Called when the user clicks on the + button to add a new query.
-	 */
-	function handleAddQuery() {
-		
-		var w = slider.value;
-		
-		// create the query mark at the top of the preview window
-		// and set it as the current media query
-		var query = QueryManager.addQueryMark(w);
-		QueryManager.setCurrentQueryMark(query);
-		displayQueryMarkTracks();
-
-		// update inline editor with the newly selected query.
-		updateInlineWidgets();
-
-		// Calling this function will write the new query to the style block 
-		// in the iframe and also to the media-queries.css file.
-		refreshIFrameMediaQueries();
-	}
-
-	/**
-	 * displays the media query tracks above the slider in the preview pane.
-	 */
-	function displayQueryMarkTracks() {
-
-		var queries = QueryManager.getSortedQueryMarks(),
-			query,
-			mark,
-			markStyle,
-			i,
-			z = 5000;
-		
-		for (i = 0; i < queries.length; i++) {
-			
-			query = queries[i];
-			
-			// if query mark div does not yet exist, create it and add to track
-			mark = $('#queryMark' + query.width);
-			if (mark.length === 0) {
-				
-				markStyle = {
-					'width': query.width + 'px',
-					'background': "url('file://" + modulePath + "/images/ruler_min.png') " +
-						"0px 0px no-repeat, " +
-						"-webkit-gradient(linear, left top, left bottom, from(" + query.color.t + "), to(" + query.color.b + "))"
-				};
-				
-				mark = $("<div/>")
-							.attr('id', 'queryMark' + query.width)
-							.addClass('mark')
-							.css(markStyle)
-							.appendTo(track);
-				$("<div/>").addClass("wd").text(query.width + 'px').appendTo(mark);
-				
-				// add listener for when user clicks on an item1
-				mark.on('click', handleQueryClicked);
-			}
-			
-			// update z-index on all elements so shorter widths have higher value (to make clickable)
-			mark.css('z-index', z--);
-		}
-	}
-	
-	/** 
-	 *  Called when the user clicks on one of the colored query marks in the track.
-	 */
-	function handleQueryClicked(e) {
-
-		// parse the width from the id. 9 is the length of queryMark prefix in id
-		var w = parseInt(e.target.id.substr(9), 10);
-		var q = QueryManager.getQueryMark(w);
-
-		// Set the clicked query as the current query.
-		QueryManager.setCurrentQueryMark(q);
-
-		// Snap the ruler and iframe to that query.
-		slider.value = w;
-		frame.style.width = w + "px";
-		
-		// update the track label with the current value
-		trackLabel.textContent = slider.value + 'px';
-
-		// In horizontal mode the code editor also snaps to the query width to give more space.      
-		if (mode === HORIZONTAL) {
-			Splitter.updateElement(w);
-		}
-
-		// Refresh codemirror
-		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
-		cm.refresh();
-
-		// update the inline editor with the newly selected query.
-		updateInlineWidgets();
 	}
 
 	/** 
@@ -1449,41 +1337,44 @@ define(function (require, exports, module) {
 	 *  style block in the iframe and also to the media-queries.css file.
 	 */
 	function refreshIFrameMediaQueries(writeToFile) {
-		
-		// Defining some vars we'll need.
-		var s = "",
-			sortedQueries = QueryManager.getSortedQueryMarks(),
-			i = sortedQueries.length,
-			query,
-			sel,
-			k;
-		
-		// Loop through the queries and write them to the output string.
-		while (i--) {
 
-			// We need to sort the queries so the larger widths are written first
-			// in order for inheritance to work properly.
-			query = sortedQueries[i];
+		// only update if the reference to the style element has been set
+		if (style) {
+			// Defining some vars we'll need.
+			var s = "",
+				sortedQueries = QueryManager.getSortedQueryMarks(),
+				i = sortedQueries.length,
+				query,
+				sel,
+				k;
 
-			s += '@media only screen and (max-width:';
-			s += query.width;
-			s += 'px) {\n\n';
-			for (sel in query.selectors) {
-				s += '\t' + sel + ' {\n';
-				for (k in query.selectors[sel].rules) {
-					s += '\t\t' + k + ": " + query.selectors[sel].rules[k] + '\n';
+			// Loop through the queries and write them to the output string.
+			while (i--) {
+
+				// We need to sort the queries so the larger widths are written first
+				// in order for inheritance to work properly.
+				query = sortedQueries[i];
+
+				s += '@media only screen and (max-width:';
+				s += query.width;
+				s += 'px) {\n\n';
+				for (sel in query.selectors) {
+					s += '\t' + sel + ' {\n';
+					for (k in query.selectors[sel].rules) {
+						s += '\t\t' + k + ": " + query.selectors[sel].rules[k] + '\n';
+					}
+					s += '\t}\n\n';
 				}
-				s += '\t}\n\n';
+				s += '}\n';
 			}
-			s += '}\n';
-		}
-		
-		// Set the style block in the iframe using the output string. 
-		style.textContent = s;
-		
-		// Write the new text to the media-queries.css file.
-		if (writeToFile === undefined || writeToFile) {
-			FileUtils.writeText(mediaQueryDoc.file, s);
+
+			// Set the style block in the iframe using the output string. 
+			style.textContent = s;
+
+			// Write the new text to the media-queries.css file.
+			if (writeToFile === undefined || writeToFile) {
+				FileUtils.writeText(mediaQueryDoc.file, s);
+			}
 		}
 	}
 
@@ -1562,6 +1453,36 @@ define(function (require, exports, module) {
 		CommandManager.register(Strings.SUBMENU_PREVIEWURL, CMD_PREVIEWURL_ID, handleLivePreviewToggle);
 		customMenu.addMenuItem(CMD_PREVIEWURL_ID, "Shift-Alt-U");
 	}
+	
+
+	/** 
+	 *  Called whenever the current query changes. It is responsible for updating the inline editors
+	 */
+	QueryManager.on("currentQueryChanged", function (e, cq) {
+
+		try {
+			console.debug("currentQueryChanged event called", cq);
+			
+			// In horizontal mode the code editor also snaps to the query width to give more space.      
+			if (mode === HORIZONTAL) {
+				Splitter.updateElement(cq.width);
+			}
+
+			// Refresh codemirror
+			var cm = EditorManager.getCurrentFullEditor()._codeMirror;
+			cm.refresh();
+
+			// update the inline editor with the newly selected query.
+			updateInlineWidgets();
+
+			// Calling this function will write the new query to the style block 
+			// in the iframe and also to the media-queries.css file.
+			refreshIFrameMediaQueries();
+			
+		} catch (err) {
+			console.error("an unexpected exception occurred trying to handle currentQueryChanged event", err);
+		}
+	});
 	
 	/** 
 	 *  Called when brackets has opened and is ready.
