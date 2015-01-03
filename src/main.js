@@ -99,6 +99,7 @@ define(function (require, exports, module) {
 		// Document for the generated media-queries.css file.
 		mediaQueryDoc,
 
+		// TODO: should be removed from global scope
 		// Element whose CSS rules are being show in the inline editor.
 		inlineElement,
 
@@ -138,12 +139,14 @@ define(function (require, exports, module) {
 		// Is the code currently animating.
 		isAnimating = false,
 
+		// TODO: should be removed from global scope
 		// Results returned from ResponseUtils.getAuthorCSSRules().
 		cssResults,
 
 		// A style block we will inject into the iframe.
 		style,
 
+		// TODO: should be removed from global scope
 		// The selected line of code in the main editor.
 		selected,
 
