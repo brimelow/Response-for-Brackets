@@ -72,6 +72,9 @@ define(function (require, exports, module) {
 		// This much lighter-weight version of the Resizer utility
 		Splitter				= require("widgets/Splitter").Splitter,
 
+		// Represents the toolbar at the top of the preview pane
+		ResponseToolbar			= require("widgets/ResponseToolbar").ResponseToolbar,
+		
 		// Set of DOM and CSS utility methods.
 		ResponseUtils			= require("utils/ResponseUtils"),
 
@@ -364,30 +367,16 @@ define(function (require, exports, module) {
 
 		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
 
-		// I wrote my own DOM insertion utility to avoid jQuery here. Insanely faster.
-		// See the details of this function in the ResponseUtils.js module.
-		var domArray = [{tag: "div", attr: {id: "response", class: "quiet-scrollbars"}, parent: -1},
-			{tag: "div", attr: {id: "tools"}, parent: 0},
-			{tag: "a", attr: {id: "inspectButton", href: "#"}, parent: 1},
-			{tag: "div", attr: {id: "inspectText"}, text: "INSPECT", parent: 1},
-			{tag: "a", attr: {id: "addButt", href: "#"}, parent: 1},
-			{tag: "a", attr: {id: "horzButt", href: "#", title: Strings.SUBMENU_HORZLAYOUT}, parent: 1},
-			{tag: "a", attr: {class: "menu-divider"}, parent: 1},
-			{tag: "div", attr: {id: "layoutText"}, text: "LAYOUT", parent: 1},
-			{tag: "a", attr: {id: "vertButt", href: "#", title: Strings.SUBMENU_VERTLAYOUT}, parent: 1},
-			{tag: "a", attr: {id: "response-refresh", href: "#"}, parent: 1},
-			{tag: "div", attr: {id: "track-label"}, parent: 1},
-			{tag: "div", attr: {id: "track"}, parent: 0},
-			{tag: "input", attr: {id: "slider", type: "range", min: "0"}, parent: 0}];
+		response = $('<div id="response" class="quiet-scrollbars"/>')[0];
 
-		// Call the utility function and get a document fragment back.
-		var frag = ResponseUtils.createDOMFragment(domArray);
+		// create toolbar and add to response div element
+		var toolbar = new ResponseToolbar();
+		toolbar.$toolbar.appendTo(response);
 
 		// Insert the fragment into the main DOM.
-		doc.body.insertBefore(frag, doc.body.firstChild);
-
+		doc.body.insertBefore(response, doc.body.firstChild);
+		
 		// Get references to all the main UI elements that we need.
-		response = document.getElementById("response");
 		inspectButton = document.getElementById("inspectButton");
 		addButt = document.getElementById("addButt");
 		slider = document.getElementById("slider");
@@ -403,15 +392,12 @@ define(function (require, exports, module) {
 		// add click handler for refresh button
 		var refreshBtn = document.getElementById("response-refresh");
 		refreshBtn.addEventListener('click', handleRefreshClick, false);
-		
-		// Set the ruler slider to the width of brackets.
-		slider.value = slider.max = response.offsetWidth;
 
 		// Here I add the live preview iframe wrapped in a div.
-		domArray = [{tag: "div", attr: {id: "fwrap"}, parent: -1},
+		var domArray = [{tag: "div", attr: {id: "fwrap"}, parent: -1},
 					{tag: "iframe", attr: {id: "frame", class: "quiet-scrollbars", name: "frame", src: previewPaneUrl}, parent: 0}];
 
-		frag = ResponseUtils.createDOMFragment(domArray);
+		var frag = ResponseUtils.createDOMFragment(domArray);
 		response.appendChild(frag);
 
 		// Get a reference to the iframe and also set its width to the slider value.
@@ -445,8 +431,6 @@ define(function (require, exports, module) {
 	 */
 	function setupEventHandlers() {
 
-		slider.addEventListener('change', handleSliderChange, false);
-		
 		// using jquery load event handling as this will trigger when iframe is reloaded
 		// instead of only on the first time it is loaded.
 		$(frame).on("load", handleFrameLoaded);
@@ -759,11 +743,11 @@ define(function (require, exports, module) {
 			query = queries[i];
 			
 			// if query mark div does not yet exist, create it and add to track
-			mark = $('#queryMark' + query.width)
-			if (mark.length == 0) {
+			mark = $('#queryMark' + query.width);
+			if (mark.length === 0) {
 				
 				markStyle = {
-					'width':query.width + 'px',
+					'width': query.width + 'px',
 					'background': "url('file://" + modulePath + "/images/ruler_min.png') " +
 						"0px 0px no-repeat, " +
 						"-webkit-gradient(linear, left top, left bottom, from(" + query.color.t + "), to(" + query.color.b + "))"
@@ -1099,18 +1083,6 @@ define(function (require, exports, module) {
 				cm.setCursor(line, cm.getLine(line).indexOf('<') + 1);
 			}
 		});
-	}
-
-	/** 
-	 *  Called when the user adjusts the ruler slider.
-	 */
-	function handleSliderChange(e) {
-
-		// Set the width of the frame to match the slider value.
-		frame.style.width = slider.value + 'px';
-		
-		// update the track label with the current value
-		trackLabel.textContent = slider.value + 'px';
 	}
 
 	/** 
