@@ -30,13 +30,13 @@ define(function (require, exports, module) {
 
 	/*====================  Define constants  =====================*/
 
-	var EXT_PREFIX              = "responsive",
-		MENU_RESPONSE_ID        = EXT_PREFIX + ".mainmenu",
-		CMD_RESPONSEMODE_ID     = EXT_PREFIX + ".cmd.launch",
-		CMD_INSPECTMODE_ID      = EXT_PREFIX + ".cmd.inspect",
-		CMD_HORZLAYOUT_ID       = EXT_PREFIX + ".cmd.horizontal",
-		CMD_VERTLAYOUT_ID       = EXT_PREFIX + ".cmd.vertical",
-		CMD_PREVIEWURL_ID       = EXT_PREFIX + ".cmd.livepreview",
+	var EXT_PREFIX				= "responsive",
+		MENU_RESPONSE_ID		= EXT_PREFIX + ".mainmenu",
+		CMD_RESPONSEMODE_ID		= EXT_PREFIX + ".cmd.launch",
+		CMD_INSPECTMODE_ID		= EXT_PREFIX + ".cmd.inspect",
+		CMD_HORZLAYOUT_ID		= EXT_PREFIX + ".cmd.horizontal",
+		CMD_VERTLAYOUT_ID		= EXT_PREFIX + ".cmd.vertical",
+		CMD_PREVIEWURL_ID		= EXT_PREFIX + ".cmd.livepreview",
 
 		// The 'constant' for vertical or horizontal mode.
 		VERTICAL = 0,
@@ -44,46 +44,46 @@ define(function (require, exports, module) {
 
 	/*================ Load needed brackets modules ================*/
 
-		CommandManager          = brackets.getModule("command/CommandManager"),
-		Menus                   = brackets.getModule("command/Menus"),
-		DocumentManager         = brackets.getModule("document/DocumentManager"),
-		MainViewManager         = brackets.getModule("view/MainViewManager"),
-		WorkspaceManager        = brackets.getModule("view/WorkspaceManager"),
-		FileUtils               = brackets.getModule("file/FileUtils"),
-		FileSystem              = brackets.getModule("filesystem/FileSystem"),
-		ProjectManager          = brackets.getModule("project/ProjectManager"),
-		EditorManager           = brackets.getModule("editor/EditorManager"),
-		ExtensionUtils          = brackets.getModule("utils/ExtensionUtils"),
-		AppInit                 = brackets.getModule("utils/AppInit"),
-		CSSUtils                = brackets.getModule("language/CSSUtils"),
-		HTMLUtils               = brackets.getModule("language/HTMLUtils"),
-		PreferencesManager      = brackets.getModule("preferences/PreferencesManager"),
+		CommandManager			= brackets.getModule("command/CommandManager"),
+		Menus					= brackets.getModule("command/Menus"),
+		DocumentManager			= brackets.getModule("document/DocumentManager"),
+		MainViewManager			= brackets.getModule("view/MainViewManager"),
+		WorkspaceManager		= brackets.getModule("view/WorkspaceManager"),
+		FileUtils				= brackets.getModule("file/FileUtils"),
+		FileSystem				= brackets.getModule("filesystem/FileSystem"),
+		ProjectManager			= brackets.getModule("project/ProjectManager"),
+		EditorManager			= brackets.getModule("editor/EditorManager"),
+		ExtensionUtils			= brackets.getModule("utils/ExtensionUtils"),
+		AppInit					= brackets.getModule("utils/AppInit"),
+		CSSUtils				= brackets.getModule("language/CSSUtils"),
+		HTMLUtils				= brackets.getModule("language/HTMLUtils"),
+		PreferencesManager		= brackets.getModule("preferences/PreferencesManager"),
 	
 	/*================  Load custom modules  ================*/
 
 		// This is a much lighter-weight version of the MultiRangeInlineTextEditor.
 		// Ideally I could would be able to use the InlineTextEditor we can't yet.
-		ResponseInlineEdit      = require("widgets/ResponseInlineEdit").ResponseInlineEdit,
+		ResponseInlineEdit		= require("widgets/ResponseInlineEdit").ResponseInlineEdit,
 
 		// Used to ask users if they want to refresh preview pane when switching
 		// between HTML documents
-		DocReloadBar            = require("widgets/DocReloadBar").DocReloadBar,
+		DocReloadBar			= require("widgets/DocReloadBar").DocReloadBar,
 
 		// This much lighter-weight version of the Resizer utility
-		Splitter                = require("widgets/Splitter").Splitter,
+		Splitter				= require("widgets/Splitter").Splitter,
 
 		// Set of DOM and CSS utility methods.
-		ResponseUtils           = require("utils/ResponseUtils"),
+		ResponseUtils			= require("utils/ResponseUtils"),
 
 		// Set of DOM and CSS utility methods.
-		DomCache           		= require("utils/DomCache"),
+		DomCache				= require("utils/DomCache"),
 
 		// represents a media query and its custom selectors/rules
-		Query                   = require("query/Query").Query,
-		QueryManager            = require("query/QueryManager"),
+		Query					= require("query/Query").Query,
+		QueryManager			= require("query/QueryManager"),
 
 		// Load the nls string module for this plugin. 
-		Strings                 = require("strings"),
+		Strings					= require("strings"),
 
 	/*================  Define module properties  ================*/
 	
