@@ -62,10 +62,6 @@
 	position: fixed;
 }
 
-.related-container {
-	display: none;
-}
-
 #inspectButton {
 	left: 69px;
 	top: 6px;
@@ -78,11 +74,9 @@
 	-webkit-transition-timing-function: ease-in;
 	background: url('../images/toggleThumb.png') 0px 1px no-repeat, url('../images/toggleBG.png') 1px 1px no-repeat;
 }
-
 .inspectButtonOn {
 	background-position: 35px 1px, 1px 1px !important;
 }
-
 #inspectText {
 	position: absolute;
 	color: hsla(0, 100%, 100%, 0.81);
