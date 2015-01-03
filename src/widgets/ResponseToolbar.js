@@ -27,13 +27,25 @@ THE SOFTWARE. */
  * ResponseToolbar.js
  *
  * UI for the responsive toolbar in the preview pane
+ *
+ * This module dispatches these events:
+ *    - queryWidthChanged -- when the slider value has chnaged. It includes the new value that the slider has been set to
+ *
+ * To listen to events, attach an 'on' listener to the toolbar instance
+ *
+ *		var toolbar = new ResponseToolbar();
+ *		toolbar.on('queryWidthChanged', function(e, newVal) { };
  */
 define(function (require, exports, module) {
 	"use strict";
 
 	var EventDispatcher		= brackets.getModule("utils/EventDispatcher"),
+		
 		Strings				= require("strings"),
 	
+		// represents a media query and its custom selectors/rules
+		QueryManager			= require("query/QueryManager"),
+
 		/**
 		 * @private
 		 * The template we use to generate the toolbar html.
@@ -44,18 +56,19 @@ define(function (require, exports, module) {
 		$slider = null,
 		$trackLabel = null;
 	
+	/**
+	 * responsible for handling any changes to the slider. It will update the track label and
+	 * the width of the iframe. It also triggers a queryWidthChanged event that any clients
+	 * can listen to.
+	 */
 	function handleSliderChange(e) {
 
 		var newValue = e.target.value;
 		console.log("slider value changed [new value: " + newValue + "]");
 		
-		// Set the width of the frame to match the slider value.
-		var frame = $('#response iframe');
-		frame.css('width', newValue + 'px');
-		
-		// update the track label with the current value
-		$trackLabel.text(newValue + 'px');
+		this.setQueryWidth(newValue);
 
+		this.trigger("queryWidthChanged", newValue);
 	}
 	
 	/**
@@ -64,16 +77,32 @@ define(function (require, exports, module) {
 	function ResponseToolbar() {
 		
 		this.$toolbar = $(Mustache.render(_htmlTemplate, Strings));
-		$slider = $('#slider', this.$toolbar).on('change', handleSliderChange);
-		$slider.value = $slider.max = this.$toolbar.offsetWidth;
+		$slider = $('#slider', this.$toolbar).on('change', $.proxy(handleSliderChange, this));
 		$trackLabel = $('#track-label', this.$toolbar);
 	}
-
-	//exports.trigger("beforeProjectClose", model.projectRoot);
 	
 	ResponseToolbar.prototype.$toolbar = null;
 	
-    EventDispatcher.makeEventDispatcher(exports);
+	ResponseToolbar.prototype.setQueryWidth = function (val) {
+		
+		// Set the width of the frame to match the slider value.
+		var frame = $('#response iframe');
+		frame.css('width', val + 'px');
+		
+		// update the track label with the current value
+		$trackLabel.text(val + 'px');
+	};
+	
+	ResponseToolbar.prototype.resize = function(width, force) {
+
+		// set the max width
+		$slider.attr('max', width);		
+		$slider.val(width);
+		this.setQueryWidth(width);
+		QueryManager.setCurrentQueryMark(null);
+	};
+	
+    EventDispatcher.makeEventDispatcher(ResponseToolbar.prototype);
 	
 	exports.ResponseToolbar = ResponseToolbar;
 });

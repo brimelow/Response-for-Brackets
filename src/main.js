@@ -93,6 +93,9 @@ define(function (require, exports, module) {
 		// Reference to the DocReloadBar
 		docReloadBar,
 	
+		// Reference to the ResponseToolbar in the preview pane
+		toolbar,
+		
 		// Configure preferences for the extension
 		prefs = PreferencesManager.getExtensionPrefs(EXT_PREFIX),
 
@@ -367,14 +370,21 @@ define(function (require, exports, module) {
 
 		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
 
+		// create response main container and add to body
 		response = $('<div id="response" class="quiet-scrollbars"/>')[0];
+		doc.body.insertBefore(response, doc.body.firstChild);
 
 		// create toolbar and add to response div element
-		var toolbar = new ResponseToolbar();
+		toolbar = new ResponseToolbar();
+		toolbar.resize(response.offsetWidth, true);
 		toolbar.$toolbar.appendTo(response);
 
+		toolbar.on('queryWidthChanged', function(e, newVal) {
+			console.log("queryWidthChanged triggered: " + newVal);
+		});
+		
 		// Insert the fragment into the main DOM.
-		doc.body.insertBefore(response, doc.body.firstChild);
+		//doc.body.insertBefore(response, doc.body.firstChild);
 		
 		// Get references to all the main UI elements that we need.
 		inspectButton = document.getElementById("inspectButton");
@@ -400,12 +410,7 @@ define(function (require, exports, module) {
 		var frag = ResponseUtils.createDOMFragment(domArray);
 		response.appendChild(frag);
 
-		// Get a reference to the iframe and also set its width to the slider value.
 		frame = doc.getElementById('frame');
-		frame.style.width = slider.value + 'px';
-		
-		// update the track label with the current value
-		trackLabel.textContent = slider.value + 'px';
 		
 		var h = window.innerHeight;
 
@@ -544,13 +549,9 @@ define(function (require, exports, module) {
 			response.style.width = (w * 0.5) + 'px';
 			mainView.style.left = (response.offsetWidth + 15) + 'px';
 			mainView.style.height = '100%';
-			slider.max = response.offsetWidth;
-			slider.value = response.offsetWidth;
-			frame.style.width = slider.value + "px";
-		
-			// update the track label with the current value
-			trackLabel.textContent = slider.value + 'px';
-
+			
+			toolbar.resize(response.offsetWidth);
+			
 			// refresh layout
 			WorkspaceManager.recomputeLayout(true);
 		}
@@ -585,13 +586,9 @@ define(function (require, exports, module) {
 			// Change to a top/bottom layout
 			response.style.height = (h * 0.6) + 'px';
 			mainView.style.height = (h - response.offsetHeight - 16) + 'px';
-			slider.max = slider.offsetWidth;
-			slider.value = slider.max;
-			frame.style.width = slider.value + "px";
-		
-			// update the track label with the current value
-			trackLabel.textContent = slider.value + 'px';
-
+			
+			toolbar.resize(response.offsetWidth);
+			
 			// refresh layout
 			WorkspaceManager.recomputeLayout(true);
 		}
@@ -817,26 +814,15 @@ define(function (require, exports, module) {
 		var responseWidth = response.offsetWidth;
 		var responseHeight = response.offsetHeight;
 
+		toolbar.resize(responseWidth);
+
 		// This gets called if we are in horizontal mode. Since the event can
 		// be fired excessively, I use a bitwise operator to eek out some perf.
 		if (mode & 1) {
-			slider.max = slider.value = responseWidth;
-			frame.style.width = responseWidth + 'px';
 			mainView.style.left = (responseWidth + 15) + 'px';
-		
-			// update the track label with the current value
-			trackLabel.textContent = slider.value + 'px';
-
-			return;
+		} else {
+			mainView.style.height = (h - responseHeight - 16) + 'px';
 		}
-
-		// This code will only be reached if in vertical mode.
-		mainView.style.height = (h - responseHeight - 16) + 'px';
-		slider.max = slider.value = w;
-		frame.style.width = w + 'px';
-		
-		// update the track label with the current value
-		trackLabel.textContent = slider.value + 'px';
 	}
 
 	/** 
@@ -853,12 +839,17 @@ define(function (require, exports, module) {
 		// Adjust things properly if in horizontal mode.
 		if (mode & 1) {
 			mainView.style.left = (parseInt(size, 10) + 15) + 'px';
+			
+			/* BR: refactor 1 */
+			toolbar.resize(size);
+			/*
 			slider.value = slider.max = size;
 			frame.style.width = slider.value + "px";
 
 			// update the track label with the current value
 			trackLabel.textContent = slider.value + 'px';
-
+			*/
+			
 			return;
 		}
 
