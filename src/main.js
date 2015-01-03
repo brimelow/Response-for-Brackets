@@ -75,6 +75,9 @@ define(function (require, exports, module) {
 		// Set of DOM and CSS utility methods.
 		ResponseUtils           = require("utils/ResponseUtils"),
 
+		// Set of DOM and CSS utility methods.
+		DomCache           		= require("utils/DomCache"),
+
 		// represents a media query and its custom selectors/rules
 		Query                   = require("query/Query").Query,
 		QueryManager            = require("query/QueryManager"),
@@ -438,58 +441,6 @@ define(function (require, exports, module) {
 	}
 
 	/** 
-	 *  Function that creates a mapping between DOM elements in the iframe and
-	 *  the corresponding line numbers for the elements in the codemirror editor.
-	 *
-	 *  First it goes through all of the codemirror lines in the editor 
-	 *  and matches tags with line numbers.
-	 *  
-	 *  Secondly it takes that codemirror info and finds the locations
-	 *  of the actual DOM elements in the iframe.
-	 */
-	function buildDOMCache() {
-
-		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
-		
-		var lines = cm.getValue().split(/\n/);
-		var frDOM = [], cmDOM = [], tag, i, j, len;
-
-		for (i = 0; i < lines.length; i++) {
-			var tags = lines[i].match(/(?:<)(\w+)(?=\s|>)/g);
-			
-			if (tags) {
-				for (j = 0; j < tags.length; j++) {
-					tag = tags[j].substr(1);
-					if (cmDOM[tag] === undefined) {
-						cmDOM[tag] = [];
-					}
-					cmDOM[tag].push(i);
-				}
-			}
-
-		}
-
-		for (tag in cmDOM) {
-			if (cmDOM.hasOwnProperty(tag)) {
-				if (frDOM[tag] === undefined) {
-					frDOM[tag] = [];
-				}
-
-				var elements = $(frameDOM.body).find(tag);
-
-				for (i = 0, len = elements.length; i < len; i++) {
-					frDOM[tag].push(elements[i]);
-				}
-			}
-		}
-
-		return {
-			frameDom: frDOM,
-			codeDom: cmDOM
-		};
-	}
-
-	/** 
 	 *  Sets up all of the event listeners we need
 	 */
 	function setupEventHandlers() {
@@ -692,9 +643,6 @@ define(function (require, exports, module) {
 		
 		// Store a reference to the iframe document.
 		frameDOM = document.getElementById("frame").contentWindow.document;
-		
-		// Rebuild DOM cache
-		buildDOMCache();
 		
 		if (!frameDOM.body.firstElementChild) {
 			
@@ -1021,7 +969,7 @@ define(function (require, exports, module) {
 			cm.removeLineClass(selected.line, "background");
 		}
 
-		var domCache = buildDOMCache();
+		var domCache = DomCache.getCache();
 
 		// Check to see if the editor even contains any tags of this type.
 		if (domCache.codeDom[tag]) {
@@ -1107,7 +1055,7 @@ define(function (require, exports, module) {
 		}
 
 		var tag = target.tagName.toLowerCase();
-		var domCache = buildDOMCache();
+		var domCache = DomCache.getCache();
 
 		// Find out the position index of the this tag in the cache.
 		var ind = domCache.frameDom[tag].indexOf(target);
