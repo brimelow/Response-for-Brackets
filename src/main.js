@@ -839,16 +839,9 @@ define(function (require, exports, module) {
 		// Adjust things properly if in horizontal mode.
 		if (mode & 1) {
 			mainView.style.left = (parseInt(size, 10) + 15) + 'px';
-			
-			/* BR: refactor 1 */
-			toolbar.resize(size);
-			/*
-			slider.value = slider.max = size;
-			frame.style.width = slider.value + "px";
 
-			// update the track label with the current value
-			trackLabel.textContent = slider.value + 'px';
-			*/
+			// resize the toolbar
+			toolbar.resize(size);
 			
 			return;
 		}
