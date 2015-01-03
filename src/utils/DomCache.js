@@ -72,6 +72,10 @@ define(function (require, exports, module) {
 				j,
 				len;
 
+			// clear the cache
+			frDOM = [];
+			cmDOM = [];
+			
 			for (i = 0; i < lines.length; i++) {
 				var tags = lines[i].match(/(?:<)(\w+)(?=\s|>)/g);
 
@@ -120,6 +124,11 @@ define(function (require, exports, module) {
 		};
 	}
 	
+	function rebuildCache() {
+		build();
+	}
+	
 	exports.getCache = getCache;
 	exports.clearCache = clearCache;
+	exports.rebuildCache = rebuildCache;
 });

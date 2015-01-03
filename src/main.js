@@ -608,6 +608,9 @@ define(function (require, exports, module) {
 		// Store a reference to the iframe document.
 		frameDOM = document.getElementById("frame").contentWindow.document;
 		
+		// refresh the dom cache
+		DomCache.rebuildCache();
+		
 		// handle the case if we are using preview url and it does not load correctly
 		if (!frameDOM.body.firstElementChild) {
 			
