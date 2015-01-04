@@ -47,5 +47,13 @@ define({
 	DOCRELOAD_OK                    : "Yes",
 	DOCRELOAD_OK_HINT               : "Clicking will reload the preview pane",
 	DOCRELOAD_CANCEL                : "No",
-	DOCRELOAD_CANCEL_HINT           : "Clicking will leave the preview pane unchanged"
+	DOCRELOAD_CANCEL_HINT           : "Clicking will leave the preview pane unchanged",
+	
+	TOOLBAR_INSPECTLABEL			: "Inspect",
+	TOOLBAR_INSPECT_TITLE			: "Enable/Disable the Inspect feature",
+	TOOLBAR_LAYOUTLABEL				: "Layout",
+	TOOLBAR_HORZ_TITLE				: "Switch to Horizontal Layout",
+	TOOLBAR_VERT_TITLE				: "Switch to Vertical Layout",
+	TOOLBAR_REFRESH_TITLE			: "Reloads the preview pane",
+	TOOLBAR_ADD_TITLE				: "Adds a new media query"
 });
