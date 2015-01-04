@@ -26,7 +26,11 @@ THE SOFTWARE. */
 
 /**
  * InspectController.js Module
- * Responsible for managing the state and behaviour of the inspect feature
+ *
+ * Responsible for managing the state and behaviour of the inspect feature. It is dependant on 
+ * the page loaded in the iframe to match the page in the editor. If it is not in sync, then the 
+ * inspect feature will not work. User must 'refresh' the preview pane when switching documents 
+ * or click on the refresh button to get them in sync
  */
 
 define(function (require, exports, module) {
