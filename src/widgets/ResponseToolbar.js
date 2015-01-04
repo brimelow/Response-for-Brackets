@@ -42,6 +42,7 @@ define(function (require, exports, module) {
 	/*================ Load needed brackets modules ================*/
 
 	var EventDispatcher			= brackets.getModule("utils/EventDispatcher"),
+		CommandManager			= brackets.getModule("command/CommandManager"),
 		FileUtils				= brackets.getModule("file/FileUtils"),
 
 	/*================ Load custom modules ================*/
@@ -149,11 +150,7 @@ define(function (require, exports, module) {
 		var iframeEl = $('#response iframe');
 		iframeEl[0].contentWindow.document.location.reload(true);
 	}
-/*
-	function handleInspectBtnClick(e) {
-		
-	}
-*/
+
 	/*================  prototype functionality  ================*/
 
 	/**
@@ -167,14 +164,17 @@ define(function (require, exports, module) {
 		$('#addButt', this.$toolbar).on('click', $.proxy(handleAddQueryTrackClicked, this));
 		$('#response-refresh', this.$toolbar).on('click', handleRefreshBtnClick);
 		
-		//$inspectBtn = $('#inspectButton', this.$toolbar).on('click', $.proxy(handleInspectBtnClick, this));
+		$('#inspectButton', this.$toolbar)
+			.on('click', function(e) {
+				var command = CommandManager.execute(Strings.CMD_INSPECTMODE_ID);	
+		});
+
 		$track = $('#track', this.$toolbar);
 		$trackLabel = $('#track-label', this.$toolbar);
 		
 	}
 	
 	ResponseToolbar.prototype.$toolbar = null;
-	//ResponseToolbar.prototype.$inspectBtn = null;
 	
 	ResponseToolbar.prototype.setQueryWidth = function (width) {
 		

@@ -27,6 +27,13 @@
 /*global define */
 
 define({
+	"MENU_RESPONSE_ID"				: "responsive.cmd.mainmenu",
+	"CMD_RESPONSEMODE_ID"			: "responsive.cmd.launch",
+	"CMD_INSPECTMODE_ID"			: "responsive.cmd.inspect",
+	"CMD_HORZLAYOUT_ID"				: "responsive.cmd.horizontal",
+	"CMD_VERTLAYOUT_ID"				: "responsive.cmd.vertical",
+	"CMD_PREVIEWURL_ID"				: "responsive.cmd.livepreview",
+	
 	"MENU_MAIN"                     : "Response",
 	"SUBMENU_RESPSONSEMODE"         : "Responsive Mode",
 	"SUBMENU_INSPECTMODE"           : "Inspect Mode",

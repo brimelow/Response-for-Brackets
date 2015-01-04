@@ -64,6 +64,8 @@ define(function (require, exports, module) {
 		
 		if (document.querySelector('#response')) {
 
+			console.debug("building dom cache");
+			
 			var cm = EditorManager.getCurrentFullEditor()._codeMirror,
 				frameDOM = document.getElementById("frame").contentWindow.document,
 				lines = cm.getValue().split(/\n/),

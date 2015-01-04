@@ -67,7 +67,8 @@ define(function (require, exports, module) {
 		// First check that there isn't already a query for this width.
 		var query = _queries[width];
 		if (!query) {
-
+			console.debug("add query mark [width: " + width + "]");
+			
 			// Create a new Query object and add to master list
 			query = new Query(width, _widthSort.length);
 			_queries[width] = query;
@@ -111,7 +112,7 @@ define(function (require, exports, module) {
 	 */
 	function setCurrentQueryMark(queryMark) {
 		
-		console.debug("QueryManager - setting current query mark [cq: " + queryMark + "]");
+		console.debug("setting current query mark [cq: " + queryMark + "]");
 		_currentQuery = queryMark;
 
 		if (_currentQuery) {
@@ -131,7 +132,7 @@ define(function (require, exports, module) {
 	 */
 	function clearQueryMarks() {
 		
-		console.debug("QueryManager - clearing query marks");
+		console.debug("clearing query marks");
 		_queries = {};
 		_widthSort = [];
 		setCurrentQueryMark(null);
@@ -142,7 +143,7 @@ define(function (require, exports, module) {
 	 */
 	function parseMediaQueries(mediaQueryText, languageMode) {
 
-		console.debug("QueryManager - parsing media queries from file");
+		console.info("parsing media queries from text");
 
 		var i;
 

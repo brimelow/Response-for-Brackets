@@ -31,12 +31,6 @@ define(function (require, exports, module) {
 	/*====================  Define constants  =====================*/
 
 	var EXT_PREFIX				= "responsive",
-		MENU_RESPONSE_ID		= EXT_PREFIX + ".mainmenu",
-		CMD_RESPONSEMODE_ID		= EXT_PREFIX + ".cmd.launch",
-		CMD_INSPECTMODE_ID		= EXT_PREFIX + ".cmd.inspect",
-		CMD_HORZLAYOUT_ID		= EXT_PREFIX + ".cmd.horizontal",
-		CMD_VERTLAYOUT_ID		= EXT_PREFIX + ".cmd.vertical",
-		CMD_PREVIEWURL_ID		= EXT_PREFIX + ".cmd.livepreview",
 
 		// The 'constant' for vertical or horizontal mode.
 		VERTICAL = 0,
@@ -85,6 +79,9 @@ define(function (require, exports, module) {
 		Query					= require("query/Query").Query,
 		QueryManager			= require("query/QueryManager"),
 
+		// responsible for controlling the inspect feature
+		InspectController		= require("InspectController").InspectController,
+
 		// Load the nls string module for this plugin. 
 		Strings					= require("strings"),
 
@@ -95,6 +92,9 @@ define(function (require, exports, module) {
 	
 		// Reference to the ResponseToolbar in the preview pane
 		toolbar,
+		
+		// Reference to the InspectController
+		inspectController = new InspectController(),
 		
 		// Configure preferences for the extension
 		prefs = PreferencesManager.getExtensionPrefs(EXT_PREFIX),
@@ -127,25 +127,12 @@ define(function (require, exports, module) {
 		// Document object of iframe.
 		frameDOM,
 
-		// The inspect mode toggle button.
-		inspectButton,
-
-		// Div that provides the dark overlay in inspect mode.
-		highlight,
-
-		// Is the code currently animating.
-		isAnimating = false,
-
 		// TODO: should be removed from global scope
 		// Results returned from ResponseUtils.getAuthorCSSRules().
 		cssResults,
 
 		// A style block we will inject into the iframe.
 		style,
-
-		// TODO: should be removed from global scope
-		// The selected line of code in the main editor.
-		selected,
 
 		// The splitter that allows resizing of the split view.
 		splitter,
@@ -236,7 +223,7 @@ define(function (require, exports, module) {
 			workingMode = null;
 			
 			// check if we should be using the live preview url
-			var command = CommandManager.get(CMD_PREVIEWURL_ID);
+			var command = CommandManager.get(Strings.CMD_PREVIEWURL_ID);
 			if (command.getChecked()) {
 				if (ProjectManager.getBaseUrl()) {
 					previewPaneUrl = ProjectManager.getBaseUrl();
@@ -306,7 +293,7 @@ define(function (require, exports, module) {
 					iconLink.style.backgroundPosition = '0 -26px';
 					document.body.classList.add('responsive-mode');
 
-					var command = CommandManager.get(CMD_RESPONSEMODE_ID);
+					var command = CommandManager.get(Strings.CMD_RESPONSEMODE_ID);
 					command.setChecked(true);
 				})
 				.fail(function (error) {
@@ -370,12 +357,6 @@ define(function (require, exports, module) {
 		toolbar.on('queryWidthChanged', function(e, newVal) {
 			console.log("queryWidthChanged triggered: " + newVal);
 		});
-		
-		// Insert the fragment into the main DOM.
-		//doc.body.insertBefore(response, doc.body.firstChild);
-		
-		// Get references to all the main UI elements that we need.
-		inspectButton = document.getElementById("inspectButton");
 
 		// add click handler for vertical/horizontal layout buttons
 		var horzLayoutBtn = document.getElementById("horzButt");
@@ -420,10 +401,8 @@ define(function (require, exports, module) {
 		// instead of only on the first time it is loaded.
 		$(frame).on("load", handleFrameLoaded);
 		
-		frame.addEventListener('mouseout', handleFrameMouseOut, false);
 		window.addEventListener('resize', handleWindowResize, false);
 		$(response).on('panelResizeUpdate', handlePanelResize);
-		inspectButton.addEventListener('click', handleInspectToggle, false);
 	}
 
 	/** 
@@ -450,13 +429,13 @@ define(function (require, exports, module) {
 
 		// check if the layout state has changed. making sure not clicking on an already
 		// active menu
-		var horzCmd = CommandManager.get(CMD_HORZLAYOUT_ID);
+		var horzCmd = CommandManager.get(Strings.CMD_HORZLAYOUT_ID);
 		if (btnClicked || !horzCmd.getChecked()) {
 			
 			// update menu state if not already correct
 			horzCmd.setChecked(true);
 
-			var vertCmd = CommandManager.get(CMD_VERTLAYOUT_ID);
+			var vertCmd = CommandManager.get(Strings.CMD_VERTLAYOUT_ID);
 			vertCmd.setChecked(false);
 		
 			// set the mode. would like to get rid of this variable and use menu state instead
@@ -481,13 +460,13 @@ define(function (require, exports, module) {
 
 		// check if the layout state has changed. making sure not clicking on an already
 		// active menu
-		var vertCmd = CommandManager.get(CMD_VERTLAYOUT_ID);
+		var vertCmd = CommandManager.get(Strings.CMD_VERTLAYOUT_ID);
 		if (btnClicked || !vertCmd.getChecked()) {
 			
 			// update menu state if not already correct
 			vertCmd.setChecked(true);
 
-			var horzCmd = CommandManager.get(CMD_HORZLAYOUT_ID);
+			var horzCmd = CommandManager.get(Strings.CMD_HORZLAYOUT_ID);
 			horzCmd.setChecked(false);
 		
 			// set the mode. would like to get rid of this variable and use menu state instead
@@ -586,7 +565,7 @@ define(function (require, exports, module) {
 		}
 
 		// update the inspect menu state
-		var command = CommandManager.get(CMD_PREVIEWURL_ID);
+		var command = CommandManager.get(Strings.CMD_PREVIEWURL_ID);
 		command.setChecked(!command.getChecked());
 	}
 	
@@ -633,23 +612,10 @@ define(function (require, exports, module) {
 		style = frameDOM.head.appendChild(document.createElement('style'));
 		style = style.appendChild(document.createTextNode(""));
 
-		// Create the highlight effect div that we use when in inspect mode.
-		highlight = document.createElement("div");
-		highlight.id = "highlight";
-		highlight.style.cssText = "outline: rgba(0, 0, 0, 0.617188) solid 2000px;display:none;-webkit-transition: top 0.2s, left 0.2s, width 0.2s, height 0.2s; -webkit-transition-timing-func: easeOut; position:absolute; width:354px; height:384px; background-color:transparent; top:1420px; z-index:0; left:713px; margin:0; padding:0;pointer-events:none;";
-
-		// Add it to the frame body
-		frameDOM.body.appendChild(highlight);
-
-		// Listen for click events on the frame's body
-		frameDOM.body.addEventListener('click', handleFrameClick, false);
-
-		// update the inspect mode based on the menu state
-		var command = CommandManager.get(CMD_INSPECTMODE_ID);
-		toggleInspectMode(command.getChecked());
-
+		inspectController.open();
+		
 		// update the layout based on vert/horz mode
-		var horzCmd = CommandManager.get(CMD_HORZLAYOUT_ID);
+		var horzCmd = CommandManager.get(Strings.CMD_HORZLAYOUT_ID);
 		if (horzCmd.getChecked()) {
 			showHorizontalLayout();
 		} else {
@@ -659,17 +625,6 @@ define(function (require, exports, module) {
 		// inject frame with media queries as inline style element
 		toolbar.refreshQueryMarkTracks();		
 		refreshIFrameMediaQueries(false);
-	}
-	
-	/** 
-	 *  Called when user mouses off the iframe.
-	 */
-	function handleFrameMouseOut() {
-
-		// Hide the highlight if the inline editor isn't open. Just a UI tweak.
-		if (highlight) {
-			highlight.style.display = 'none';
-		}
 	}
 
 	/** 
@@ -724,225 +679,6 @@ define(function (require, exports, module) {
 		mainView.style.height = (window.innerHeight - size - 16) + 'px';
 	}
 
-
-	/** 
-	 *  Called when the user clicks on the inspect mode toggle button.
-	 */
-	function handleInspectToggle(e) {
-
-		if (e) {
-			e.stopImmediatePropagation();
-		}
-
-		// update the inspect menu state
-		var command = CommandManager.get(CMD_INSPECTMODE_ID);
-		command.setChecked(!command.getChecked());
-		
-		toggleInspectMode(command.getChecked());
-	}
-	
-	function toggleInspectMode(enabled) {
-		
-		// update the state of the inspect button
-		var inspectBtn = document.getElementById("inspectButton");
-		if (inspectBtn) {
-			
-			// get code mirror from main editor
-			var cm = EditorManager.getCurrentFullEditor()._codeMirror;
-			
-			// change the button visuals and remove any highlighted code lines
-			// and the highlight div.
-			
-			if (enabled) {
-
-				// if menu state is now checked, means it was just turned on. 
-				inspectBtn.classList.add("inspectButtonOn");
-				if (highlight) {
-					highlight.style.display = 'block';
-				}
-				selected = null;
-				frameDOM.body.addEventListener('mouseover', handleInspectHover, false);
-				cm.display.wrapper.addEventListener('click', handleCodeClick, false);
-				
-			} else {
-
-				// If menu state is no longer checked, then it was just turned off
-				inspectBtn.classList.remove("inspectButtonOn");
-				if (selected) {
-					cm.removeLineClass(selected.line, "background");
-				}
-				if (highlight) {
-					highlight.style.display = 'none';
-				}
-				cm.display.wrapper.removeEventListener('click', handleCodeClick);
-				frameDOM.body.removeEventListener('mouseover', handleInspectHover);
-				return;
-				
-			}
-		}
-	}
-
-	/** 
-	 *  Called when the user clicks on a line of code in the editor while in inspect mode.
-	 */
-	function handleCodeClick(e) {
-
-		e.stopImmediatePropagation();
-
-		// Ignore if the inline editor is open.
-		if (isAnimating) {
-			return;
-		}
-
-		// get code mirror from main editor
-		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
-
-		// Get current cursor location.
-		var cur = cm.getCursor(),
-			line = cur.line;
-
-		// Get the HTML tag name that the cursor is currently on.
-		var tag = cm.getTokenAt(cur).state.htmlState.tagName;
-		
-		var ind;
-
-		// If there is already a selected line with a highlight, remove the highlight.
-		if (selected) {
-			cm.removeLineClass(selected.line, "background");
-		}
-
-		var domCache = DomCache.getCache();
-
-		// Check to see if the editor even contains any tags of this type.
-		if (domCache.codeDom[tag]) {
-			
-			// Find out index position of the tag amongst all of the existing tags of this type.   
-			ind = domCache.codeDom[tag].indexOf(line);
-			
-			// Now find the corrensponding DOM element using the position index.
-			// IMPORTANT: If the user adds or changes lines in the HTML editor you will
-			// need to rebuild the mapping cache. I never wrote the code for that.
-			var el = domCache.frameDom[tag][ind];
-
-			// Set the selected line object using the line number and DOM element.
-			selected = {el: el, line: line};
-			
-			// If we found an element and the inline editor isn't open, then proceed.
-			if (el) {
-				
-				// Boolean that tells you if the scroll position of the iframe is currently being animated.
-				isAnimating = true;
-
-				// Here we take the color of the current query and use it highlight the code line.
-				var cq = QueryManager.getCurrentQueryMark();
-				if (cq) {
-					var cl = "l" + cq.colorIndex.toString();
-					cm.addLineClass(line, "background", cl);
-					
-				} else {
-					// If there is no current query, just make the highlight the blue color.
-					cm.addLineClass(line, "background", "l0");
-				}
-
-				// The correct DOM element is now animated into view in the iframe using the
-				// TweenMax library. This just animates the scrollTop property of the body.
-				TweenMax.to(frameDOM.body, 0.8, {
-					scrollTop: (el.offsetTop - frame.offsetHeight * 0.5) + el.offsetHeight * 0.5,
-					ease: 'Expo.easeOut',
-					onComplete: function () {
-						isAnimating = false;
-					}
-				});
-
-				// Adjust the highlight to show the selected element.
-				positionHighlight(el);
-			}
-		}
-
-
-	}
-
-	/** 
-	 *  Called when the user hovers over an element in the iframe while in inspect mode.
-	 */
-	function handleInspectHover(e) {
-
-		e.stopImmediatePropagation();
-
-		// position the highlight.
-		positionHighlight(e.target);
-	}
-
-	/** 
-	 *  Called when the user clicks on an element in the iframe while in inspect mode.
-	 */
-	function handleFrameClick(e) {
-
-		e.stopImmediatePropagation();
-		e.preventDefault();
-
-		// If inline editor is open, say goodbye.
-		if (!inspectButton.classList.contains("inspectButtonOn")) {
-			return;
-		}
-
-		// get code mirror from main editor
-		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
-
-		var target = e.target;
-
-		// If there is already a selected line of code, remove the background highlight.
-		if (selected) {
-			cm.removeLineClass(selected.line, "background");
-		}
-
-		var tag = target.tagName.toLowerCase();
-		var domCache = DomCache.getCache();
-
-		// Find out the position index of the this tag in the cache.
-		var ind = domCache.frameDom[tag].indexOf(target);
-
-		// We'll use the codemirror scroller element to animate our code into view.
-		var scroller = cm.display.scroller;
-		window.scroller = scroller;
-		var editorHeight = (scroller.offsetHeight > 0) ? scroller.offsetHeight : parseInt(scroller.style.height, 10);
-		
-		// Find out the correct line number from the cache.
-		var line = domCache.codeDom[tag][ind];
-		
-		// Set this as the new selected line.
-		selected = {el: target, line: line};
-		
-		// If there is a current query, use its color to highlight the code line.
-		var cq = QueryManager.getCurrentQueryMark();
-		if (cq) {
-			var cl = "l" + cq.colorIndex.toString();
-			cm.addLineClass(line, "background", cl);
-			
-		} else {
-			// If there's not, just use the blue color.
-			cm.addLineClass(line, "background", "l0");
-		}
-		
-		// Calculate the correct scrollTop value that will make the line be in the center.
-		var documentCurPos = cm.charCoords({line: line, ch: 0}, "local").bottom;
-		var pos = documentCurPos - editorHeight * 0.5;
-
-		var info = cm.getScrollInfo();
-		pos = Math.min(Math.max(pos, 0), (info.height - info.clientHeight));
-		
-		// Use TweenMax to animate our code to the correct position. When the animation is
-		// done we position the cursor on the that line inside the correct tag.
-		TweenMax.to(scroller, 0.5, {
-			scrollTop: pos,
-			roundProps: 'scrollTop',
-			ease: 'Expo.easeOut',
-			onComplete: function () {
-				cm.setCursor(line, cm.getLine(line).indexOf('<') + 1);
-			}
-		});
-	}
-
 	/** 
 	 *  Called when the user chooses a CSS selector from the select box
 	 *  that appears in the inline editor.
@@ -970,43 +706,6 @@ define(function (require, exports, module) {
 			inlineCm.removeLineClass(existingEdits[i].line, "background");
 			inlineCm.addLineClass(existingEdits[i].line, "background", "pq" + existingEdits[i].query.colorIndex);
 		}
-	}
-
-	/** 
-	 *  Function that positions the highlight over a certain DOM element.
-	 *  @param: a DOM element you want to highlight.
-	 *  The animation of the this highlight is all done using CSS transitions.
-	 */
-	function positionHighlight(el) {
-		
-		// If the element passed is bunk or were not in inspect mode, just leave. 
-		if (!el || !inspectButton.classList.contains("inspectButtonOn")) {
-			return;
-		}
-
-		var x = 0;
-		var y = 0;
-
-		// Create a temporary reference to the element.
-		var tempEl = el;
-
-		// This loop walks up the DOM tree and calculates the correct left
-		// and top properties taking into account the element's ancestors.
-		while (tempEl) {
-			x += tempEl.offsetLeft;
-			y += tempEl.offsetTop;
-			tempEl = tempEl.offsetParent;
-		}
-
-		// Turn on the highlight and position the top and left.
-		highlight.style.display = 'block';
-		highlight.style.left = x + 'px';
-		highlight.style.top = y + 'px';
-
-		// Set the width and height based on either offset values or style properties.
-		highlight.style.width = (el.offsetWidth > 0) ? el.offsetWidth + 'px' : el.style.width;
-		highlight.style.height = (el.offsetHeight > 0) ? el.offsetHeight + 'px' : el.style.height;
-		
 	}
 
 	/** 
@@ -1057,12 +756,9 @@ define(function (require, exports, module) {
 		
 		// get code mirror from main editor
 		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
-
+		
 		// If there isn't a media query, show the message that a query has not been selected
 		if (!QueryManager.getCurrentQueryMark()) {
-			if (selected) {
-				cm.removeLineClass(selected.line, "background");
-			}
 			hostEditor.displayErrorMessageAtCursor("There have not been any media queries defined.");
 			return $.Deferred().promise();
 		}
@@ -1070,11 +766,6 @@ define(function (require, exports, module) {
 		// We are now going to write the string the temporary CSS file so we can display
 		// it in the inline editor. A jQuery deffered object is used for async.
 		var result = new $.Deferred();
-				
-		// If there is a selected line of code in the editor, remove the highlight.
-		if (selected) {
-			cm.removeLineClass(selected.line, "background");
-		}
 
 		// get the tag information for the currently cursor position in the HTML
 		// document. If could not be determined then return so message is displayed to user
@@ -1266,7 +957,9 @@ define(function (require, exports, module) {
 		}
 
 		// Adjust the highlight according to the new CSS value.
-		positionHighlight(inlineElement);
+		if (inspectController) {
+			inspectController.positionDomHighlight(inlineElement);
+		}
 	}
 
 	/** 
@@ -1281,7 +974,9 @@ define(function (require, exports, module) {
 		var inlineWidgets = hostEditor.getInlineWidgets();
 
 		// Update the highlight.
-		positionHighlight(inlineElement);
+		if (inspectController) {
+			inspectController.positionDomHighlight(inlineElement);
+		}
 
 		var cq = QueryManager.getCurrentQueryMark(),
 			i,
@@ -1382,16 +1077,18 @@ define(function (require, exports, module) {
 		// close docReloadBar if it is still open
 		docReloadBar.close();
 
-		// ensure inspect mode is off so handlers are removed 
-		// but don't update inspect mode menu item
-		toggleInspectMode(false);
-
 		// deselect the current query and queries
 		QueryManager.clearQueryMarks();
 		
 		// remove the #response view
 		var element = document.getElementById("response");
 		if (element) {
+
+			// ensure inspect mode is off so handlers are removed 
+			// but don't update inspect mode menu item
+			inspectController.close();
+
+			// remove the response dom element
 			element.parentNode.removeChild(element);
 
 			// Manually fire the window resize event to position everything correctly.
@@ -1407,37 +1104,37 @@ define(function (require, exports, module) {
 		iconLink.style.backgroundPosition = '0 0';
 		document.body.classList.remove('responsive-mode');
 
-		var command = CommandManager.get(CMD_RESPONSEMODE_ID);
+		var command = CommandManager.get(Strings.CMD_RESPONSEMODE_ID);
 		command.setChecked(false);
 	}
 	
 	function buildMenuSystem() {
 		
 		// Build commands and menu system
-		var customMenu = Menus.addMenu(Strings.MENU_MAIN, MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
+		var customMenu = Menus.addMenu(Strings.MENU_MAIN, Strings.MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
 
-		CommandManager.register(Strings.SUBMENU_RESPSONSEMODE, CMD_RESPONSEMODE_ID, Response);
-		customMenu.addMenuItem(CMD_RESPONSEMODE_ID, "Shift-Alt-R");
+		CommandManager.register(Strings.SUBMENU_RESPSONSEMODE, Strings.CMD_RESPONSEMODE_ID, Response);
+		customMenu.addMenuItem(Strings.CMD_RESPONSEMODE_ID, "Shift-Alt-R");
 
 		// Toggle inspect mode.
-		CommandManager.register(Strings.SUBMENU_INSPECTMODE, CMD_INSPECTMODE_ID, handleInspectToggle);
-		customMenu.addMenuItem(CMD_INSPECTMODE_ID, "Shift-Alt-I");
+		CommandManager.register(Strings.SUBMENU_INSPECTMODE, Strings.CMD_INSPECTMODE_ID, inspectController.handleInspectToggle);
+		customMenu.addMenuItem(Strings.CMD_INSPECTMODE_ID, "Shift-Alt-I");
 
 		customMenu.addMenuDivider();
 
 		// add menu items to indicate if horizontal or vertical layout should be used for the preview
 		// pane
-		CommandManager.register(Strings.SUBMENU_HORZLAYOUT, CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
-		customMenu.addMenuItem(CMD_HORZLAYOUT_ID, "Shift-Alt-H");
+		CommandManager.register(Strings.SUBMENU_HORZLAYOUT, Strings.CMD_HORZLAYOUT_ID, handleHorzLayoutToggle);
+		customMenu.addMenuItem(Strings.CMD_HORZLAYOUT_ID, "Shift-Alt-H");
 
-		CommandManager.register(Strings.SUBMENU_VERTLAYOUT, CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
-		customMenu.addMenuItem(CMD_VERTLAYOUT_ID, "Shift-Alt-V");
+		CommandManager.register(Strings.SUBMENU_VERTLAYOUT, Strings.CMD_VERTLAYOUT_ID, handleVertLayoutToggle);
+		customMenu.addMenuItem(Strings.CMD_VERTLAYOUT_ID, "Shift-Alt-V");
 
 		customMenu.addMenuDivider();
 
 		// Add menu item to indicate if live preview url setting should be used for preview pane
-		CommandManager.register(Strings.SUBMENU_PREVIEWURL, CMD_PREVIEWURL_ID, handleLivePreviewToggle);
-		customMenu.addMenuItem(CMD_PREVIEWURL_ID, "Shift-Alt-U");
+		CommandManager.register(Strings.SUBMENU_PREVIEWURL, Strings.CMD_PREVIEWURL_ID, handleLivePreviewToggle);
+		customMenu.addMenuItem(Strings.CMD_PREVIEWURL_ID, "Shift-Alt-U");
 	}
 	
 
@@ -1509,7 +1206,7 @@ define(function (require, exports, module) {
 
 	prefs.definePreference("useLivePreviewUrl", "boolean", false).on("change", function () {
 
-		var command = CommandManager.get(CMD_PREVIEWURL_ID);
+		var command = CommandManager.get(Strings.CMD_PREVIEWURL_ID);
 
 		// update the live preview url menu state
 		if (prefs.get("useLivePreviewUrl")) {
