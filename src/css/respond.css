@@ -180,6 +180,19 @@ input[type='range']::-webkit-slider-thumb {
 	box-shadow: inset 0px -1px 0px hsl(0, 0%, 24%), inset 0px 1px 6px hsl(0, 0%, 8%) !important;
 }
 
+
+#layoutText {
+	color: hsla(0, 100%, 100%, 0.81);
+	text-shadow: 2px 2px 0px hsla(0, 0%, 0%, 0.3);
+	font-size: 12px;
+	letter-spacing: -1px;
+	text-transform: uppercase;
+	font-weight: bold;
+	position: absolute;
+	top: 10px;
+	left: 175px;
+}
+
 #horzButt {
 	position: absolute;
 	background-image: url('../images/horzIcon.png'), -webkit-linear-gradient(top, hsl(180, 2%, 29%) 0%, hsl(180, 2%, 22%) 100%);
@@ -273,103 +286,6 @@ input[type='range']::-webkit-slider-thumb {
 	width: 100%;
 	z-index: 18;
 	cursor: row-resize;
-}
-
-
-/*
-.clear {
-	clear:both;
-	display:block;
-	overflow:hidden;
-	visibility:hidden;
-	width:0;
-	height:0;
-}
-
-
-.html2 {
-	width:0px;
-}
-*/
-
-/* tweeny tweaks */
-
-.tick {
-	width : 1px;
-	background-color: #FF0000;
-	height: 30px;
-	position: absolute;
-}
-
-/*
-#rightCover {
-	position: absolute;
-	background-color: #000;
-	width: 0px;
-	height: 0px;
-}
-#toolbar {
-	width : 100%;
-	height : 100px;
-	position: absolute;
-	left: 0px;
-	top: 0px;
-	background-color: #000000;
-	opacity: 0.0;
-}
-*/
-
-#layoutText {
-	color: hsla(0, 100%, 100%, 0.81);
-	text-shadow: 2px 2px 0px hsla(0, 0%, 0%, 0.3);
-	font-size: 12px;
-	letter-spacing: -1px;
-	text-transform: uppercase;
-	font-weight: bold;
-	position: absolute;
-	top: 10px;
-	left: 175px;
-}
-.caret {
-	display: none !important;
-}
-
-.presetPos {
-	position: absolute;
-	background-image: url('../images/presetsIcon.png'), -webkit-linear-gradient(top, hsl(180, 2%, 29%) 0%, hsl(180, 2%, 22%) 100%);
-	margin: 0;
-	right: 55px;
-	top: 4px;
-	width: 76px;
-	height: 20px;
-	background-repeat: no-repeat;
-	background-position: 66px 6.7px, 0,0;
-	background-size: 9px, 87px;
-	padding: 3px 0px 2px 10px;
-	text-align: left;
-	vertical-align: middle;
-	color: hsla(0, 100%, 100%, 0.91);
-	font-weight: bold;
-	font-size: 12px;
-	border-radius: 0px;
-	letter-spacing: -1px;
-	text-shadow: 2px 2px 0px hsla(0, 0%, 0%, 0.3);
-	border: 1px solid hsl(0, 0%, 9%);
-	box-shadow: inset 0px 1px 0px hsl(0, 0%, 37%);
-}
-
-.presetPos:hover {
-	background-image: url('../images/presetsIcon.png'),
-		-webkit-linear-gradient(top, #393C3C 0%, #282A2A 100%);
-	border: 1px solid #171717;
-	box-shadow: inset 0px 1px 0px #4D4D4D;
-}
-
-.presetPos:active {
-	background-image: url('../images/presetsIcon.png'), -webkit-linear-gradient(bottom, hsl(180, 3%, 20%) 0%, hsl(180, 2%, 17%) 100%);
-	background-position-y: 6.7px, -6px;
-	border: 1px solid hsl(0, 0%, 9%);
-	box-shadow: 0px 1px 0px hsl(0, 0%, 30%), inset 0px 1px 6px hsl(0, 0%, 8%);
 }
 
 /* inline css editor css rules */
@@ -501,11 +417,101 @@ input[type='range']::-webkit-slider-thumb {
 	pointer-events: none;
 }
 
+
 .resizing-container {
 	z-index: 9999999999;
 	background: transparent;
 }
 
+/* tweeny tweaks */
+
+.tick {
+	width : 1px;
+	background-color: #FF0000;
+	height: 30px;
+	position: absolute;
+}
+
+
+
+/*
+.clear {
+	clear:both;
+	display:block;
+	overflow:hidden;
+	visibility:hidden;
+	width:0;
+	height:0;
+}
+
+
+.html2 {
+	width:0px;
+}
+*/
+
+/*
+#rightCover {
+	position: absolute;
+	background-color: #000;
+	width: 0px;
+	height: 0px;
+}
+#toolbar {
+	width : 100%;
+	height : 100px;
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	background-color: #000000;
+	opacity: 0.0;
+}
+
+.caret {
+	display: none !important;
+}
+
+.presetPos {
+	position: absolute;
+	background-image: url('../images/presetsIcon.png'), -webkit-linear-gradient(top, hsl(180, 2%, 29%) 0%, hsl(180, 2%, 22%) 100%);
+	margin: 0;
+	right: 55px;
+	top: 4px;
+	width: 76px;
+	height: 20px;
+	background-repeat: no-repeat;
+	background-position: 66px 6.7px, 0,0;
+	background-size: 9px, 87px;
+	padding: 3px 0px 2px 10px;
+	text-align: left;
+	vertical-align: middle;
+	color: hsla(0, 100%, 100%, 0.91);
+	font-weight: bold;
+	font-size: 12px;
+	border-radius: 0px;
+	letter-spacing: -1px;
+	text-shadow: 2px 2px 0px hsla(0, 0%, 0%, 0.3);
+	border: 1px solid hsl(0, 0%, 9%);
+	box-shadow: inset 0px 1px 0px hsl(0, 0%, 37%);
+}
+
+.presetPos:hover {
+	background-image: url('../images/presetsIcon.png'),
+		-webkit-linear-gradient(top, #393C3C 0%, #282A2A 100%);
+	border: 1px solid #171717;
+	box-shadow: inset 0px 1px 0px #4D4D4D;
+}
+
+.presetPos:active {
+	background-image: url('../images/presetsIcon.png'), -webkit-linear-gradient(bottom, hsl(180, 3%, 20%) 0%, hsl(180, 2%, 17%) 100%);
+	background-position-y: 6.7px, -6px;
+	border: 1px solid hsl(0, 0%, 9%);
+	box-shadow: 0px 1px 0px hsl(0, 0%, 30%), inset 0px 1px 6px hsl(0, 0%, 8%);
+}
+*/
+
+/*
 #docreload-ok {
 	margin-left: 10px;
 }
+*/
