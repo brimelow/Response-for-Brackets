@@ -138,83 +138,311 @@ define(function (require, exports, module) {
 		splitter,
 
 		// indicates whether we are currently working with livePreviewUrl or local files
-		workingMode;
+		workingMode,
+
+		// reference to the left hand toolbar icon to open/close response mode
+		iconLink;
 	
 	/*================  Begin function definitions  ================*/
 
-	/** 
-	 *  Main entry point of extension that is called when responsive mode is launched.
+
+	/**
+	 * Responsible for closing any open inline editors.
+	 *
+	 * Note, we are making use of Document._masterEditor in order to get the editor
+	 * associated to the document. This may not be 'legel' but seems to be the only
+	 * way to get the editor associated to a document
 	 */
-	function Response(e) {
+	function closeOpenInlineEditors() {
 
-		if (e) { e.stopImmediatePropagation(); }
-		
-		var iconLink = document.getElementById('response-icon');
+		var i, len;
 
-		// Prevent creating UI more than once
-		if (document.querySelector('#response')) {
+		try {
+			var openDocs = DocumentManager.getAllOpenDocuments();
+			for (i = 0; i < openDocs.length; i++) {
 
-			// close any open inline editors
-			_closeOpenInlineEditors();
+				var editor = openDocs[i]._masterEditor;
 
-			closeResponseMode();
+				if (editor !== null) {
+					var inlineWidgets = editor.getInlineWidgets();
 
-			return;
+					// when closing widgets, the array is being modified so need to 
+					// iterate by modifying the length value
+					len = inlineWidgets.length;
+					while (len--) {
+						EditorManager.closeInlineWidget(editor, inlineWidgets[len]);
+					}
+				}
+			}
+		} catch (err) {
+			console.error("unexpected error occurred trying to close inline widgets", err);
+		}
+	}
 
-		} else {
+	/** 
+	 *  Function that goes through all of the media query data and writes it to the 
+	 *  style block in the iframe and also to the media-queries.css file.
+	 */
+	function refreshIFrameMediaQueries(writeToFile) {
 
-			// Ensure we can create a preview pane. Either the currently main
-			// document needs to be an HTML doc or use the Live Preview URL if
-			// it has been set
-			var previewPaneUrl = _getPreviewPaneUrl();
-			if (!previewPaneUrl) {
-				return;
+		// only update if the reference to the style element has been set
+		if (style) {
+			// Defining some vars we'll need.
+			var s = "",
+				sortedQueries = QueryManager.getSortedQueryMarks(),
+				i = sortedQueries.length,
+				query,
+				sel,
+				k;
+
+			// Loop through the queries and write them to the output string.
+			while (i--) {
+
+				// We need to sort the queries so the larger widths are written first
+				// in order for inheritance to work properly.
+				query = sortedQueries[i];
+
+				s += '@media only screen and (max-width:';
+				s += query.width;
+				s += 'px) {\n\n';
+				for (sel in query.selectors) {
+					if (query.selectors.hasOwnProperty(sel)) {
+						s += '\t' + sel + ' {\n';
+						for (k in query.selectors[sel].rules) {
+							if (query.selectors[sel].rules.hasOwnProperty(k)) {
+								s += '\t\t' + k + ": " + query.selectors[sel].rules[k] + '\n';
+							}
+						}
+						s += '\t}\n\n';
+					}
+				}
+				s += '}\n';
 			}
 
-			projectRoot = ProjectManager.getProjectRoot().fullPath;
-			mainView = document.querySelector('.main-view');
-			
-			var mediaQueryFilePath = projectRoot + prefs.get("mediaQueryFile");
-			
-			// Check if the media-queries css file exists. If it doesn't, then create a
-			// new file. If it does, then reload and refresh UI
-			FileSystem.resolve(mediaQueryFilePath, function (result, file, fileSystemStats) {
-				console.log("resolved path to media query file");
-				
-				// create an empty file as one doesn't exist yet                
-				if ('NotFound' === result) {
-					console.log("creating media query file: " + prefs.get("mediaQueryFile"));
-					
-					var mediaQueryFile = FileSystem.getFileForPath(mediaQueryFilePath);
-					
-					// create the parent dir if it doesn't yet exist. currently only supports a single node
-					console.log("creating parent dir if it doesn't exist");
-					var parentDir = FileSystem.getDirectoryForPath(mediaQueryFile.parentPath);
-					parentDir.exists(function (error, exists) {
-						if (!exists) {
-							parentDir.create();
-						}
-					});
-				
-					console.log("writing to media query file to force create");
-					mediaQueryFile.write('', function (error, stats) {
-						console.log("error: " + error + "; stats: " + stats);
-						if (error === null) {
-							_getMediaQueryDocument(previewPaneUrl);
-						}
-					});
-					console.log("write completed");
-				
-				} else {
-					_getMediaQueryDocument(previewPaneUrl);
-				}
-				
-				
-			});
+			// Set the style block in the iframe using the output string. 
+			style.textContent = s;
+
+			// Write the new text to the media-queries.css file.
+			if (writeToFile === undefined || writeToFile) {
+				FileUtils.writeText(mediaQueryDoc.file, s);
+			}
 		}
+	}
+
+	function showHorizontalLayout() {
+		
+		// Update only if the response element exists
+		if (document.querySelector('#response')) {
+
+			// update the global class to indicate layout
+			document.body.classList.remove('response-vert');
+			document.body.classList.add('response-horz');
+
+			// clear any inline css rules on div#response and div.main-view
+			response.style.cssText = null;
+			mainView.style.cssText = null;
+
+			// Remove the current panel splitter
+			if (splitter !== undefined) {
+				response.removeChild(splitter);
+			}
+
+			// Create a new splitter for this mode
+			var cm = EditorManager.getCurrentFullEditor()._codeMirror;
+			Splitter.makeResizable(response, 'horz', 344, cm);
+			splitter = document.querySelector('.horz-splitter');
+			splitter.style.right = '-16px';
+			
+			var w = window.innerWidth;
+
+			// Change to a left/right layout
+			response.style.width = (w * 0.5) + 'px';
+			mainView.style.left = (response.offsetWidth + 15) + 'px';
+			mainView.style.height = '100%';
+			
+			toolbar.resize(response.offsetWidth);
+			
+			// refresh layout
+			WorkspaceManager.recomputeLayout(true);
+		}
+	}
+
+	/** 
+	 *  Called when the user clicks on one of the editor layout
+	 *  toggle buttons (either vertical or horizontal)
+	 *
+	 * note: the buttons are not named correctly. the 'horzButt' is actually 
+	 * when the user is in vertical layout (up and down) while 'vertButt' is
+	 * when the user is in horizontal layout (left to right). the code should
+	 * be updated at some point to remove this confusion
+	 */
+
+	function handleHorzLayoutToggle(e) {
+
+		var btnClicked = false;
+		
+		// if e is defined then it means the click came from the button in the preview pane. 
+		// need to check if it is not already 'active' and signal it was clicked if it is 
+		// not active
+		if (e) {
+			e.stopImmediatePropagation();
+			btnClicked = !document.body.classList.contains('response-horz');
+		}
+
+		// check if the layout state has changed. making sure not clicking on an already
+		// active menu
+		var horzCmd = CommandManager.get(Strings.CMD_HORZLAYOUT_ID);
+		if (btnClicked || !horzCmd.getChecked()) {
+			
+			// update menu state if not already correct
+			horzCmd.setChecked(true);
+
+			var vertCmd = CommandManager.get(Strings.CMD_VERTLAYOUT_ID);
+			vertCmd.setChecked(false);
+		
+			// set the mode. would like to get rid of this variable and use menu state instead
+			mode = HORIZONTAL;
+			
+			// update the layout if the preview pane is visible
+			showHorizontalLayout();
+		}
+	}
+
+	function showVerticalLayout() {
+		
+		// Update only if the response element exists
+		if (document.querySelector('#response')) {
+
+			// update the global class to indicate layout
+			document.body.classList.remove('response-horz');
+			document.body.classList.add('response-vert');
+
+			// clear any inline css rules on div#response and div.main-view
+			response.style.cssText = null;
+			mainView.style.cssText = null;
+
+			// Remove the current panel splitter
+			if (splitter !== undefined) {
+				response.removeChild(splitter);
+			}
+
+			// Create a new splitter for this mode
+			var cm = EditorManager.getCurrentFullEditor()._codeMirror;
+			Splitter.makeResizable(response, 'vert', 100, cm);
+
+			splitter = document.querySelector('.vert-splitter');
+
+			var h = window.innerHeight;
+
+			// Change to a top/bottom layout
+			response.style.height = (h * 0.6) + 'px';
+			mainView.style.height = (h - response.offsetHeight - 16) + 'px';
+			
+			toolbar.resize(response.offsetWidth);
+			
+			// refresh layout
+			WorkspaceManager.recomputeLayout(true);
+		}
+	}
+
+	function handleVertLayoutToggle(e) {
+
+		var btnClicked = false;
+		
+		// if e is defined then it means the click came from the button in the preview pane. 
+		// need to check if it is not already 'active' and signal it was clicked if it is 
+		// not active
+		if (e) {
+			e.stopImmediatePropagation();
+			btnClicked = !document.body.classList.contains('response-vert');
+		}
+
+		// check if the layout state has changed. making sure not clicking on an already
+		// active menu
+		var vertCmd = CommandManager.get(Strings.CMD_VERTLAYOUT_ID);
+		if (btnClicked || !vertCmd.getChecked()) {
+			
+			// update menu state if not already correct
+			vertCmd.setChecked(true);
+
+			var horzCmd = CommandManager.get(Strings.CMD_HORZLAYOUT_ID);
+			horzCmd.setChecked(false);
+		
+			// set the mode. would like to get rid of this variable and use menu state instead
+			mode = VERTICAL;
+			
+			// update the layout if the preview pane is visible
+			showVerticalLayout();
+		}
+	}
+
+	/** 
+	 *  Builds the UI for responsive mode. Lots of DOM injecting here.
+	 */
+	function createResponseUI(previewPaneUrl) {
+
+		var doc = document;
+		doc.body.backgroundColor = "#303030";
+
+		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
+
+		// create response main container and add to body
+		response = $('<div id="response" class="quiet-scrollbars"/>')[0];
+		doc.body.insertBefore(response, doc.body.firstChild);
+
+		// create toolbar and add to response div element
+		toolbar = new ResponseToolbar();
+		toolbar.resize(response.offsetWidth, true);
+		toolbar.$toolbar.appendTo(response);
+
+		toolbar.on('queryWidthChanged', function (e, newVal) {
+			console.log("queryWidthChanged triggered: " + newVal);
+		});
+
+		// add click handler for vertical/horizontal layout buttons
+		var horzLayoutBtn = document.getElementById("horzButt");
+		horzLayoutBtn.addEventListener('click', handleHorzLayoutToggle, false);
+		var vertLayoutBtn = document.getElementById("vertButt");
+		vertLayoutBtn.addEventListener('click', handleVertLayoutToggle, false);
+
+		// Here I add the live preview iframe wrapped in a div.
+		var domArray = [{tag: "div", attr: {id: "fwrap"}, parent: -1},
+					{tag: "iframe", attr: {id: "frame", class: "quiet-scrollbars", name: "frame", src: previewPaneUrl}, parent: 0}];
+
+		var frag = ResponseUtils.createDOMFragment(domArray);
+		response.appendChild(frag);
+
+		frame = doc.getElementById('frame');
+		
+		var h = window.innerHeight;
+
+		// Set the initial heights of the panels to 60% response / 40% code editor.
+		response.style.height = (h * 0.6) + 'px';
+		mainView.style.height = (h - response.offsetHeight - 16) + 'px';
+
+		// Create a vertical splitter to divide the editor and the response UI
+		Splitter.makeResizable(response, 'vert', 100, cm);
+		splitter = document.querySelector('.vert-splitter');
+		
+		// Manually fire the window resize event to position everything correctly.
+		handleWindowResize(null);
+
+		// Refresh codemirror
+		cm.refresh();
+	 
+		setupEventHandlers();
+	}
+
+	/**
+	 * Responsible for open the response mode which happens when the user clicks on the response icon
+	 * in the main toolbar along the left
+	 */
+	function openResponseMode() {
+
+		console.info('opening response mode');
 		
 		/**
-		 * responsible to determine which URL to use in the iframe preview pane
+		 * determines which URL to use in the iframe preview pane
 		 */
 		function _getPreviewPaneUrl() {
 			
@@ -277,7 +505,7 @@ define(function (require, exports, module) {
 					console.log("retrieved document");
 
 					// close any open inline editors
-					_closeOpenInlineEditors();
+					closeOpenInlineEditors();
 
 					// Save reference to the new files document.
 					mediaQueryDoc = doc;
@@ -297,99 +525,116 @@ define(function (require, exports, module) {
 					command.setChecked(true);
 				})
 				.fail(function (error) {
-					console.log("error: " + error);
+					console.error("an unexpedted error occurred trying to get the media query css file", error);
 				});
 		}
-
-		/**
-		 * Responsible for closing any open inline editors.
-		 *
-		 * Note, we are making use of Document._masterEditor in order to get the editor
-		 * associated to the document. This may not be 'legel' but seems to be the only
-		 * way to get the editor associated to a document
-		 */
-		function _closeOpenInlineEditors() {
-
-			var i, len;
-			
-			try {
-				var openDocs = DocumentManager.getAllOpenDocuments();
-				for (i = 0; i < openDocs.length; i++) {
-
-					var editor = openDocs[i]._masterEditor;
-
-					if (editor !== null) {
-						var inlineWidgets = editor.getInlineWidgets();
-
-						// when closing widgets, the array is being modified so need to 
-						// iterate by modifying the length value
-						len = inlineWidgets.length;
-						while (len--) {
-							EditorManager.closeInlineWidget(editor, inlineWidgets[len]);
-						}
-					}
-				}
-			} catch (err) {
-				console.error("unexpected error occurred trying to close inline widgets", err);
-			}
+		
+		// Ensure we can create a preview pane. Either the currently main
+		// document needs to be an HTML doc or use the Live Preview URL if
+		// it has been set
+		var previewPaneUrl = _getPreviewPaneUrl();
+		if (!previewPaneUrl) {
+			return;
 		}
+
+		projectRoot = ProjectManager.getProjectRoot().fullPath;
+		mainView = document.querySelector('.main-view');
+
+		var mediaQueryFilePath = projectRoot + prefs.get("mediaQueryFile");
+
+		// Check if the media-queries css file exists. If it doesn't, then create a
+		// new file. If it does, then reload and refresh UI
+		FileSystem.resolve(mediaQueryFilePath, function (result, file, fileSystemStats) {
+			console.log("resolved path to media query file");
+
+			// create an empty file as one doesn't exist yet                
+			if ('NotFound' === result) {
+				console.log("creating media query file: " + prefs.get("mediaQueryFile"));
+
+				var mediaQueryFile = FileSystem.getFileForPath(mediaQueryFilePath);
+
+				// create the parent dir if it doesn't yet exist. currently only supports a single node
+				console.log("creating parent dir if it doesn't exist");
+				var parentDir = FileSystem.getDirectoryForPath(mediaQueryFile.parentPath);
+				parentDir.exists(function (error, exists) {
+					if (!exists) {
+						parentDir.create();
+					}
+				});
+
+				console.log("writing to media query file to force create");
+				mediaQueryFile.write('', function (error, stats) {
+					console.log("error: " + error + "; stats: " + stats);
+					if (error === null) {
+						_getMediaQueryDocument(previewPaneUrl);
+					}
+				});
+				console.log("write completed");
+
+			} else {
+				_getMediaQueryDocument(previewPaneUrl);
+			}
+		});
 	}
 
-	/** 
-	 *  Builds the UI for responsive mode. Lots of DOM injecting here.
+	/**
+	 * Responsible for closing the response mode. This can be invoked in a number of situations
+	 *   - when the user clicks on the 'response' icon in the main toolbar on the left
+	 *   - when the user switches between projects
 	 */
-	function createResponseUI(previewPaneUrl) {
+	function closeResponseMode() {
 
-		var doc = document;
-		doc.body.backgroundColor = "#303030";
+		console.info('closing response mode');
 
-		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
+		// close any open inline editors and close responsemode
+		closeOpenInlineEditors();
 
-		// create response main container and add to body
-		response = $('<div id="response" class="quiet-scrollbars"/>')[0];
-		doc.body.insertBefore(response, doc.body.firstChild);
+		// close docReloadBar if it is still open
+		docReloadBar.close();
 
-		// create toolbar and add to response div element
-		toolbar = new ResponseToolbar();
-		toolbar.resize(response.offsetWidth, true);
-		toolbar.$toolbar.appendTo(response);
-
-		toolbar.on('queryWidthChanged', function(e, newVal) {
-			console.log("queryWidthChanged triggered: " + newVal);
-		});
-
-		// add click handler for vertical/horizontal layout buttons
-		var horzLayoutBtn = document.getElementById("horzButt");
-		horzLayoutBtn.addEventListener('click', handleHorzLayoutToggle, false);
-		var vertLayoutBtn = document.getElementById("vertButt");
-		vertLayoutBtn.addEventListener('click', handleVertLayoutToggle, false);
-
-		// Here I add the live preview iframe wrapped in a div.
-		var domArray = [{tag: "div", attr: {id: "fwrap"}, parent: -1},
-					{tag: "iframe", attr: {id: "frame", class: "quiet-scrollbars", name: "frame", src: previewPaneUrl}, parent: 0}];
-
-		var frag = ResponseUtils.createDOMFragment(domArray);
-		response.appendChild(frag);
-
-		frame = doc.getElementById('frame');
+		// deselect the current query and queries
+		QueryManager.clearQueryMarks();
 		
-		var h = window.innerHeight;
+		// remove the #response view
+		var element = document.getElementById("response");
+		if (element) {
 
-		// Set the initial heights of the panels to 60% response / 40% code editor.
-		response.style.height = (h * 0.6) + 'px';
-		mainView.style.height = (h - response.offsetHeight - 16) + 'px';
+			// ensure inspect mode is off so handlers are removed 
+			// but don't update inspect mode menu item
+			inspectController.close();
 
-		// Create a vertical splitter to divide the editor and the response UI
-		Splitter.makeResizable(response, 'vert', 100, cm);
-		splitter = document.querySelector('.vert-splitter');
+			// remove the response dom element
+			element.parentNode.removeChild(element);
+
+			// Manually fire the window resize event to position everything correctly.
+			handleWindowResize(null);
+			response = null;
+
+			// refresh layout
+			WorkspaceManager.recomputeLayout(true);
+		}
+
+		// update toolbar icon and menu state to indicate we are leaving responsive mode
+		iconLink.style.backgroundPosition = '0 0';
+		document.body.classList.remove('responsive-mode');
+
+		var command = CommandManager.get(Strings.CMD_RESPONSEMODE_ID);
+		command.setChecked(false);
+	}
+	
+	/** 
+	 *  Main entry point of extension that is called when responsive mode is launched.
+	 */
+	function handleResponseIconClick(e) {
+
+		if (e) { e.stopImmediatePropagation(); }
 		
-		// Manually fire the window resize event to position everything correctly.
-		handleWindowResize(null);
-
-		// Refresh codemirror
-		cm.refresh();
-	 
-		setupEventHandlers();
+		// Prevent creating UI more than once
+		if (document.querySelector('#response')) {
+			closeResponseMode();
+		} else {
+			openResponseMode();
+		}
 	}
 
 	/** 
@@ -403,153 +648,6 @@ define(function (require, exports, module) {
 		
 		window.addEventListener('resize', handleWindowResize, false);
 		$(response).on('panelResizeUpdate', handlePanelResize);
-	}
-
-	/** 
-	 *  Called when the user clicks on one of the editor layout
-	 *  toggle buttons (either vertical or horizontal)
-	 *
-	 * note: the buttons are not named correctly. the 'horzButt' is actually 
-	 * when the user is in vertical layout (up and down) while 'vertButt' is
-	 * when the user is in horizontal layout (left to right). the code should
-	 * be updated at some point to remove this confusion
-	 */
-
-	function handleHorzLayoutToggle(e) {
-
-		var btnClicked = false;
-		
-		// if e is defined then it means the click came from the button in the preview pane. 
-		// need to check if it is not already 'active' and signal it was clicked if it is 
-		// not active
-		if (e) {
-			e.stopImmediatePropagation();
-			btnClicked = !document.body.classList.contains('response-horz');
-		}
-
-		// check if the layout state has changed. making sure not clicking on an already
-		// active menu
-		var horzCmd = CommandManager.get(Strings.CMD_HORZLAYOUT_ID);
-		if (btnClicked || !horzCmd.getChecked()) {
-			
-			// update menu state if not already correct
-			horzCmd.setChecked(true);
-
-			var vertCmd = CommandManager.get(Strings.CMD_VERTLAYOUT_ID);
-			vertCmd.setChecked(false);
-		
-			// set the mode. would like to get rid of this variable and use menu state instead
-			mode = HORIZONTAL;
-			
-			// update the layout if the preview pane is visible
-			showHorizontalLayout();
-		}
-	}
-	
-	function handleVertLayoutToggle(e) {
-
-		var btnClicked = false;
-		
-		// if e is defined then it means the click came from the button in the preview pane. 
-		// need to check if it is not already 'active' and signal it was clicked if it is 
-		// not active
-		if (e) {
-			e.stopImmediatePropagation();
-			btnClicked = !document.body.classList.contains('response-vert');
-		}
-
-		// check if the layout state has changed. making sure not clicking on an already
-		// active menu
-		var vertCmd = CommandManager.get(Strings.CMD_VERTLAYOUT_ID);
-		if (btnClicked || !vertCmd.getChecked()) {
-			
-			// update menu state if not already correct
-			vertCmd.setChecked(true);
-
-			var horzCmd = CommandManager.get(Strings.CMD_HORZLAYOUT_ID);
-			horzCmd.setChecked(false);
-		
-			// set the mode. would like to get rid of this variable and use menu state instead
-			mode = VERTICAL;
-			
-			// update the layout if the preview pane is visible
-			showVerticalLayout();
-		}
-	}
-
-	function showHorizontalLayout() {
-		
-		// Update only if the response element exists
-		if (document.querySelector('#response')) {
-
-			// update the global class to indicate layout
-			document.body.classList.remove('response-vert');
-			document.body.classList.add('response-horz');
-
-			// clear any inline css rules on div#response and div.main-view
-			response.style.cssText = null;
-			mainView.style.cssText = null;
-
-			// Remove the current panel splitter
-			if (splitter !== undefined) {
-				response.removeChild(splitter);
-			}
-
-			// Create a new splitter for this mode
-			var cm = EditorManager.getCurrentFullEditor()._codeMirror;
-			Splitter.makeResizable(response, 'horz', 344, cm);
-			splitter = document.querySelector('.horz-splitter');
-			splitter.style.right = '-16px';
-			
-			var w = window.innerWidth;
-
-			// Change to a left/right layout
-			response.style.width = (w * 0.5) + 'px';
-			mainView.style.left = (response.offsetWidth + 15) + 'px';
-			mainView.style.height = '100%';
-			
-			toolbar.resize(response.offsetWidth);
-			
-			// refresh layout
-			WorkspaceManager.recomputeLayout(true);
-		}
-	}
-
-	function showVerticalLayout() {
-		
-		// Update only if the response element exists
-		if (document.querySelector('#response')) {
-
-			// update the global class to indicate layout
-			document.body.classList.remove('response-horz');
-			document.body.classList.add('response-vert');
-
-			// clear any inline css rules on div#response and div.main-view
-			response.style.cssText = null;
-			mainView.style.cssText = null;
-
-			// Remove the current panel splitter
-			if (splitter !== undefined) {
-				response.removeChild(splitter);
-			}
-
-			// Create a new splitter for this mode
-			var cm = EditorManager.getCurrentFullEditor()._codeMirror;
-			Splitter.makeResizable(response, 'vert', 100, cm);
-
-			splitter = document.querySelector('.vert-splitter');
-
-			var h = window.innerHeight;
-
-			// Change to a top/bottom layout
-			response.style.height = (h * 0.6) + 'px';
-			mainView.style.height = (h - response.offsetHeight - 16) + 'px';
-			
-			toolbar.resize(response.offsetWidth);
-			
-			// refresh layout
-			WorkspaceManager.recomputeLayout(true);
-		}
 	}
 
 
@@ -623,7 +721,7 @@ define(function (require, exports, module) {
 		}
 		
 		// inject frame with media queries as inline style element
-		toolbar.refreshQueryMarkTracks();		
+		toolbar.refreshQueryMarkTracks();
 		refreshIFrameMediaQueries(false);
 	}
 
@@ -767,16 +865,19 @@ define(function (require, exports, module) {
 		// it in the inline editor. A jQuery deffered object is used for async.
 		var result = new $.Deferred();
 
-		// get the tag information for the currently cursor position in the HTML
-		// document. If could not be determined then return so message is displayed to user
-		var tagInfo = HTMLUtils.getTagInfo(hostEditor, pos);
-		if (tagInfo.tagName === "") {
-			return null;
-		}
+        var cursor = cm.getCursor();
+        
+        // Find out the tag name they were on when they hit Cmd-E. If could not
+        // be determined then return so message is displayed to user
+        var tag = cm.getTokenAt(cursor).state.htmlState.tagName;
+        if (tag ===  null) {
+            return null;
+        }
+        
+        // Get a reference to the DOM element in the iframe.
+		var domCache = DomCache.getCache();
+        var el = domCache.frameDom[tag][domCache.codeDom[tag].indexOf(cursor.line)];
 		
-		// get the first element in the frame dom that matches the tagInfo
-		var el = _getFrameElement(frameDOM, tagInfo);
-
 		// Set this element to the inlineElement property that is used elsewhere.
 		inlineElement = el;
 
@@ -797,7 +898,7 @@ define(function (require, exports, module) {
 		// Create a new inline editor. This is my stripped-down version of the
 		// MultiRangeInlineEditor module.
 		var inlineEditor = new ResponseInlineEdit();
-		inlineEditor.editorNode = inlineElement;
+		inlineEditor.editorNode = el;
 
 		// Load the editor with the CSS we generated.
 		inlineEditor.load(hostEditor, 0, count + 2, editorContents.contents);
@@ -819,9 +920,13 @@ define(function (require, exports, module) {
 			// Sets cursor to the end of line 2 in the inline editor.
 			this.editor.setCursorPos(1, 0);
 
+			/* BR: could use inlineEditor change event instead of code mirror in effort to stop using code mirror */
 			// Listen for changes in the inline editor.
 			inlineCm.on("change", inlineChange);
-
+			inlineEditor.doc.on("change", function (e, instance, change) {
+				console.log("inlineEditor change event triggered", e, instance, change);
+			});
+			
 			this.refreshMediaQueryInfo(cq);
 			this.refreshSelectorDropdown(cssResults);
 			this.$selectorSelect[0].addEventListener('change', handleSelectorChange, false);
@@ -937,6 +1042,8 @@ define(function (require, exports, module) {
 	 */
 	function inlineChange(instance, change) {
 
+		console.log("inlineChange", instance, change);
+		
 		// Make sure that the change is even worth looking at.
 		if (change.text.length < 2 && change.from.line !== 0) {
 
@@ -992,6 +1099,8 @@ define(function (require, exports, module) {
 			
 			var existingEdits = [];
 
+/* BR: issue74 - stop using cached editorNode dom element as it is not longer valid if user reloads the iframe for any reason */
+
 			// Refresh rules for current query and loop through.
 			cssResults = ResponseUtils.getAuthorCSSRules(frameDOM, inlineWidgets[j].editorNode);
 			inlineWidgets[j].refreshSelectorDropdown(cssResults);
@@ -1013,55 +1122,11 @@ define(function (require, exports, module) {
 		}
 	}
 
-	/** 
-	 *  Function that goes through all of the media query data and writes it to the 
-	 *  style block in the iframe and also to the media-queries.css file.
-	 */
-	function refreshIFrameMediaQueries(writeToFile) {
-
-		// only update if the reference to the style element has been set
-		if (style) {
-			// Defining some vars we'll need.
-			var s = "",
-				sortedQueries = QueryManager.getSortedQueryMarks(),
-				i = sortedQueries.length,
-				query,
-				sel,
-				k;
-
-			// Loop through the queries and write them to the output string.
-			while (i--) {
-
-				// We need to sort the queries so the larger widths are written first
-				// in order for inheritance to work properly.
-				query = sortedQueries[i];
-
-				s += '@media only screen and (max-width:';
-				s += query.width;
-				s += 'px) {\n\n';
-				for (sel in query.selectors) {
-					s += '\t' + sel + ' {\n';
-					for (k in query.selectors[sel].rules) {
-						s += '\t\t' + k + ": " + query.selectors[sel].rules[k] + '\n';
-					}
-					s += '\t}\n\n';
-				}
-				s += '}\n';
-			}
-
-			// Set the style block in the iframe using the output string. 
-			style.textContent = s;
-
-			// Write the new text to the media-queries.css file.
-			if (writeToFile === undefined || writeToFile) {
-				FileUtils.writeText(mediaQueryDoc.file, s);
-			}
-		}
-	}
-
-	function updateCurrentFile(e, newFile, newPaneId, oldFile, oldPaneId) {
+	function handleCurrentFilechange(e, newFile, newPaneId, oldFile, oldPaneId) {
 
 		try {
+			//console.log("currentFileChange event triggered", newFile, oldFile);
+			
 			var currentDoc = DocumentManager.getCurrentDocument();
 			if (document.querySelector('#response') && workingMode === 'local' && currentDoc !== null && currentDoc.language.getId() === "html") {
 				// open the doc reload bar so user can decide if the preview pane should be reloaded
@@ -1072,48 +1137,12 @@ define(function (require, exports, module) {
 		}
 	}
 	
-	function closeResponseMode() {
-
-		// close docReloadBar if it is still open
-		docReloadBar.close();
-
-		// deselect the current query and queries
-		QueryManager.clearQueryMarks();
-		
-		// remove the #response view
-		var element = document.getElementById("response");
-		if (element) {
-
-			// ensure inspect mode is off so handlers are removed 
-			// but don't update inspect mode menu item
-			inspectController.close();
-
-			// remove the response dom element
-			element.parentNode.removeChild(element);
-
-			// Manually fire the window resize event to position everything correctly.
-			handleWindowResize(null);
-			response = null;
-
-			// refresh layout
-			WorkspaceManager.recomputeLayout(true);
-		}
-
-		// update toolbar icon and menu state to indicate we are leaving responsive mode
-		var iconLink = document.getElementById('response-icon');
-		iconLink.style.backgroundPosition = '0 0';
-		document.body.classList.remove('responsive-mode');
-
-		var command = CommandManager.get(Strings.CMD_RESPONSEMODE_ID);
-		command.setChecked(false);
-	}
-	
 	function buildMenuSystem() {
 		
 		// Build commands and menu system
 		var customMenu = Menus.addMenu(Strings.MENU_MAIN, Strings.MENU_RESPONSE_ID, Menus.AFTER, Menus.AppMenuBar.NAVIGATE_MENU);
 
-		CommandManager.register(Strings.SUBMENU_RESPSONSEMODE, Strings.CMD_RESPONSEMODE_ID, Response);
+		CommandManager.register(Strings.SUBMENU_RESPSONSEMODE, Strings.CMD_RESPONSEMODE_ID, handleResponseIconClick);
 		customMenu.addMenuItem(Strings.CMD_RESPONSEMODE_ID, "Shift-Alt-R");
 
 		// Toggle inspect mode.
@@ -1171,16 +1200,17 @@ define(function (require, exports, module) {
 	 *  Called when brackets has opened and is ready.
 	 */
 	AppInit.appReady(function () {
+		
 		// Here we add the toolbar icon that launches you into responsive mode.
-		var icon = document.createElement('a');
-		icon.href = "#";
-		icon.id = "response-icon";
+		iconLink = document.createElement('a');
+		iconLink.href = "#";
+		iconLink.id = "response-icon";
 
 		var iconURL = require.toUrl('./images/toolbar-icon.png');
-		icon.style.cssText = "content: ''; background: url('" + iconURL + "') 0 0 no-repeat;";
+		iconLink.style.cssText = "content: ''; background: url('" + iconURL + "') 0 0 no-repeat;";
 
-		document.querySelector('#main-toolbar .buttons').appendChild(icon);
-		icon.addEventListener('click', Response, false);
+		document.querySelector('#main-toolbar .buttons').appendChild(iconLink);
+		iconLink.addEventListener('click', handleResponseIconClick, false);
 
 		docReloadBar = new DocReloadBar();
 	});
@@ -1204,6 +1234,11 @@ define(function (require, exports, module) {
 		}
 	});
 
+	EditorManager.on('activeEditorChange', function (e, newEditor, oldEditor) {
+	
+		//console.log('activeEditorChange invoked', newEditor, oldEditor);
+	});
+	
 	prefs.definePreference("useLivePreviewUrl", "boolean", false).on("change", function () {
 
 		var command = CommandManager.get(Strings.CMD_PREVIEWURL_ID);
@@ -1218,7 +1253,7 @@ define(function (require, exports, module) {
 
 	buildMenuSystem();
 
-	MainViewManager.on("currentFileChange", $.proxy(updateCurrentFile));
+	MainViewManager.on("currentFileChange", $.proxy(handleCurrentFilechange));
 	ProjectManager.on("beforeProjectClose", $.proxy(closeResponseMode));
 
 	// Register as an inline provider.
