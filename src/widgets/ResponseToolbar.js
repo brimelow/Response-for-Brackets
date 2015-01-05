@@ -178,17 +178,15 @@ define(function (require, exports, module) {
 	
 	ResponseToolbar.prototype.setQueryWidth = function (width) {
 		
-		if (width !== $slider.val()) {
-			// update the slider position
-			$slider.val(width);
+		// update the slider position
+		$slider.val(width);
 
-			// Set the width of the frame to match the slider value.
-			var iframeEl = $('#response iframe');
-			iframeEl.css('width', width + 'px');
+		// Set the width of the frame to match the slider value.
+		var iframeEl = $('#response iframe');
+		iframeEl.css('width', width + 'px');
 
-			// update the track label with the current value
-			$trackLabel.text(width + 'px');
-		}
+		// update the track label with the current value
+		$trackLabel.text(width + 'px');
 	};
 	
 	ResponseToolbar.prototype.resize = function (width, force) {
