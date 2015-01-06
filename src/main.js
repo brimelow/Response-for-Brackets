@@ -852,9 +852,6 @@ define(function (require, exports, module) {
 			return null;
 		}
 		
-		// get code mirror from main editor
-		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
-		
 		// If there isn't a media query, show the message that a query has not been selected
 		if (!QueryManager.getCurrentQueryMark()) {
 			hostEditor.displayErrorMessageAtCursor("There have not been any media queries defined.");
@@ -864,7 +861,9 @@ define(function (require, exports, module) {
 		// We are now going to write the string the temporary CSS file so we can display
 		// it in the inline editor. A jQuery deffered object is used for async.
 		var result = new $.Deferred();
-
+		
+		// get code mirror from main editor
+		var cm = EditorManager.getCurrentFullEditor()._codeMirror;
         var cursor = cm.getCursor();
         
         // Find out the tag name they were on when they hit Cmd-E. If could not
