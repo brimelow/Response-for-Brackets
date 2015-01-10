@@ -35,7 +35,7 @@ define(function (require, exports, module) {
 
 	/*====================  Define constants  =====================*/
 	
-	var MEDIA_QUERY_REGEX = /@media only screen and \(max-width:[0-9]+px\) {\s*([\.#\w:\(\)\-]+\s*{\s*[\w\s:%;\(\)\-,]*}\s*)*}/g,
+	var MEDIA_QUERY_REGEX = /@media only screen and \(max-width:[0-9]+px\) {\s*([\.#\w\s:\(\)\-]+\s*{\s*[\w\s:%;\(\)\-,]*}\s*)*}/g,
 		
 	/*================ Load needed brackets modules ================*/
 		
