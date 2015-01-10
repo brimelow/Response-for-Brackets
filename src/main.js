@@ -376,6 +376,21 @@ define(function (require, exports, module) {
 		}
 	}
 
+	function handleCurrentFilechange(e, newFile, newPaneId, oldFile, oldPaneId) {
+
+		try {
+			console.log("currentFileChange event triggered", newFile, oldFile);
+			
+			var currentDoc = DocumentManager.getCurrentDocument();
+			if (document.querySelector('#response') && workingMode === 'local' && currentDoc !== null && currentDoc.language.getId() === "html") {
+				// open the doc reload bar so user can decide if the preview pane should be reloaded
+				docReloadBar.open();
+			}
+		} catch (err) {
+			console.error("unexpected error occurred trying to handle currentFileChange event", err);
+		}
+	}
+
 	/** 
 	 *  Builds the UI for responsive mode. Lots of DOM injecting here.
 	 */
@@ -497,6 +512,26 @@ define(function (require, exports, module) {
 			return previewPaneUrl;
 		}
 		
+		function _addDocumentHandlers() {
+			
+			MainViewManager.on("currentFileChange", handleCurrentFilechange);
+	/*
+			DocumentManager.on('dirtyFlagChange', function (e, doc) {
+				console.log('dirtyFlagChange triggered', doc);
+
+			}).on('documentSaved', function (e, doc) {
+				console.log('documentSaved triggered', doc);
+
+			}).on('documentRefreshed', function (e, doc) {
+				console.log('documentRefreshed triggered', doc);
+
+			});
+			*/
+			
+			// if the user switches to a new project, then close the reponse mode
+			ProjectManager.on("beforeProjectClose", closeResponseMode);
+		}
+		
 		function _getMediaQueryDocument(previewPaneUrl) {
 			
 			console.log("getting document for media query");
@@ -507,6 +542,9 @@ define(function (require, exports, module) {
 					// close any open inline editors
 					closeOpenInlineEditors();
 
+					// enable event handlers for documents
+					_addDocumentHandlers();
+				
 					// Save reference to the new files document.
 					mediaQueryDoc = doc;
 					MainViewManager.addToWorkingSet(MainViewManager.ACTIVE_PANE, doc.file);
@@ -584,11 +622,35 @@ define(function (require, exports, module) {
 	 */
 	function closeResponseMode() {
 
+		function _removeDocumentHandlers() {
+			
+			MainViewManager.off("currentFileChange", handleCurrentFilechange);
+	
+			/*
+			DocumentManager.off('dirtyFlagChange', function (e, doc) {
+				console.log('dirtyFlagChange triggered', doc);
+
+			}).off('documentSaved', function (e, doc) {
+				console.log('documentSaved triggered', doc);
+
+			}).off('documentRefreshed', function (e, doc) {
+				console.log('documentRefreshed triggered', doc);
+
+			});
+			*/
+			
+			// if the user switches to a new project, then close the reponse mode
+			ProjectManager.off("beforeProjectClose", closeResponseMode);
+		}
+		
 		console.info('closing response mode');
 
 		// close any open inline editors and close responsemode
 		closeOpenInlineEditors();
 
+		// remove any document event handlers
+		_removeDocumentHandlers();
+		
 		// close docReloadBar if it is still open
 		docReloadBar.close();
 
@@ -1120,21 +1182,6 @@ define(function (require, exports, module) {
 			}
 		}
 	}
-
-	function handleCurrentFilechange(e, newFile, newPaneId, oldFile, oldPaneId) {
-
-		try {
-			//console.log("currentFileChange event triggered", newFile, oldFile);
-			
-			var currentDoc = DocumentManager.getCurrentDocument();
-			if (document.querySelector('#response') && workingMode === 'local' && currentDoc !== null && currentDoc.language.getId() === "html") {
-				// open the doc reload bar so user can decide if the preview pane should be reloaded
-				docReloadBar.open();
-			}
-		} catch (err) {
-			console.error("unexpected error occurred trying to handle currentFileChange event", err);
-		}
-	}
 	
 	function buildMenuSystem() {
 		
@@ -1232,11 +1279,6 @@ define(function (require, exports, module) {
 			handleVertLayoutToggle();
 		}
 	});
-
-	EditorManager.on('activeEditorChange', function (e, newEditor, oldEditor) {
-	
-		//console.log('activeEditorChange invoked', newEditor, oldEditor);
-	});
 	
 	prefs.definePreference("useLivePreviewUrl", "boolean", false).on("change", function () {
 
@@ -1251,9 +1293,6 @@ define(function (require, exports, module) {
 	});
 
 	buildMenuSystem();
-
-	MainViewManager.on("currentFileChange", $.proxy(handleCurrentFilechange));
-	ProjectManager.on("beforeProjectClose", $.proxy(closeResponseMode));
 
 	// Register as an inline provider.
 	EditorManager.registerInlineEditProvider(inlineEditorProvider, 9);
