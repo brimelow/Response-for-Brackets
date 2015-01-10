@@ -32,6 +32,8 @@ THE SOFTWARE. */
 define(function (require, exports, module) {
 	"use strict";
 
+	var DocumentManager		= brackets.getModule("document/DocumentManager");
+	
 	// DOM utility methods
 	//----------------------------------------------------------------//
 
@@ -299,10 +301,21 @@ define(function (require, exports, module) {
 		return res;
 	}
 
+	function refreshPreviewPane() {
+		
+		// get the current document and update frame src attribute
+		var currentDoc = DocumentManager.getCurrentDocument(),
+			previewPaneUrl = "file://" + currentDoc.file.fullPath,
+			frame = document.getElementById('frame');
+
+		frame.contentWindow.document.location.href = previewPaneUrl;
+		
+	}
+	
 	// Export the functions.
 	exports.getAuthorCSSRules = getAuthorCSSRules;
 	exports.getAuthorCSSBySelector = getAuthorCSSBySelector;
 	exports.createDOMFragment = createDOMFragment;
 	exports.loadExternalScript = loadExternalScript;
-
+	exports.refreshPreviewPane = refreshPreviewPane;
 });

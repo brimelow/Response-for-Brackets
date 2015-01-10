@@ -31,9 +31,9 @@ THE SOFTWARE. */
 define(function (require, exports, module) {
 	"use strict";
 
-	var ModalBar           = brackets.getModule("widgets/ModalBar").ModalBar,
-		DocumentManager    = brackets.getModule("document/DocumentManager"),
-		Strings            = require("strings"),
+	var ModalBar			= brackets.getModule("widgets/ModalBar").ModalBar,
+		Strings				= require("strings"),
+		ResponseUtils		= require("utils/ResponseUtils"),
 	
 		/**
 		 * @private
@@ -64,13 +64,8 @@ define(function (require, exports, module) {
 			var $root = this._modalBar.getRoot();
 			$root
 				.on("click", "#docreload-ok", function (e) {
-					// get the current document and update frame src attribute
-					var currentDoc = DocumentManager.getCurrentDocument(),
-						previewPaneUrl = "file://" + currentDoc.file.fullPath,
-						frame = document.getElementById('frame');
-				
-					frame.contentWindow.document.location.href = previewPaneUrl;
-				
+					// reload the contents of the preview pane
+					ResponseUtils.refreshPreviewPane();				
 					bar.close();
 				})
 				.on("click", "#docreload-cancel", function (e) {
