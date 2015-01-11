@@ -1,16 +1,16 @@
 {
-    "title": "Response for Brackets - original",
-    "name": "response-for-brackets",
-    "description": "Original Responsive design tool for Brackets from Lee Brimelow",
-    "keywords": ["responsive", "media", "query", "css"],
-    "version": "0.0.6",
-    "author": "Ben Rooney",
-    "homepage": "https://github.com/brimelow/Response-for-Brackets",
-    "repository": {
-        "type": "ssh",
-        "url": "git@github.com:brimelow/Response-for-Brackets.git"
-    },
-    "engines": {
-        "brackets": ">=1.0.0"
-    }
+	"title": "Response for Brackets - original",
+	"name": "response-for-brackets",
+	"description": "Original Responsive design tool for Brackets from Lee Brimelow",
+	"keywords": ["responsive", "media", "query", "css"],
+	"version": "0.1.0",
+	"author": "Ben Rooney",
+	"homepage": "https://github.com/brimelow/Response-for-Brackets",
+	"repository": {
+		"type": "ssh",
+		"url": "git@github.com:brimelow/Response-for-Brackets.git"
+	},
+	"engines": {
+		"brackets": ">=1.0.0"
+	}
 }
