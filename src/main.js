@@ -441,13 +441,13 @@ define(function (require, exports, module) {
 
 		try {
 			console.debug("documentRefreshed event triggered", doc);
-/*
-			if (workingMode === 'local' && doc.language.getId() === "html") {
-				// refresh the preview pane and close the reload bar
-				ResponseUtils.refreshPreviewPane();
-				docReloadBar.close();
+
+			var currentDoc = DocumentManager.getCurrentDocument();
+			if (doc === currentDoc && workingMode === 'local' && currentDoc.language.getId() === "html") {
+				// open the doc reload bar so user can decide if the preview pane should be reloaded
+				docReloadBar.open();
 			}
-*/
+
 		} catch (err) {
 			console.error("unexpected error occurred trying to handle currentFileChange event", err);
 		}
