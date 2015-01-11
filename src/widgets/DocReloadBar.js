@@ -31,9 +31,12 @@ THE SOFTWARE. */
 define(function (require, exports, module) {
 	"use strict";
 
-	var ModalBar			= brackets.getModule("widgets/ModalBar").ModalBar,
-		Strings				= require("strings"),
-		ResponseUtils		= require("utils/ResponseUtils"),
+	var ModalBar				= brackets.getModule("widgets/ModalBar").ModalBar,
+		DocumentManager			= brackets.getModule("document/DocumentManager"),
+		FileUtils				= brackets.getModule("file/FileUtils"),
+
+		Strings					= require("strings"),
+		ResponseUtils			= require("utils/ResponseUtils"),
 	
 		/**
 		 * @private
@@ -64,9 +67,28 @@ define(function (require, exports, module) {
 			var $root = this._modalBar.getRoot();
 			$root
 				.on("click", "#docreload-ok", function (e) {
-					// reload the contents of the preview pane
-					ResponseUtils.refreshPreviewPane();				
-					bar.close();
+				
+					// We don't want normalized line endings, so it's important to pass true to getText()
+					var docToSave = DocumentManager.getCurrentDocument();
+					FileUtils.writeText(docToSave.file, docToSave.getText(true))
+						.done(function () {
+							// reload the contents of the preview pane
+							ResponseUtils.refreshPreviewPane();
+							bar.close();
+
+							// notify that document has been saved
+							docToSave.notifySaved();
+						})
+						.fail(function (err) {
+							console.error("unexpected error trying to save document", err);
+							/*
+							if (err === FileSystemError.CONTENTS_MODIFIED) {
+								handleContentsModified();
+							} else {
+								handleError(err);
+							}
+							*/
+						});
 				})
 				.on("click", "#docreload-cancel", function (e) {
 					bar.close();
