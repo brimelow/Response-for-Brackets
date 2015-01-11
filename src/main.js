@@ -376,10 +376,16 @@ define(function (require, exports, module) {
 		}
 	}
 
+	/*================  Methods to handle document changes  ================*/
+	
+	/**
+	 * responsible for handling when the current main document changes. It will show 
+	 * a message to reload the preview pane bar
+	 */
 	function handleCurrentFilechange(e, newFile, newPaneId, oldFile, oldPaneId) {
 
 		try {
-			console.log("currentFileChange event triggered", newFile, oldFile);
+			console.debug("currentFileChange event triggered", newFile, oldFile);
 			
 			var currentDoc = DocumentManager.getCurrentDocument();
 			if (document.querySelector('#response') && workingMode === 'local' && currentDoc !== null && currentDoc.language.getId() === "html") {
@@ -391,6 +397,62 @@ define(function (require, exports, module) {
 		}
 	}
 
+	/**
+	 * handles when the file has been modified from user editing. It will show 
+	 * a message to reload the preview pane bar
+	 */
+	function handleDirtyFlagChange(e, doc) {
+
+		try {
+			console.debug("dirtyFlagChange event triggered", doc);
+			
+			var currentDoc = DocumentManager.getCurrentDocument();
+			if (doc.isDirty && doc === currentDoc && workingMode === 'local' && currentDoc.language.getId() === "html") {
+				// open the doc reload bar so user can decide if the preview pane should be reloaded
+				docReloadBar.open();
+			}
+
+		} catch (err) {
+			console.error("unexpected error occurred trying to handle currentFileChange event", err);
+		}
+	}
+
+	/**
+	 * handles when the document has been saved. It will refresh the preview pane and close
+	 * any open doc reload bars
+	 */
+	function handleDocumentSaved(e, doc) {
+
+		try {
+			console.debug("documentSaved event triggered", doc);
+
+			if (workingMode === 'local' && doc.language.getId() === "html") {
+				// refresh the preview pane and close the reload bar
+				ResponseUtils.refreshPreviewPane();
+				docReloadBar.close();
+			}
+
+		} catch (err) {
+			console.error("unexpected error occurred trying to handle currentFileChange event", err);
+		}
+	}
+	
+	function handleDocumentRefreshed(e, doc) {
+
+		try {
+			console.debug("documentRefreshed event triggered", doc);
+/*
+			if (workingMode === 'local' && doc.language.getId() === "html") {
+				// refresh the preview pane and close the reload bar
+				ResponseUtils.refreshPreviewPane();
+				docReloadBar.close();
+			}
+*/
+		} catch (err) {
+			console.error("unexpected error occurred trying to handle currentFileChange event", err);
+		}
+	}
+ 
 	/** 
 	 *  Builds the UI for responsive mode. Lots of DOM injecting here.
 	 */
@@ -515,18 +577,11 @@ define(function (require, exports, module) {
 		function _addDocumentHandlers() {
 			
 			MainViewManager.on("currentFileChange", handleCurrentFilechange);
-	/*
-			DocumentManager.on('dirtyFlagChange', function (e, doc) {
-				console.log('dirtyFlagChange triggered', doc);
-
-			}).on('documentSaved', function (e, doc) {
-				console.log('documentSaved triggered', doc);
-
-			}).on('documentRefreshed', function (e, doc) {
-				console.log('documentRefreshed triggered', doc);
-
-			});
-			*/
+	
+			DocumentManager
+				.on('dirtyFlagChange', handleDirtyFlagChange)
+				.on('documentSaved', handleDocumentSaved)
+				.on('documentRefreshed', handleDocumentRefreshed);
 			
 			// if the user switches to a new project, then close the reponse mode
 			ProjectManager.on("beforeProjectClose", closeResponseMode);
@@ -626,18 +681,10 @@ define(function (require, exports, module) {
 			
 			MainViewManager.off("currentFileChange", handleCurrentFilechange);
 	
-			/*
-			DocumentManager.off('dirtyFlagChange', function (e, doc) {
-				console.log('dirtyFlagChange triggered', doc);
-
-			}).off('documentSaved', function (e, doc) {
-				console.log('documentSaved triggered', doc);
-
-			}).off('documentRefreshed', function (e, doc) {
-				console.log('documentRefreshed triggered', doc);
-
-			});
-			*/
+			DocumentManager
+				.off('dirtyFlagChange', handleDirtyFlagChange)
+				.off('documentSaved', handleDocumentSaved)
+				.off('documentRefreshed', handleDocumentRefreshed);
 			
 			// if the user switches to a new project, then close the reponse mode
 			ProjectManager.off("beforeProjectClose", closeResponseMode);
