@@ -70,25 +70,31 @@ define(function (require, exports, module) {
 				
 					// We don't want normalized line endings, so it's important to pass true to getText()
 					var docToSave = DocumentManager.getCurrentDocument();
-					FileUtils.writeText(docToSave.file, docToSave.getText(true))
-						.done(function () {
-							// reload the contents of the preview pane
-							ResponseUtils.refreshPreviewPane();
-							bar.close();
+					if (docToSave.isDirty) {
+						FileUtils.writeText(docToSave.file, docToSave.getText(true))
+							.done(function () {
+								// reload the contents of the preview pane
+								ResponseUtils.refreshPreviewPane();
+								bar.close();
 
-							// notify that document has been saved
-							docToSave.notifySaved();
-						})
-						.fail(function (err) {
-							console.error("unexpected error trying to save document", err);
-							/*
-							if (err === FileSystemError.CONTENTS_MODIFIED) {
-								handleContentsModified();
-							} else {
-								handleError(err);
-							}
-							*/
-						});
+								// notify that document has been saved
+								docToSave.notifySaved();
+							})
+							.fail(function (err) {
+								console.error("unexpected error trying to save document", err);
+								/*
+								if (err === FileSystemError.CONTENTS_MODIFIED) {
+									handleContentsModified();
+								} else {
+									handleError(err);
+								}
+								*/
+							});
+					} else {
+						// reload the contents of the preview pane
+						ResponseUtils.refreshPreviewPane();
+						bar.close();
+					}
 				})
 				.on("click", "#docreload-cancel", function (e) {
 					bar.close();
